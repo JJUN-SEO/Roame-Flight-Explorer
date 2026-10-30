@@ -44,7 +44,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
-| D8 | **MapLibre** is the Android map library: open source, no API key, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
+| D8 | **MapLibre** is the Android map library: open source, no API key, GPU-drawn vector maps, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). Google Maps was rejected for its mandatory billing account and key; osmdroid for its raster rendering and visual glitches (§4.5). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
 | D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Claude | Built with the search engine; awaiting owner review | 2026‑10‑30 |
 | D10 | One app-scoped store per process | SEL-2, VIEW-1 | Claude | Awaiting owner review | 2026‑10‑29 |
 | P1 | Keep the agent guide as `CLAUDE.md` (no `AGENTS.md`) | — | Owner | Decided | 2026‑10‑30 |
@@ -80,16 +80,201 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A12 | What "fall back to the original data" means when `airports.json` is missing | Volume = each airport's number of flights in `flights.json` | P4 |
 | A13 | How much location vs popularity should count | Origin 0.7 / 0.3, destination 0.2 / 0.8 (D19) | P5 |
 
-## 4. Tradeoffs
+## 4. Technical tradeoffs by stack choice
 
-- **Tiered vs blended search.** Tiered is predictable: fuzzy never adds noise when prefix already matched. The cost is that a weak prefix hit can hide a better fuzzy one. A prototype of both passed the same 114 cases.
-- **Copied Double Metaphone vs our own phonetic key.** The port is a well-known, battle-tested algorithm with multilingual rules. The cost is ~900 lines (with comments) that we didn't design. That is mitigated by the oracle test (§8).
-- **Device location for ranking (D16, D17).** Location never leaves the device and works offline, but it costs a permission prompt. Because ranking only orders the *matched airports* (D17), its visible effect today is the order of airports in the fuzzy hint when several match (e.g. `tokio`). It would matter more with autocomplete.
-- **Fuzzy thresholds** (4-letter gate, edit budget, Dice ≥ 0.55, 0.10 margin) were tuned on the 32 fixture airports. They are explainable and tested, but should be re-validated on a larger dataset.
-- **Full cache replacement vs diffing.** Full replacement is simple and correct for a full-dataset API, but wasteful for a large or paged API.
-- **In-memory filtering vs SQL.** In-memory filtering is ideal at 1,000 rows. At around 100k rows it would move to indexed SQL queries (ARCHITECTURE §12).
-- **Hand-written Swift bridge vs SKIE.** The bridge has no dependency risk, but it means more boilerplate per intent and sealed types that are clumsy to switch on in Swift.
-- **MapLibre vs Google Maps on Android.** MapLibre needs no key, but custom markers take more work and the tile style differs from iOS.
+Every technology choice made so far: the options considered, what each one gives and costs **in this project**, who chose it, and why. ✅ marks the chosen option. The IDs refer to the decision record (§2). "Claude" means Claude's choice, awaiting the owner's review unless the status says otherwise.
+
+### 4.1 Platform and architecture
+
+**Native UIs: SwiftUI + Jetpack Compose** (brief)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ SwiftUI + Compose | What the brief asks for; each app feels native | Two UIs to build and keep consistent |
+| Compose Multiplatform on iOS | One UI codebase | The brief allows it only without a Mac, and prefers SwiftUI |
+
+**Share presentation state, not only data** (D2, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Shared `ExplorerStore` (selection, map grouping, offline state) | List and map can't disagree; selection and offline rules are written and tested once | More Kotlin→Swift interop, and less idiomatic for SwiftUI developers, who expect their own view models |
+| A view model per platform over shared repositories | More native on each side | Selection, grouping and offline rules would be written twice and could drift |
+
+**One app-scoped store** (D10, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ One store per process | Survives Android rotation; one source of truth; nothing per screen to leak | State lives in memory for the app's lifetime (small). Android process death loses the in-memory query and filters; the cached data survives in the DB. |
+| A store per screen | Tighter scoping | Risk of list and map holding different state |
+
+**Kotlin → Swift bridge** (D7, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Hand-written `observe()` wrapper | No extra dependency; no compiler plugin tied to Kotlin 2.4.21 | Boilerplate per intent; Kotlin sealed types appear in Swift as class hierarchies (clumsy `switch`) |
+| SKIE | Swift enums and `AsyncSequence`; much nicer Swift code | Must support the exact Kotlin version (2.4.21 is brand new) |
+| KMP-NativeCoroutines | Swift async/await over Flows | Compiler plugin with the same version risk |
+
+### 4.2 Data and networking
+
+**Local API server** (D1, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Ktor module in the Gradle build (`./gradlew :server:run`) | One language and one build; reuses the JDK Gradle already downloads; serves the fixture byte for byte | Gradle startup is slow (tens of seconds on the first run); heavier than a script |
+| Node or Python script | ~10 lines; starts instantly | Reviewers need that runtime installed; a second language in the repo |
+
+**HTTP client and JSON** (ARCHITECTURE §10, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Ktor client + kotlinx.serialization | The standard KMP pair: one implementation for both apps; `MockEngine` makes failure tests easy | Another library family to keep compatible with Kotlin 2.4.21 |
+| Platform clients (OkHttp / URLSession) behind expect/actual | The most native networking | Networking would be written twice, against the brief's "once in KMP" |
+
+**On-device database** (D3, **open: owner to decide**)
+
+Both options are libraries on top of **SQLite**, the database engine built into Android and iOS. Both meet every persistence requirement: atomic cache replacement, saving without duplicates, survival across restarts, reactive updates, work off the main thread, and in-memory tests on the JVM.
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| SQLDelight (Cash App) | Multiplatform since ~2019, very mature. **You write the SQL** and it generates type-safe Kotlin, so every query is visible and easy to explain. Smallest footprint (uses the phone's own SQLite). One Gradle plugin; simple migrations. | Uses the **phone's built-in SQLite**: Android 6 (our `minSdk 23`) ships a 2015 version with no "insert or update" syntax (we work around it with two statements), and the SQLite version differs by device and from iOS. The iOS app must link `sqlite3`. Its plugin's support for AGP 9's new multiplatform setup is unverified. |
+| Room KMP (Google) | Android's standard, so most reviewers know it. **You write Kotlin classes** with annotations. `@Upsert` maps directly onto OFF-6. It can **bundle its own modern SQLite**, so both apps and every Android version run the identical database, which also keeps modern features (full-text search, upsert) available for scaling. | Multiplatform only since 2025. More build machinery: the KSP code generator for 5 targets, plus database-constructor boilerplate for iOS. Generated code is hidden. The bundled SQLite adds roughly a megabyte per CPU architecture (est.). KSP/Room support for Kotlin 2.4.21 is unverified. |
+| JSON files / DataStore | No library; trivial for 1,000 flights | We'd hand-build atomic writes, duplicate checks and change notifications, which is exactly what the databases provide |
+
+Neither database is strictly better. Room's edge here is one consistent, modern SQLite on both apps and every Android version, plus reviewer familiarity. SQLDelight's edge is fewer moving parts, visible SQL, the longest multiplatform track record, and the smallest app. Either sits behind our repositories, so switching later only touches the data layer. Whichever is picked gets a short compatibility check (PLAN M0) before anything is built on it.
+
+**Saved flights as snapshots** (D4, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ A full copy per saved flight, in its own table | Saved flights survive being removed from the API (OFF-7) and cache wipes | The data is duplicated between the cache and saved flights, so a refresh must update both in one transaction (V5) |
+| A table of saved ids joined to the cache | No duplication | Loses saved flights that disappear from the API, which breaks OFF-7 |
+
+**Cache refresh** (D5, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Replace everything in one transaction | Simple and atomic; matches an API that always returns the full list | Rewrites every row on every refresh: trivial at 1,000, seconds at 100k |
+| A diff (upsert changed rows, delete missing ones) | Less work per refresh at scale | More code and edge cases, for no benefit at this size |
+
+**Filtering** (D6, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ In memory, off the main thread, latest input wins | Pure functions that are easy to test at the boundaries; ~1 ms at 1,000 flights | The whole dataset sits in memory; at ~100k flights it moves to SQL (ARCHITECTURE §12) |
+| SQL `WHERE` clauses | Scales to very large data | Harder to compose and to test, and needs the database for every unit test |
+
+### 4.3 Search
+
+**How prefix and fuzzy matching are combined** (D11, owner)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Tiered: a prefix tree first (O(m) walk); fuzzy only when that finds nothing | Predictable while typing; fuzzy never adds noise to good prefix results | A weak prefix hit can hide a better fuzzy one |
+| Blended: one score over every signal | Every signal always competes; it produces a natural ranking | Less predictable while typing. It passed the same 114 prototype cases, so the choice is about behaviour, not accuracy |
+
+**Which fuzzy signals** (D12, owner; edit distance added by Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Phonetic + n-gram + typo distance + accent folding | Covers the owner's four cases: typo, sound-alike, partly right spelling, accents | More code, and thresholds tuned on only 32 airports. Places outside the data can sound alike (`newark` → New York) |
+| Prefix only | Simplest, fully predictable | No tolerance for any mistake |
+| Soundex | Tiny | English-only rules that keep the first letter, so it misses `shicago` and `okland` |
+
+**The phonetic algorithm's implementation** (D13, owner)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Double Metaphone translated from Apache Commons Codec, credited, oracle-tested | A proven algorithm with multilingual rules; identical on both apps; correctness proven against the original (§8) | ~900 lines of third-party logic we didn't design; license obligations (notice, modification statement); updates mean re-porting |
+| Commons Codec as a normal dependency | Zero copied code | JVM-only, so iOS would get no phonetic matching and the apps would behave differently |
+| Our own small Metaphone-style key | Fully ours and explainable | Owner preferred a library over a from-scratch implementation; narrower rules |
+
+**Accent folding** (S1, Claude, for the owner's case 4)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Our own Latin character table (`ã` → `a`, `ß` → `ss`) | Works in common Kotlin on every platform; tiny | Latin scripts only; no transliteration (`東京`) |
+| Unicode normalisation / ICU | Complete | Not available in common Kotlin (`java.text.Normalizer` is JVM-only), so it would need per-platform code |
+
+**Feedback when fuzzy matching kicks in** (D14, owner's choice)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ A "Showing Sydney (SYD)" hint under the field | Corrections are never silent; small UI cost | One more line in the header |
+| A suggestions dropdown | The best UX, and where ranking would shine | Much more UI work on both platforms |
+| Silent | Nothing to build | The user can't tell why `sidnee` shows Sydney flights |
+
+**What search runs on** (D18, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Airports (32 here), behind indexes; flights are then filtered by airport code | Cost doesn't grow with the number of flights (SCALE-1) | Text search only covers places (cabin, program and the rest are filters anyway) |
+| Each flight's text | No separate index | Work grows with the number of flights on every keystroke |
+
+### 4.4 Ranking and location
+
+**Where airport volume comes from** (D15, owner; file format by Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ A separate `fixtures/airports.json`, falling back to flight counts from `flights.json` | The provided data stays untouched; the app works without the file; the fallback is tested | The figures are approximate and unverified; one more file to serve and cache |
+| Add a field to `flights.json` | One file | Changes the provided data, which the API must serve verbatim |
+| A table compiled into the app | Always available offline | Needs an app release to update |
+
+**Where the user's location comes from** (D16, owner)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ The device: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy | Accurate; works offline (GPS needs no internet); nothing sent to a third party; no extra endpoint | A permission prompt; location code on each platform. Fused needs Google Play services, so it won't work on devices without them and the emulator needs a Play image. Android's plain `LocationManager` would avoid that dependency, but it is lower-level and less battery-efficient. |
+| Geo-IP through our local API (Claude's earlier idea) | No permission prompt | Locally it finds the developer's machine, not the user. City-level only; wrong behind a VPN; needs an outside geo-IP service |
+| The app calls a public geo-IP service | No permission prompt | Sends the device's IP to a third party; rate limits |
+
+**What ranking reorders** (D17, owner's choice)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ A: only the matched airports (the hint, and autocomplete later) | The flight list stays in date → points order, so earlier and cheaper flights are never pushed down | Without autocomplete, ranking's visible effect is small (the order inside the hint) |
+| B: the flight list as well | Ranking is visible everywhere | Hides earlier and cheaper flights (with `tokio`, the Feb 1–3 NRT flights drop to row 56); the list order depends on where you are |
+
+**Ranking weights** (D19, Claude, assumption A13): origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8. Simple and explainable, but chosen by judgement, not measured. Revisit with real usage data.
+
+### 4.5 Maps
+
+**Android map library** (D8, owner's choice)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ MapLibre | Open source with no account, key or billing, so any reviewer sees a working map. The GPU draws **vector** tiles: smooth zoom and rotation, and crisp text and lines at any zoom and screen density. Actively maintained. | Needs an OpenGL ES 3.0 GPU (practically every phone of the last decade). Custom pill markers take more work. Map images come from OpenFreeMap's free server (no uptime guarantee). The map style differs from Apple Maps. Larger APK (native libraries). |
+| Google Maps SDK (maps-compose) | The most polished and familiar; any composable can be a marker | **Requires a Google Cloud project with billing enabled and an API key.** The key can't be committed, so a reviewer without one sees a blank grey map. (Native mobile map loads are, to our knowledge, currently free of charge; the barrier is the mandatory billing account and key.) Needs Play services. |
+| osmdroid | No key; lightweight | Draws **raster** (bitmap) tiles in a classic Android View: zooming between levels blurs or shows tile seams, gestures are less fluid, and it is dated, with known visual glitches. Compose only through an interop wrapper; slower-moving maintenance; OpenStreetMap's own tile servers discourage heavy app use. |
+
+**Owner's reasoning:** Google Maps is ruled out by its mandatory billing account and key. osmdroid is ruled out by its known visual glitches. Its one advantage, being lightweight, doesn't matter here: we aren't targeting low-performance phones, so there's no reason to trade MapLibre's smoother, sharper, higher-resolution rendering for a smaller footprint.
+
+**iOS map** (with D8)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ Apple MapKit | Built in, free, no key; native look and gestures; draws geodesic route lines itself | Looks different from the Android map |
+| MapLibre on iOS too | Identical styling on both apps | More work and less native feel on iOS |
+
+### 4.6 Tooling and tests
+
+**A test-only JVM target** (D9, Claude)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ `jvm()` target for shared tests | Fast, runs on any OS and in CI; in-memory SQLite; lets the oracle test run the original Java Double Metaphone | The JVM isn't a shipped platform, so the same tests should also run on the iOS simulator (Mac) to cover Kotlin/Native |
+| Android host tests | Closer to a shipped platform | Slower, and awkward under AGP 9's new multiplatform plugin |
+
+**Agent instructions file** (P1, owner)
+
+| Option | Strengths here | Weaknesses here |
+|---|---|---|
+| ✅ `CLAUDE.md` | Claude Code reads it automatically | Other AI tools (Codex, Cursor, …) look for `AGENTS.md` and would need to be pointed at it |
+| `AGENTS.md` (+ a `CLAUDE.md` import) | Every tool reads the same file | One more indirection |
+
+**Fuzzy thresholds** (S6–S10, Claude): a 4-letter gate, an edit budget of 1–2, Dice ≥ 0.55, and a 0.10 margin. They are explainable and covered by 87 table tests, but were tuned on 32 airports, so re-validate them on a larger dataset.
+
 
 ## 5. Known limitations
 
@@ -173,4 +358,5 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑10‑30 | Double Metaphone port | Translated commons-codec's `DoubleMetaphone.java` to Kotlin | Oracle test against the original jar (150k+ words), plus commons-codec's own vectors |
 | 2026‑10‑30 | Search engine | Implemented the owner's design in Kotlin: the trie, trigram index, edit distance, ranking and tiered engine, with 54 tests | Tests pass on the JVM; the iOS klib compiles; owner review pending |
 | 2026‑10‑30 | Docs | After owner review: corrected the decision attribution (brief vs owner vs Claude), and recorded D16 (device location) and D17 (ranking scope) | Owner review |
+| 2026‑10‑30 | Docs | Wrote up every stack tradeoff from the planning conversation (§4), including the owner's reasoning for MapLibre | Owner review |
 | 2026‑10‑30 | `airports.json` | Recalled approximate 2024 passenger totals for the 32 airports | **Not verified**: labelled as approximate in the file and in §5 |

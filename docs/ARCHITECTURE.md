@@ -323,6 +323,8 @@ The app creates `AppGraph` once in `@main struct … : App`, and passes the mode
 
 ## 10. Libraries
 
+The per-choice tradeoffs (options, strengths, weaknesses, who chose and why) are in [SUBMISSION_NOTES.md §4](SUBMISSION_NOTES.md#4-technical-tradeoffs-by-stack-choice).
+
 Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatible with **Kotlin 2.4.21, AGP 9.3.1 and Gradle 9.7** at implementation time.
 
 | Concern | Choice | Why | Fallback |
@@ -356,7 +358,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D5 | Replace the whole cache on every successful refresh | Claude; awaiting review | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct | Merge or diff, which is unnecessary complexity |
 | D6 | Filter in memory on `Dispatchers.Default`, not in SQL | Claude; awaiting review | Only 1,000 rows. Pure functions are easier to test, and there is one code path. | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
 | D7 | A hand-written Swift bridge | Claude; awaiting review | No plugin coupled to Kotlin 2.4.21 | SKIE or KMP-NativeCoroutines, which carry version risk |
-| D8 | **MapLibre** on Android (MapKit on iOS) | Owner's choice (Claude's recommendation) | Open source and needs no API key, so the map works for any reviewer; a modern library for a new app | Google Maps Compose, which has the best Compose API but needs a Google Cloud API key with billing (reviewers without one see a blank map); osmdroid (older and View-based) |
+| D8 | **MapLibre** on Android (MapKit on iOS) | Owner's choice (Claude's recommendation) | Open source with no API key, so the map works for any reviewer. GPU-drawn vector tiles give smooth, sharp rendering, and we don't target low-end phones, so a lighter library buys nothing | Google Maps Compose (mandatory Google Cloud billing account and API key; reviewers without one see a blank map); osmdroid (raster tiles in a classic View, with known visual glitches) |
 | D9 | Add a `jvm()` target for tests | Claude; built, awaiting review | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
 | D10 | One app-scoped store per process | Claude; awaiting review | It survives rotation, avoids leaks, and gives one source of truth for list and map | Per-screen view models, which risk divergent state |
 | D11 | **Tiered search:** walk a prefix tree node by node in O(m); fuzzy only when the prefix tier finds nothing | **Owner** | Predictable while typing; fuzzy never adds noise to good prefix results | A blended score over every signal (it passed the same tests but is less predictable) |
