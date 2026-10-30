@@ -39,7 +39,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 |---|---|---|---|---|---|
 | D1 | Build the local API as a Ktor (Kotlin) module inside the existing Gradle build, run with `./gradlew :server:run` | API-1, API-2 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires | DATA-3, VIEW-1, SEL-2 | Claude | Awaiting owner review | 2026‑10‑29 |
-| D3 | Use SQLite through the SQLDelight library | DATA-2, DATA-4, DATA-5 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in M0. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in M0 | 2026‑10‑30 |
 | D4 | Store saved flights as full snapshots in their own table | OFF-6, OFF-7 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
@@ -131,17 +131,19 @@ Every technology choice made so far: the options considered, what each one gives
 | ✅ Ktor client + kotlinx.serialization | The standard KMP pair: one implementation for both apps; `MockEngine` makes failure tests easy | Another library family to keep compatible with Kotlin 2.4.21 |
 | Platform clients (OkHttp / URLSession) behind expect/actual | The most native networking | Networking would be written twice, against the brief's "once in KMP" |
 
-**On-device database** (D3, **open: owner to decide**)
+**On-device database** (D3, owner's choice: Room)
 
 Both options are libraries on top of **SQLite**, the database engine built into Android and iOS. Both meet every persistence requirement: atomic cache replacement, saving without duplicates, survival across restarts, reactive updates, work off the main thread, and in-memory tests on the JVM.
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
 | SQLDelight (Cash App) | Multiplatform since ~2019, very mature. **You write the SQL** and it generates type-safe Kotlin, so every query is visible and easy to explain. Smallest footprint (uses the phone's own SQLite). One Gradle plugin; simple migrations. | Uses the **phone's built-in SQLite**: Android 6 (our `minSdk 23`) ships a 2015 version with no "insert or update" syntax (we work around it with two statements), and the SQLite version differs by device and from iOS. The iOS app must link `sqlite3`. Its plugin's support for AGP 9's new multiplatform setup is unverified. |
-| Room KMP (Google) | Android's standard, so most reviewers know it. **You write Kotlin classes** with annotations. `@Upsert` maps directly onto OFF-6. It can **bundle its own modern SQLite**, so both apps and every Android version run the identical database, which also keeps modern features (full-text search, upsert) available for scaling. | Multiplatform only since 2025. More build machinery: the KSP code generator for 5 targets, plus database-constructor boilerplate for iOS. Generated code is hidden. The bundled SQLite adds roughly a megabyte per CPU architecture (est.). KSP/Room support for Kotlin 2.4.21 is unverified. |
+| ✅ Room KMP (Google), with its bundled SQLite | Android's standard, so most reviewers know it. **You write Kotlin classes** with annotations. `@Upsert` maps directly onto OFF-6. It can **bundle its own modern SQLite**, so both apps and every Android version run the identical database, which also keeps modern features (full-text search, upsert) available for scaling. | Multiplatform only since 2025. More build machinery: the KSP code generator for 5 targets, plus database-constructor boilerplate for iOS. Generated code is hidden. The bundled SQLite adds roughly a megabyte per CPU architecture (est.). KSP/Room support for Kotlin 2.4.21 is unverified. |
 | JSON files / DataStore | No library; trivial for 1,000 flights | We'd hand-build atomic writes, duplicate checks and change notifications, which is exactly what the databases provide |
 
-Neither database is strictly better. Room's edge here is one consistent, modern SQLite on both apps and every Android version, plus reviewer familiarity. SQLDelight's edge is fewer moving parts, visible SQL, the longest multiplatform track record, and the smallest app. Either sits behind our repositories, so switching later only touches the data layer. Whichever is picked gets a short compatibility check (PLAN M0) before anything is built on it.
+Neither database is strictly better. Room's edge here is one consistent, modern SQLite on both apps and every Android version, plus reviewer familiarity. SQLDelight's edge is fewer moving parts, visible SQL, the longest multiplatform track record, and the smallest app. Either sits behind our repositories, so switching later only touches the data layer.
+
+**Owner's reasoning for Room:** with SQLDelight, each phone runs its own built-in SQLite (a 2015 version on Android 6, a newer one on iOS), so a database issue could depend on the device and be hard to reproduce. Room's bundled SQLite is the same build everywhere, so what works, or breaks, on one device behaves the same on all of them. SQLDelight's fully visible SQL would make reading queries easier, but engine differences between devices are the harder kind of problem to debug. The accepted cost is Room's build setup and its version risk with Kotlin 2.4.21, which the PLAN M0 check confirms first; if it fails, the options go back to the owner.
 
 **Saved flights as snapshots** (D4, Claude)
 
@@ -359,4 +361,5 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑10‑30 | Search engine | Implemented the owner's design in Kotlin: the trie, trigram index, edit distance, ranking and tiered engine, with 54 tests | Tests pass on the JVM; the iOS klib compiles; owner review pending |
 | 2026‑10‑30 | Docs | After owner review: corrected the decision attribution (brief vs owner vs Claude), and recorded D16 (device location) and D17 (ranking scope) | Owner review |
 | 2026‑10‑30 | Docs | Wrote up every stack tradeoff from the planning conversation (§4), including the owner's reasoning for MapLibre | Owner review |
+| 2026‑10‑30 | Docs | Explained SQLDelight vs Room for the owner's D3 decision; recorded Room and updated the persistence design (ARCHITECTURE §5) | Owner review |
 | 2026‑10‑30 | `airports.json` | Recalled approximate 2024 passenger totals for the 32 airports | **Not verified**: labelled as approximate in the file and in §5 |

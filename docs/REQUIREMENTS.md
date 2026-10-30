@@ -25,7 +25,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
 | DATA-1 | Networking is implemented once in KMP | The HTTP client and DTO decoding live in `shared/commonMain`. Neither app makes HTTP calls. | R1–R12 | ⬜ |
-| DATA-2 | Persistence is implemented once in KMP | The schema, queries and repositories live in `shared`. Only the DB driver is per platform. | V1–V8, R3 | ⬜ |
+| DATA-2 | Persistence is implemented once in KMP | The Room entities, DAOs, database and repositories live in `shared` (D3). Only the database file location is per platform. | V1–V8, R3 | ⬜ |
 | DATA-3 | Search and filtering are implemented once in KMP and consumed by both apps | Neither app filters, sorts or groups flights itself. Both render `ExplorerState`. | S, F, O, M | ⬜ |
 | DATA-4 | The last successful API results are persisted | After a successful fetch, killing the app and relaunching with the API stopped shows the same results. | R1, R3 | ⬜ |
 | DATA-5 | Saved flights are stored locally | Saved flights survive app restarts and do not depend on the cache. | V1 | ⬜ |

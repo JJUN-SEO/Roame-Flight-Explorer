@@ -11,7 +11,7 @@ flowchart LR
   end
   subgraph SH[":shared · Kotlin Multiplatform"]
     API["FlightsApi (Ktor client)"] --> FR[FlightRepository]
-    DB[("SQLite via SQLDelight: cached_flight, sync_meta, saved_flight")]
+    DB[("Room + bundled SQLite: cached_flight, sync_meta, saved_flight")]
     FR <--> DB
     SR[SavedFlightsRepository] <--> DB
     FR --> ST["ExplorerStore: search, filter, sort, aggregate, selection"]
@@ -45,16 +45,15 @@ shared/src/
                     SearchText, AirportRanking         ← implemented (§4.4)
     vendor/commonscodec/  DoubleMetaphone              ← third-party port (Apache-2.0), see §4.4
     data/remote/    FlightsApi, FlightsEnvelopeDto, FlightDto, error mapping
-    data/local/     DriverFactory (expect), FlightCacheDao, SavedFlightDao
+    data/local/     AppDatabase, entities, FlightCacheDao, SavedFlightDao (Room, §5)
     data/           FlightRepository, SavedFlightsRepository (interfaces + impls)
     presentation/   ExplorerStore, ExplorerState, FlightItem, SavedFlightItem,
                     DestinationMarker, DataStatus, UserMessage
     di/             AppGraph                            ← the single composition root
-  commonMain/sqldelight/travel/roame/takehome/db/
-    CachedFlight.sq  SyncMeta.sq  SavedFlight.sq
-  androidMain/      DriverFactory(context), OkHttp engine
-  iosMain/          DriverFactory(), Darwin engine, ios/ExplorerStoreIos.kt (Swift bridge)
-  jvmMain/          DriverFactory (JdbcSqliteDriver), engine for completeness
+  androidMain/      Room database builder (file path from Context), OkHttp engine
+  iosMain/          Room database builder (Documents dir), Darwin engine, ios/ExplorerStoreIos.kt (Swift bridge)
+  jvmMain/          Room database builder (tests use in-memory), engine for completeness
+shared/schemas/     Room's exported schema JSON (version 1)
   commonTest/       rule tests, fakes, builders
   jvmTest/          fixture contract tests; DoubleMetaphoneOracleTest (port vs the commons-codec jar)
 ```
@@ -152,48 +151,102 @@ flowchart LR
 
 **Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
-## 5. Persistence (SQLDelight)
+## 5. Persistence (Room, D3)
 
-The database file is `roame.db`, at schema version 1, with no migrations.
+The owner chose **Room** (Google's database library, multiplatform since 2.7), running on its **bundled SQLite** (`BundledSQLiteDriver`). Every Android version (6 and up) and iOS therefore runs the *same* modern SQLite build. Behaviour, and bugs, reproduce identically on every device, and modern SQL (`ON CONFLICT … DO UPDATE`, full-text search) is available everywhere.
 
-```sql
--- CachedFlight.sq
-CREATE TABLE cached_flight (
-  id TEXT NOT NULL PRIMARY KEY,
-  origin TEXT NOT NULL, origin_city TEXT NOT NULL, origin_lat REAL NOT NULL, origin_lon REAL NOT NULL,
-  destination TEXT NOT NULL, destination_city TEXT NOT NULL, destination_lat REAL NOT NULL, destination_lon REAL NOT NULL,
-  departure_date TEXT NOT NULL,          -- ISO yyyy-MM-dd
-  program TEXT NOT NULL,
-  points INTEGER NOT NULL,
-  cabin TEXT NOT NULL
-);
+The database file is `roame.db`, at schema version 1, with no migrations. Room writes a JSON description of the schema to `shared/schemas/` (for future auto-migrations).
 
--- SyncMeta.sq  (single row; absent = never synced, R8)
-CREATE TABLE sync_meta (
-  id INTEGER NOT NULL PRIMARY KEY CHECK (id = 0),
-  last_success_at INTEGER NOT NULL       -- epoch millis
-);
-
--- SavedFlight.sq  (same flight columns as cached_flight, plus:)
---   saved_at INTEGER NOT NULL
-```
-
-**Refresh transaction (R3 + V5):**
+### 5.1 Tables (entities)
 
 ```kotlin
-withContext(io) {
-    db.transaction {
-        cachedFlightQueries.deleteAll()
-        flights.forEach(cachedFlightQueries::insert)
-        syncMetaQueries.upsertLastSuccess(now)               // INSERT OR REPLACE on the single row
-        flights.forEach(savedFlightQueries::updateDetailsWhereIdMatches)
+@Entity(tableName = "cached_flight")
+data class CachedFlightEntity(
+    @PrimaryKey val id: String,
+    val origin: String, val originCity: String, val originLat: Double, val originLon: Double,
+    val destination: String, val destinationCity: String, val destinationLat: Double, val destinationLon: Double,
+    val departureDate: String,   // ISO yyyy-MM-dd
+    val program: String,
+    val points: Int,
+    val cabin: String,
+)
+
+@Entity(tableName = "saved_flight")   // the same flight columns, plus:
+data class SavedFlightEntity(/* …flight columns… */ val savedAt: Long)   // epoch millis
+
+@Entity(tableName = "sync_meta")      // single row (id = 0); absent = never synced (R8)
+data class SyncMetaEntity(@PrimaryKey val id: Int = 0, val lastSuccessAt: Long)
+```
+
+### 5.2 Access objects (DAOs) and transactions
+
+```kotlin
+@Dao
+abstract class FlightCacheDao {
+    @Query("SELECT * FROM cached_flight") abstract fun observeAll(): Flow<List<CachedFlightEntity>>
+    @Query("SELECT * FROM sync_meta WHERE id = 0") abstract fun observeMeta(): Flow<SyncMetaEntity?>
+
+    /** R3 + V5: one transaction, so a failure part-way leaves the old cache intact. */
+    @Transaction
+    open suspend fun replaceAll(flights: List<CachedFlightEntity>, now: Long) {
+        deleteAll()
+        insertAll(flights)
+        upsertMeta(SyncMetaEntity(lastSuccessAt = now))
+        flights.forEach { updateSavedDetails(/* id + new details */) }   // V5: refresh saved snapshots
     }
+    // deleteAll / insertAll / upsertMeta / updateSavedDetails: @Query / @Insert / @Upsert
+}
+
+@Dao
+abstract class SavedFlightDao {
+    @Query("SELECT * FROM saved_flight ORDER BY departureDate, id")
+    abstract fun observeAll(): Flow<List<SavedFlightEntity>>
+
+    /** V2 / OFF-6: one row per id; re-saving updates the details but keeps the original savedAt. */
+    @Transaction
+    open suspend fun save(flight: SavedFlightEntity) {
+        val existing = findById(flight.id)
+        upsert(flight.copy(savedAt = existing?.savedAt ?: flight.savedAt))
+    }
+    @Upsert protected abstract suspend fun upsert(flight: SavedFlightEntity)
+    @Query("SELECT * FROM saved_flight WHERE id = :id") protected abstract suspend fun findById(id: String): SavedFlightEntity?
+    @Query("DELETE FROM saved_flight WHERE id = :id") abstract suspend fun remove(id: String)
 }
 ```
 
-**Upsert without `ON CONFLICT … DO UPDATE` (V2).** `minSdk` is 23, and the platform SQLite on old Android versions predates SQLite's UPSERT syntax (3.24). Use two statements in one transaction: `INSERT OR IGNORE …`, then `UPDATE … WHERE id = ?`. This keeps `saved_at` and works on every SQLite version. Avoid `INSERT OR REPLACE` for saved rows, because it deletes and re-inserts the row and resets `saved_at`.
+- **Reads** are `Flow`s, so the UI updates whenever a table changes. This is what makes "no optimistic UI" (V7) possible.
+- **Writes** are `suspend` functions. The database runs them on `Dispatchers.IO` (`setQueryCoroutineContext`), so they never block the main thread. Failures surface as exceptions that the repositories turn into `Result` (V7).
+- With Room's multiplatform support, DAO functions must be `suspend` or return `Flow`. Blocking DAO calls are Android-only, so we never use them.
 
-**Reads** go through `asFlow().mapToList(io)`, from SQLDelight's coroutines extensions, so they never run on the main thread.
+### 5.3 Database and per-platform builders
+
+```kotlin
+@Database(entities = [CachedFlightEntity::class, SavedFlightEntity::class, SyncMetaEntity::class], version = 1)
+@ConstructedBy(AppDatabaseConstructor::class)          // lets iOS/JVM find Room's generated code
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun flightCacheDao(): FlightCacheDao
+    abstract fun savedFlightDao(): SavedFlightDao
+}
+expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase>   // filled in by Room's generator
+
+// commonMain: the only shared setup
+fun RoomDatabase.Builder<AppDatabase>.configure(): AppDatabase =
+    setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()
+```
+
+Only the **file location** differs per platform:
+
+- Android: `Room.databaseBuilder<AppDatabase>(context, context.getDatabasePath("roame.db").absolutePath)`
+- iOS: `Room.databaseBuilder<AppDatabase>(name = <Documents dir>/roame.db)`
+- Tests (JVM): `Room.inMemoryDatabaseBuilder<AppDatabase>()`, or a temp file for the "survives reopen" tests
+
+### 5.4 Build setup (one-time, checked in PLAN M0)
+
+- Plugins: `com.google.devtools.ksp` (Room's code generator) and `androidx.room` (with `room { schemaDirectory("$projectDir/schemas") }`).
+- Dependencies: `androidx.room:room-runtime` and `androidx.sqlite:sqlite-bundled` in `commonMain`.
+- `room-compiler` is registered with KSP once **per target**: `kspAndroid`, `kspIosArm64`, `kspIosSimulatorArm64`, `kspIosX64` and `kspJvm`.
+- **Known risk:** KSP and Room must support Kotlin 2.4.21 and AGP 9.3.1. If the M0 check fails, the options go back to the owner; SQLDelight is the fallback.
+- The bundled SQLite is compiled into the app: roughly +1 MB per CPU architecture (estimate). Play Store users download only their own architecture's copy. The iOS app needs **no** `-lsqlite3` linker flag.
 
 ## 6. Networking & the local API
 
@@ -253,7 +306,7 @@ The platform passes the base URL into `AppGraph`. Shared code never hardcodes a 
 |---|---|
 | Intents and state collection | `Dispatchers.Main.immediate` (the store scope) |
 | Reduce, search index, aggregation | `Dispatchers.Default` |
-| SQLite reads and writes | `Dispatchers.IO` (`kotlinx.coroutines.IO` on Native) |
+| SQLite reads and writes | Room, on `Dispatchers.IO` via `setQueryCoroutineContext` (`kotlinx.coroutines.IO` on Native) |
 | HTTP | Ktor engine threads (`suspend`) |
 
 - `AppGraph` is created **once per process** and owns `CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)`. Because the store is app-scoped, Android rotation or configuration changes never lose state, and there are no per-screen stores to leak.
@@ -302,7 +355,7 @@ Rules for the Swift-facing API:
 - No default arguments relied on from Swift, no generics, and no `suspend` or `Flow` in public signatures.
 - UI models (`FlightItem` and similar) expose primitive-friendly fields: `String`, `Int`, `Double`, `Bool`, and ISO date strings rather than `LocalDate`.
 - Sealed types (`DataStatus`, `FetchError`) appear in Swift as class hierarchies. Switch on them with `case let x as DataStatus.Ready`.
-- `Shared` is a **static** framework, so add `-lsqlite3` to the app target's `OTHER_LDFLAGS` for SQLDelight's native driver.
+- `Shared` is a **static** framework. Room's bundled SQLite is compiled into it, so the app needs no `-lsqlite3` linker flag.
 - Optional: use **SKIE** (Touchlab), which gives Swift enums and `AsyncSequence`, but only if a release supports Kotlin 2.4.21. Check that first; otherwise keep the bridge above.
 
 The app creates `AppGraph` once in `@main struct … : App`, and passes the model down through `.environment(model)`.
@@ -333,7 +386,7 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | JSON | kotlinx-serialization-json (+ plugin) | KMP-native, compile-time | — |
 | Dates | kotlinx-datetime `LocalDate` | Calendar dates with no timezone traps | ISO strings, which compare correctly as text |
 | HTTP client | Ktor client: core, content-negotiation, okhttp, darwin, mock | The standard KMP client; `MockEngine` for tests | — |
-| Database | SQLDelight 2.x: runtime, coroutines-extensions, android/native/sqlite drivers | Typed SQL, Flow queries, mature KMP drivers, JVM in-memory driver for tests | Room KMP (bundled SQLite driver), then a JSON file with atomic writes |
+| Database (D3) | **Room KMP** (`room-runtime`, KSP `room-compiler`) + **bundled SQLite** (`sqlite-bundled`) | The same modern SQLite on every Android version and iOS; `@Upsert`, `@Transaction`, `Flow` queries; the Android standard; in-memory JVM tests | SQLDelight (the fallback if Room/KSP don't support Kotlin 2.4.21; owner to confirm) |
 | Server | Ktor server (Netty/CIO) in `:server` | Same language and build, so `./gradlew :server:run` is the single command | A ~20-line Node or Python script |
 | Flow testing | Turbine | Readable Flow assertions | Collect into lists manually |
 | iOS bridge | Hand-written `observe()` wrapper | No dependency on Kotlin-version-specific plugins | SKIE, if compatible |
@@ -353,7 +406,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 |---|---|---|---|---|
 | D1 | The local API is a Ktor JVM module in the same Gradle build | Claude; awaiting review | One language and one command. It reuses the Gradle and JDK setup that already exists. | Node or Python, which add a runtime dependency for reviewers |
 | D2 | Share **presentation state** (`ExplorerStore`), not just repositories | Claude; awaiting review | Selection, map grouping, active filters and offline state then behave identically on both platforms and are unit-tested once | Separate per-platform view models over shared repositories, which duplicates rules |
-| D3 | SQLite via SQLDelight | Claude; awaiting review | Transactions for atomic cache replacement, upsert for saved flights, reactive queries, and in-memory JVM tests | DataStore or JSON files: no transactions or queries. Room KMP is a close second. |
+| D3 | **Room KMP on its bundled SQLite** | Owner's choice | One identical SQLite build on every phone and on iOS, so behaviour and bugs reproduce the same everywhere; transactions, `@Upsert` and `Flow` queries; familiar to Android reviewers. Accepted risk: KSP/Room support for Kotlin 2.4.21, checked first in M0 | SQLDelight (visible SQL and the longest multiplatform record, but it uses each phone's own SQLite, whose version varies by device); DataStore or JSON files (no transactions or queries) |
 | D4 | Saved flights are snapshots in their own table | Claude; awaiting review | They survive being missing from the API response (V4) and cache wipes | A saved-ids table joined to the cache, which loses flights that vanish from the API |
 | D5 | Replace the whole cache on every successful refresh | Claude; awaiting review | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct | Merge or diff, which is unnecessary complexity |
 | D6 | Filter in memory on `Dispatchers.Default`, not in SQL | Claude; awaiting review | Only 1,000 rows. Pure functions are easier to test, and there is one code path. | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
@@ -378,7 +431,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Layer | Current design | Cost per operation | Comfortable up to (est.) | Next step beyond that |
 |---|---|---|---|---|
 | Local API | Returns the whole fixture on every request | O(n) bytes (~430 KB today) | ~10k flights (~4 MB) | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
-| Cache (SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departure_date`, `origin`, `destination`, `points` |
+| Cache (Room + bundled SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default` | O(n) filter + O(k log k) sort per input change | ~100k flights | Push predicates into indexed SQL that returns ids; page the results |
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²) | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n) | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |

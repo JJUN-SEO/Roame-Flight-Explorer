@@ -58,8 +58,8 @@ shared/                KMP module → Android library + static Shared.framework 
   src/commonMain/kotlin/travel/roame/takehome/
     domain/search/       airport search engine: trie, fuzzy, ranking (DOMAIN_RULES §2, §2b)
     vendor/commonscodec/ DoubleMetaphone — THIRD-PARTY port (Apache-2.0), see THIRD_PARTY_NOTICES.md
-    {model,data,presentation,di} †
-  src/commonMain/sqldelight/ †
+    {model,data,presentation,di} †   (data/local = Room database, ARCHITECTURE §5)
+  shared/schemas/ †      Room's exported schema JSON
   src/commonTest/        rule tests (run on JVM and iOS)
   src/jvmTest/           fixture contracts + DoubleMetaphoneOracleTest (port vs commons-codec jar)
   src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = Swift bridge †)
@@ -108,8 +108,10 @@ These were found in the starter and the fixture.
   - The API is cleartext HTTP, so add a network security config that allows `10.0.2.2` and `localhost`.
   - The emulator reaches the host at `http://10.0.2.2:8080`.
 - **iOS networking:** the simulator uses `http://localhost:8080`. Add `NSAppTransportSecurity › NSAllowsLocalNetworking = YES` to `iosApp/Info.plist`.
-- **iOS linking:** `Shared` is a **static** framework. SQLDelight's native driver needs `-lsqlite3` in the app's `OTHER_LDFLAGS`.
-- **SQLite on old Android:** `minSdk 23` means old platform SQLite with no `ON CONFLICT DO UPDATE`. Upsert with `INSERT OR IGNORE` + `UPDATE` instead.
+- **Database (D3):** use Room with the **bundled** SQLite driver (`BundledSQLiteDriver`), never the platform driver. That keeps one modern SQLite on every Android version and iOS, and the iOS app needs no `-lsqlite3`.
+  - In multiplatform Room, DAO functions must be `suspend` or return `Flow`.
+  - Register `room-compiler` with KSP for every target.
+  - Re-saving a flight must keep its original `savedAt` (V2), so use the `@Transaction` save in ARCHITECTURE §5.2 rather than a bare `@Upsert`.
 - **Fixture traps:**
   - "Mileage Plan" and "MileagePlus" are different programs.
   - Tokyo has two airports (HND and NRT).

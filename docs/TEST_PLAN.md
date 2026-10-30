@@ -20,7 +20,7 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 - `FakeFlightsApi`: a scripted queue of responses or errors, with a configurable delay.
 - `FakeSavedFlightsRepository(failOn = setOf(Op.Save))`: for V7.
 - `TestClock`: a settable `now`.
-- `testDb()`: `JdbcSqliteDriver(IN_MEMORY)` on the JVM, or a temp file for the "reopen" tests.
+- `testDb()`: `Room.inMemoryDatabaseBuilder<AppDatabase>()` with the bundled SQLite driver on the JVM, or a temp-file database for the "survives reopen" tests.
 
 ## 2. Shared test matrix
 
