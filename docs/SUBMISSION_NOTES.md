@@ -44,7 +44,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
-| D8 | The Android map library. Claude suggested MapLibre (no API key); iOS uses Apple's built-in MapKit | MAP-1 – MAP-4 | Claude | **Open: owner to choose** | 2026‑10‑29 |
+| D8 | **MapLibre** is the Android map library: open source, no API key, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
 | D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Claude | Built with the search engine; awaiting owner review | 2026‑10‑30 |
 | D10 | One app-scoped store per process | SEL-2, VIEW-1 | Claude | Awaiting owner review | 2026‑10‑29 |
 | P1 | Keep the agent guide as `CLAUDE.md` (no `AGENTS.md`) | — | Owner | Decided | 2026‑10‑30 |

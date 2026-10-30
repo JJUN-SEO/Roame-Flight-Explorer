@@ -20,7 +20,8 @@ Gate: nothing else starts until M0 is done.
 - [ ] Build and run the starter on Android (emulator) and iOS (simulator). Record the result in TEST_PLAN P1 (DEL-6).
 - [ ] Create `gradle/libs.versions.toml` and pick library versions compatible with Kotlin 2.4.21, AGP 9.3.1 and Gradle 9.7.
 - [ ] **Spike:** add SQLDelight + Ktor + serialization to `:shared` and add the `jvm()` target. Confirm that `./gradlew :shared:jvmTest` runs and that the iOS framework still builds. If SQLDelight fights the AGP 9 KMP plugin, switch to Room KMP (D3).
-- [ ] **Owner decision D8 (Android map library)**, then a time-boxed spike: a map in Compose with one text marker and one line.
+- [x] Owner decision D8: **MapLibre** for the Android map.
+- [ ] **Spike (time-boxed, can run in parallel with M4):** a MapLibre map in Compose with one text marker and one line. If it doesn't work out, bring the options back to the owner before switching (rule 2).
 
 ### M1 · Local API → API-1, API-2
 
@@ -98,7 +99,7 @@ Requested by the owner. Implemented ahead of the rest of M3, under review.
 |---|---|---|---|
 | Library versions incompatible with Kotlin 2.4.21 / AGP 9.3.1 (both very new) | Medium | High | M0 spike first; fall back to Room KMP; pin versions in the catalog |
 | SQLDelight + the new `com.android.kotlin.multiplatform.library` plugin | Medium | Medium | Same spike; fall back to Room KMP |
-| MapLibre in Compose takes too long (custom pill markers) | Medium | Medium | Time-boxed spike; fall back to Google Maps Compose (needs a key) |
+| MapLibre in Compose takes too long (custom pill markers) | Medium | Medium | Time-boxed spike. If it fails, ask the owner before falling back to Google Maps Compose (needs a key) |
 | Swift 6 strict concurrency vs Kotlin callbacks | Medium | Low | Main-thread delivery + `MainActor.assumeIsolated`; keep the bridge tiny |
 | Static framework missing `sqlite3` at link time | High (if forgotten) | Low | Add `-lsqlite3` to `OTHER_LDFLAGS` during iOS setup |
 | Emulator or simulator can't reach the API (cleartext, wrong host) | High (if forgotten) | Medium | Platform setup checklists in M4 and M5; ARCHITECTURE §6.4 |

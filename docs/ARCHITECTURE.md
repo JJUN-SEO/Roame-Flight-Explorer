@@ -315,7 +315,7 @@ The app creates `AppGraph` once in `@main struct … : App`, and passes the mode
 - Screens read `app.graph.explorerStore.state.collectAsStateWithLifecycle()`. There is no Android `ViewModel` layer, because the shared store already outlives configuration changes.
 - Navigation uses `rememberSaveable` tab state. Two tabs don't need a navigation library.
 - Lists use `LazyColumn(items(results, key = { it.id }))`, with stable and immutable models (`@Immutable` where helpful).
-- Add these dependencies: `material3`, `lifecycle-runtime-compose`, the map SDK (D8, open), and `leakcanary-android` (debug only).
+- Add these dependencies: `material3`, `lifecycle-runtime-compose`, MapLibre (D8), and `leakcanary-android` (debug only).
 - **Location (D16):**
   - Fused Location Provider comes from Google Play services (`com.google.android.gms:play-services-location`), so the emulator needs a "Google Play" or "Google APIs" system image.
   - Declare `ACCESS_COARSE_LOCATION` and request it only when the user taps "Use my location".
@@ -336,7 +336,7 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | Flow testing | Turbine | Readable Flow assertions | Collect into lists manually |
 | iOS bridge | Hand-written `observe()` wrapper | No dependency on Kotlin-version-specific plugins | SKIE, if compatible |
 | iOS map | MapKit for SwiftUI (`Map`, `Annotation`, `MapPolyline(…, contourStyle: .geodesic)`) | Built in, iOS 17, no API key | — |
-| Android map *(D8, open)* | Suggested: **MapLibre Native Android** with OpenFreeMap tiles, no API key | Reviewers can run it with no setup | Google Maps Compose, which has the best Compose API (`MarkerComposable`) but needs a Maps API key in `local.properties` |
+| Android map (D8) | **MapLibre Native Android** with OpenFreeMap tiles, no API key | Reviewers can run it with no setup | Google Maps Compose (needs an API key), only with the owner's approval if MapLibre fails |
 | Device location *(D16)* | Android: Fused Location Provider (`play-services-location`). iOS: Core Location (built in) | Works offline, no third party | — |
 | Leaks | LeakCanary (Android debug), Xcode Memory Graph and Leaks instrument | — | — |
 | Phonetic matching | **Vendored** Double Metaphone: a Kotlin port of Apache Commons Codec 1.23.0, Apache-2.0 | No KMP library exists, and commons-codec is JVM-only (no iOS) | — |
@@ -356,7 +356,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D5 | Replace the whole cache on every successful refresh | Claude; awaiting review | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct | Merge or diff, which is unnecessary complexity |
 | D6 | Filter in memory on `Dispatchers.Default`, not in SQL | Claude; awaiting review | Only 1,000 rows. Pure functions are easier to test, and there is one code path. | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
 | D7 | A hand-written Swift bridge | Claude; awaiting review | No plugin coupled to Kotlin 2.4.21 | SKIE or KMP-NativeCoroutines, which carry version risk |
-| D8 | Android map library | **Open: owner to choose.** Claude suggested MapLibre | MapLibre needs no API key, so the map works for any reviewer | Google Maps Compose, which has the best Compose API but needs a Google Cloud API key; osmdroid (older, View-based) |
+| D8 | **MapLibre** on Android (MapKit on iOS) | Owner's choice (Claude's recommendation) | Open source and needs no API key, so the map works for any reviewer; a modern library for a new app | Google Maps Compose, which has the best Compose API but needs a Google Cloud API key with billing (reviewers without one see a blank map); osmdroid (older and View-based) |
 | D9 | Add a `jvm()` target for tests | Claude; built, awaiting review | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
 | D10 | One app-scoped store per process | Claude; awaiting review | It survives rotation, avoids leaks, and gives one source of truth for list and map | Per-screen view models, which risk divergent state |
 | D11 | **Tiered search:** walk a prefix tree node by node in O(m); fuzzy only when the prefix tier finds nothing | **Owner** | Predictable while typing; fuzzy never adds noise to good prefix results | A blended score over every signal (it passed the same tests but is less predictable) |
