@@ -20,7 +20,7 @@ Gate: nothing else starts until M0 is done.
 - [ ] Build and run the starter on Android (emulator) and iOS (simulator). Record the result in TEST_PLAN P1 (DEL-6).
 - [ ] Create `gradle/libs.versions.toml` and pick library versions compatible with Kotlin 2.4.21, AGP 9.3.1 and Gradle 9.7.
 - [ ] **Spike:** add SQLDelight + Ktor + serialization to `:shared` and add the `jvm()` target. Confirm that `./gradlew :shared:jvmTest` runs and that the iOS framework still builds. If SQLDelight fights the AGP 9 KMP plugin, switch to Room KMP (D3).
-- [ ] **Spike (time-boxed, can run in parallel with M4):** a MapLibre map in Compose with one text marker and one line. If it doesn't work out, switch to Google Maps Compose and document the API key setup (D8).
+- [ ] **Owner decision D8 (Android map library)**, then a time-boxed spike: a map in Compose with one text marker and one line.
 
 ### M1 · Local API → API-1, API-2
 
@@ -56,8 +56,8 @@ Requested by the owner. Implemented ahead of the rest of M3, under review.
 - [x] `fixtures/airports.json` (separate file; `flights.json` untouched).
 - [x] Tests: 54 shared tests passing on the JVM; the iOS klib compiles.
 - [ ] **Owner review** → push.
-- [ ] *Decisions pending:* the location source (on-device location vs geo-IP, P2) and whether ranking reorders the flight list (P7).
-- [ ] *Later:* `GET /airports` in M1, plus loading and caching in M2. Wire the engine into `ExplorerStore` and the hint UI (S13) in M3–M5.
+- [x] Owner decisions: location comes from the device (D16); ranking orders matched airports only, never the flight list (D17).
+- [ ] *Later:* `GET /airports` in M1, plus loading and caching in M2. Wire the engine into `ExplorerStore` and the hint UI (S13) in M3–M5. Add device location in M4 and M5.
 
 ### M4 · Android app
 
@@ -68,12 +68,13 @@ Requested by the owner. Implemented ahead of the rest of M3, under review.
 - [ ] Map: markers, marker sheet, route line, camera rules.
 - [ ] Selection card + Save/Remove with pending and error states; snackbar.
 - [ ] Saved tab.
+- [ ] "Use my location" (⌖): Fused Location Provider, `ACCESS_COARSE_LOCATION`, one balanced-power fix → store (D16).
 - [ ] Run QA Q1–Q24 on Android.
 
 ### M5 · iOS app
 
 - [ ] Platform setup: ATS local networking, `API_BASE_URL` in Info.plist, `-lsqlite3`, `ExplorerModel` bridge.
-- [ ] The same feature list as M4, in SwiftUI with MapKit.
+- [ ] The same feature list as M4, in SwiftUI with MapKit, including "Use my location" with Core Location and `NSLocationWhenInUseUsageDescription` (D16).
 - [ ] Run QA Q1–Q24 on iOS.
 
 ### M6 · Hardening, scale & polish

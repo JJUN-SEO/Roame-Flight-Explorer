@@ -51,7 +51,14 @@ data class Flight(
 
 ## 2. Search (S)
 
-Implemented in `shared/src/commonMain/kotlin/travel/roame/takehome/domain/search/` (`AirportSearchEngine`). The owner chose the design (SUBMISSION_NOTES §2, D11–D13): **tiered search, with prefix first and fuzzy as the fallback**.
+Implemented in `shared/src/commonMain/kotlin/travel/roame/takehome/domain/search/` (`AirportSearchEngine`).
+
+**The design is the owner's** (SUBMISSION_NOTES §2, D11–D17):
+- a prefix tree walked node by node,
+- a tiered fallback to fuzzy matching that mixes phonetic and n-gram matching, plus accent folding,
+- ranking by the user's location and airport volume.
+
+Claude implemented it, added an edit-distance typo signal (D12), and chose the thresholds below.
 
 Search resolves each text field to a set of **airports**. Flights are then filtered by those airport codes. Matching never scans flights (SCALE-1).
 
@@ -64,7 +71,7 @@ query → S1 normalise → Tier 1: prefix tree (S4) ──found──▶ matches
       → ranked by P1–P6 → "Showing …" hint in the UI when fuzzy (S13)
 ```
 
-The four ways people mistype a place, and what catches each:
+The owner's hypothesis is that people mistype a place in four ways. Here is what catches each:
 
 | Case | Example | Caught by |
 |---|---|---|
@@ -149,7 +156,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   `(w_proximity · proximity + w_volume · volume) / (w_proximity + w_volume)`
 - **P2** `proximity = exp(−distance_km / 1000)`, where the distance is the great-circle (haversine) distance from the user's location to the airport.
   - Without a location (unknown, permission denied, or not available yet), priority is volume only.
-  - *The location source is **pending an owner decision**. Proposed: on-device location (Fused Location Provider / Core Location) instead of geo-IP.*
+  - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". There is no geo-IP and no third party.
 - **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched.
 - **P4 Fallback to the original data.**
   - If `airports.json` is missing or fails to load, `volume = flights per airport in flights.json / max`.
@@ -157,7 +164,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - Search and ranking always work with `flights.json` alone. *(assumption: "fall back to the original data" means deriving volume from the flight counts in `flights.json`)*
 - **P5** The weights are origin 0.7 proximity / 0.3 volume (you usually fly from somewhere near you), and destination 0.2 / 0.8 (where you go is mostly about popularity). *(assumption)*
 - **P6 Order of matches:** match score ↓, then priority ↓, then code ↑. A blank query is ordered by priority ↓, then code ↑.
-- **P7** Whether priority also reorders the **flight list** is *pending an owner decision*. Until then, the flight list keeps O1.
+- **P7** Priority **never reorders the flight list** (owner decision D17, option A). It only orders the matched airports: the hint line (S13), and autocomplete if added later. The flight list always keeps O1 (date, then points).
 
 ## 3. Filters (F)
 

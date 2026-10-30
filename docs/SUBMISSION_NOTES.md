@@ -8,39 +8,57 @@ Flight Explorer is two native apps (SwiftUI and Jetpack Compose) on a single Kot
 
 A small Ktor server (`./gradlew :server:run`) serves the fixture verbatim at `GET /flights`.
 
+The airport search engine follows the owner's design: a prefix tree first, then fuzzy matching that mixes phonetic and n-gram matching (plus accent folding). It is built around the owner's four ways people mistype a place. Matches are ranked by the device's location and by airport passenger volume (D11–D17).
+
 ## 2. Decision record
 
-Every notable architectural decision, who made it, and when. The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](ARCHITECTURE.md#11-decision-log).
+Who shaped each part of the design. The **Origin** column separates four things:
 
-**Decided by** means:
-- **Owner:** the project owner chose it.
-- **Owner (approved):** Claude proposed it and the owner explicitly approved it.
-- **Proposed:** Claude proposed it in the planning docs, and the owner hasn't individually reviewed it yet.
+- **Brief:** the assignment requires it. It isn't our decision; §2.1 lists these only to show what each design serves.
+- **Owner:** the owner's own idea or instruction.
+- **Owner's choice:** the owner picked one of the options Claude laid out.
+- **Claude:** Claude's choice of *how* to meet a brief requirement, written into the planning docs. The **Status** column says whether the owner has reviewed it yet.
 
-| # | Decision | Why | Decided by | Date |
-|---|---|---|---|---|
-| D1 | The local API is a Ktor JVM module in the same Gradle build | One language and one command (`./gradlew :server:run`) | Proposed | 2026‑10‑29 |
-| D2 | Share presentation state (`ExplorerStore`), not just repositories | List and map can't disagree; selection and offline rules are tested once | Proposed | 2026‑10‑29 |
-| D3 | SQLite via SQLDelight | Atomic cache replacement, upserts, reactive queries, fast JVM tests | Proposed | 2026‑10‑29 |
-| D4 | Saved flights are snapshots in their own table | They survive being missing from the API response | Proposed | 2026‑10‑29 |
-| D5 | Replace the whole cache on each successful refresh | The API returns the full dataset, so a full replace is simplest and correct | Proposed | 2026‑10‑29 |
-| D6 | Filter in memory with `mapLatest` | 1,000 rows; pure, testable functions; latest input wins | Proposed | 2026‑10‑29 |
-| D7 | A hand-written Kotlin→Swift bridge | Avoids plugins tied to specific Kotlin versions | Proposed | 2026‑10‑29 |
-| D8 | MapLibre on Android, MapKit on iOS | No API keys, so reviewers can run both apps | Proposed | 2026‑10‑29 |
-| D9 | A test-only `jvm()` target in `:shared` | Fast shared tests on any OS | Proposed | 2026‑10‑29 |
-| D10 | One app-scoped store per process | Survives rotation, avoids leaks, one source of truth | Proposed | 2026‑10‑29 |
-| P1 | Keep the agent guide as `CLAUDE.md` (no `AGENTS.md`) | Owner's preference | Owner | 2026‑10‑30 |
-| P2 | Work one functionality at a time. The owner reviews each one, and it is pushed only after acceptance. | Keeps every change reviewable and owned | Owner | 2026‑10‑30 |
-| P3 | Ask the owner before significant architectural decisions, and record them here | The owner must be able to explain and defend every design | Owner | 2026‑10‑30 |
-| D11 | **Tiered search.** Tier 1 is a prefix tree walked node by node in O(m). Tier 2 (fuzzy) runs only when Tier 1 finds nothing. | Predictable while typing; fuzzy never pollutes good prefix results | Owner | 2026‑10‑30 |
-| D12 | **Mixed fuzzy matching**: typo distance + phonetic (Double Metaphone) + trigram n-grams, plus accent folding | Covers the four ways people mistype a place: typo, sound-alike, partly right, accents | Owner | 2026‑10‑30 |
-| D13 | **Double Metaphone is copied from Apache Commons Codec and translated to Kotlin, with credit** (not written from scratch) | No multiplatform library exists, and the Java library can't run on iOS. See §8. | Owner | 2026‑10‑30 |
-| D14 | **"Showing Sydney (SYD)" hint** under a field when fuzzy matching was used | Silent corrections would confuse people | Owner (approved) | 2026‑10‑30 |
-| D15 | **Ranking by user location + annual passenger volume.** Volume lives in a new, separate `fixtures/airports.json`; `flights.json` is never edited. If the file is missing, volume falls back to flight counts from `flights.json`. | Nearby and busy airports first, without changing the provided data, and the app works without the extra file | Owner | 2026‑10‑30 |
-| D16 | Search runs on **airports, not flights**, behind indexes | Search cost doesn't grow with the number of flights (SCALE-1) | Proposed | 2026‑10‑30 |
-| D17 | Ranking weights: origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8 | You fly *from* near you; *where* you go is about popularity | Proposed | 2026‑10‑30 |
-| — | *Pending:* the source of the user's location. Proposed: on-device location (Fused Location Provider / Core Location). Alternative: geo-IP via the local API. | — | **Awaiting owner** | — |
-| — | *Pending:* whether ranking also reorders the flight list (P7) | — | **Awaiting owner** | — |
+The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](ARCHITECTURE.md#11-decision-log).
+
+### 2.1 What the brief fixes (not our decisions)
+
+| Brief requirement | IDs |
+|---|---|
+| Two native apps: SwiftUI on iOS, Kotlin + Jetpack Compose on Android | REQUIREMENTS §0 |
+| One shared Kotlin Multiplatform data and persistence layer. Networking, persistence, search and filtering are implemented once, and both apps consume them | DATA-1 – DATA-3 |
+| A local API: `GET /flights` returns the fixture envelope with HTTP 200, in any server language, with one documented run command | API-1, API-2 |
+| Persist the last successful results and the saved flights locally, plus the offline and error behaviours | DATA-4, DATA-5, OFF-1 – OFF-8 |
+| A list and a map showing the same results; markers grouped by destination, with the count and the lowest points | VIEW-1, MAP-1 – MAP-4 |
+| Selection shows a route connector and a card. It is preserved across list/map and cleared when the flight is filtered out | SEL-1 – SEL-3 |
+| Libraries and the server framework are ours to choose | — |
+
+### 2.2 Decisions
+
+| # | Decision | Serves | Origin | Status | Date |
+|---|---|---|---|---|---|
+| D1 | Build the local API as a Ktor (Kotlin) module inside the existing Gradle build, run with `./gradlew :server:run` | API-1, API-2 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires | DATA-3, VIEW-1, SEL-2 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D3 | Use SQLite through the SQLDelight library | DATA-2, DATA-4, DATA-5 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D4 | Store saved flights as full snapshots in their own table | OFF-6, OFF-7 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D8 | The Android map library. Claude suggested MapLibre (no API key); iOS uses Apple's built-in MapKit | MAP-1 – MAP-4 | Claude | **Open: owner to choose** | 2026‑10‑29 |
+| D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Claude | Built with the search engine; awaiting owner review | 2026‑10‑30 |
+| D10 | One app-scoped store per process | SEL-2, VIEW-1 | Claude | Awaiting owner review | 2026‑10‑29 |
+| P1 | Keep the agent guide as `CLAUDE.md` (no `AGENTS.md`) | — | Owner | Decided | 2026‑10‑30 |
+| P2 | One functionality at a time; the owner reviews it; push only after acceptance | — | Owner | Decided | 2026‑10‑30 |
+| P3 | Ask the owner before significant architectural decisions, and record them here | — | Owner | Decided | 2026‑10‑30 |
+| D11 | **Tiered search.** Tier 1 walks a prefix tree node by node (n → e → w) in O(m) and branches into the full names under it. Tier 2 (fuzzy) runs only when Tier 1 finds nothing. | SRCH-1 – SRCH-4 | **Owner**: the prefix-tree traversal is the owner's spec; tiered fallback was the owner's choice over a blended score | Built | 2026‑10‑30 |
+| D12 | **Mixed fuzzy matching**: phonetic and n-gram matching plus accent folding. It covers the owner's hypothesis that people mistype a place in four ways: (1) a typo, (2) knowing the sound but not the spelling, (3) roughly knowing the spelling, (4) accents. Claude added an edit-distance typo signal alongside. | SRCH-5 (beyond the brief) | **Owner** (design and hypothesis); Claude (the edit-distance signal) | Built | 2026‑10‑30 |
+| D13 | **Use Double Metaphone from an existing library, not our own implementation.** No library runs on iOS, so Apache Commons Codec's version is translated to Kotlin, credited, and verified against the original (§8) | SRCH-6 | **Owner** (use a library and disclose it); Claude proposed the translate-and-verify route, which was the owner's choice | Built | 2026‑10‑30 |
+| D14 | A **"Showing Sydney (SYD)" hint** under a field when fuzzy matching was used | SRCH-8 | Owner's choice (the option Claude recommended) | Engine ready; UI pending | 2026‑10‑30 |
+| D15 | **Rank matches by the user's location and annual airport volume.** Volume lives in a separate new file; `flights.json` is never edited. When the file is missing, the app falls back to the original data. | SRCH-7 | **Owner** (the idea, the separate file, the fallback); Claude (the file format, and reading "fallback" as flight counts, A12) | Built | 2026‑10‑30 |
+| D16 | **Location comes from the device**: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy, requested only when the user taps "Use my location". Without it, ranking uses volume only. Nothing is sent to a third party. This replaces Claude's earlier geo-IP proposal. | SRCH-7 | **Owner** (suggested on-device location instead of geo-IP) | Decided; platform code in M4/M5 | 2026‑10‑30 |
+| D17 | **Ranking only orders the matched airports** (the hint line, and autocomplete later). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
+| D18 | Search runs on **airports, not flights**, behind indexes | SCALE-1 | Claude | Built; awaiting owner review | 2026‑10‑30 |
+| D19 | Ranking weights: origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8 | SRCH-7 | Claude (assumption A13) | Built; awaiting owner review | 2026‑10‑30 |
 
 ## 3. Assumptions
 
@@ -48,7 +66,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 
 | # | Ambiguity in the brief | Assumption | Rule |
 |---|---|---|---|
-| A1 | How search "matches" codes and cities | Tier 1 is a case-, accent- and whitespace-insensitive **prefix** match on the code, the city, or any word of the city (`york` → New York). Fuzzy matching is the fallback (owner design D11–D13). | S4–S10 |
+| A1 | How search "matches" codes and cities | Tier 1 is a case-, accent- and whitespace-insensitive **prefix** match on the code, the city, or any word of the city (`york` → New York). Fuzzy matching is the fallback (the owner's design, D11–D13). | S4–S10 |
 | A2 | Whether cabin is single- or multi-select | Single-select ("Cabin." is singular; programs are explicitly multi) | F5 |
 | A3 | What "start with the full fixture date range" means | The default range is the dataset's min–max, derived from the data, and it follows the data after a refresh | F2 |
 | A4 | Whether selection clearing is permanent | Clearing is permanent; the selection doesn't come back when the filter is undone | L3 |
@@ -60,12 +78,13 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A10 | What reset clears | Search fields and all filters; saved flights are untouched | C4 |
 | A11 | Whether an extra API surface is allowed | The required contract is untouched; `--mode` is a QA-only switch | — |
 | A12 | What "fall back to the original data" means when `airports.json` is missing | Volume = each airport's number of flights in `flights.json` | P4 |
-| A13 | How much location vs popularity should count | Origin 0.7 / 0.3, destination 0.2 / 0.8 (D17) | P5 |
+| A13 | How much location vs popularity should count | Origin 0.7 / 0.3, destination 0.2 / 0.8 (D19) | P5 |
 
 ## 4. Tradeoffs
 
 - **Tiered vs blended search.** Tiered is predictable: fuzzy never adds noise when prefix already matched. The cost is that a weak prefix hit can hide a better fuzzy one. A prototype of both passed the same 114 cases.
 - **Copied Double Metaphone vs our own phonetic key.** The port is a well-known, battle-tested algorithm with multilingual rules. The cost is ~900 lines (with comments) that we didn't design. That is mitigated by the oracle test (§8).
+- **Device location for ranking (D16, D17).** Location never leaves the device and works offline, but it costs a permission prompt. Because ranking only orders the *matched airports* (D17), its visible effect today is the order of airports in the fuzzy hint when several match (e.g. `tokio`). It would matter more with autocomplete.
 - **Fuzzy thresholds** (4-letter gate, edit budget, Dice ≥ 0.55, 0.10 margin) were tuned on the 32 fixture airports. They are explainable and tested, but should be re-validated on a larger dataset.
 - **Full cache replacement vs diffing.** Full replacement is simple and correct for a full-dataset API, but wasteful for a large or paged API.
 - **In-memory filtering vs SQL.** In-memory filtering is ideal at 1,000 rows. At around 100k rows it would move to indexed SQL queries (ARCHITECTURE §12).
@@ -150,7 +169,8 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 |---|---|---|---|
 | 2026‑10‑29 | Planning | Profiled the fixture and drafted the docs in `docs/` and `CLAUDE.md` | Re-read the brief line by line against REQUIREMENTS.md |
 | 2026‑10‑30 | Docs | Added the working agreement, scalability sections, and this decision record; removed the deadline references | Reviewed in the review gate |
-| 2026‑10‑30 | Search prototype | Prototyped prefix, typo, phonetic and n-gram matching in Python against the fixture cities, using codes from the real commons-codec jar, and compared tiered vs blended mixing (114 cases) | Test cases chosen to cover the four kinds of mistyping, plus negatives |
+| 2026‑10‑30 | Search prototype | Prototyped the owner's search design (prefix + phonetic + n-gram) in Python against the fixture cities, using codes from the real commons-codec jar, and compared tiered vs blended mixing (114 cases) for the owner to choose | Test cases cover the owner's four kinds of mistyping, plus negatives |
 | 2026‑10‑30 | Double Metaphone port | Translated commons-codec's `DoubleMetaphone.java` to Kotlin | Oracle test against the original jar (150k+ words), plus commons-codec's own vectors |
-| 2026‑10‑30 | Search engine | Wrote the trie, trigram index, edit distance, ranking and tiered engine, with 54 tests | Tests pass on the JVM; the iOS klib compiles; owner review pending |
+| 2026‑10‑30 | Search engine | Implemented the owner's design in Kotlin: the trie, trigram index, edit distance, ranking and tiered engine, with 54 tests | Tests pass on the JVM; the iOS klib compiles; owner review pending |
+| 2026‑10‑30 | Docs | After owner review: corrected the decision attribution (brief vs owner vs Claude), and recorded D16 (device location) and D17 (ranking scope) | Owner review |
 | 2026‑10‑30 | `airports.json` | Recalled approximate 2024 passenger totals for the 32 airports | **Not verified**: labelled as approximate in the file and in §5 |

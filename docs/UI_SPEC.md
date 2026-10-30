@@ -14,7 +14,8 @@ Both platforms follow the same information architecture and copy, but each uses 
 Tab bar
 ├── Explore                       ← discovery
 │   ├── Search header: From / To fields
-│   │     └── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
+│   │     ├── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
+│   │     └── "Use my location" button (⌖) at the end of the From field: the only place location is requested (D16)
 │   ├── Filter bar: [Dates] [Cabin] [Points] [Programs]  ·  Reset
 │   ├── Summary line: "238 flights · 2 filters"
 │   ├── Segmented control: List | Map      (switching never changes the selection, L4)
@@ -131,6 +132,8 @@ Use the same copy on both platforms.
 | Unavailable: bad data | `Unavailable(InvalidData)` | "We received flight data we couldn't read." + **Try again** |
 | Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights. Pull to refresh later." No error styling. |
 | Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
+| Location not shared | The user never tapped ⌖, or denied the permission (D16) | Nothing extra is shown and there is no error. Ranking uses airport volume only. ⌖ stays outlined. |
+| Location shared | Permission granted and a location received | ⌖ is filled with the accent colour. Matched airports near the user rank higher in the hint. |
 | Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
 | Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |
 | Saved empty | `saved` is empty | "No saved flights yet" + "Tap ♡ on any flight to keep it here — even offline." |
@@ -213,7 +216,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
-| Location for ranking *(pending decision)* | Core Location, "when in use", reduced (approximate) accuracy is enough | Fused Location Provider, `ACCESS_COARSE_LOCATION` |
+| Location for ranking (D16) | Core Location, "when in use", approximate accuracy, asked on tapping ⌖ | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on tapping ⌖ |
 
 ## 10. Scalability
 

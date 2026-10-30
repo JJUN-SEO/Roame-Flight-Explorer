@@ -114,6 +114,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q1 | Fresh install with the API running → loading state → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | | |
 | Q2 | From `"  BoStOn "` → BOS only. To `tokyo` → HND and NRT. To `nrt` → NRT only. | | |
 | Q2b | Fuzzy search: To `sidnee` → SYD with the hint "Showing Sydney (SYD)"; `sydeny` → SYD; `berlin` → filtered-empty state; `São Paulo` → GRU with no hint | | |
+| Q2c | Location (D16): with no location, typing To `tokio` shows "Showing Tokyo (HND), Tokyo (NRT)" (HND is busier). Tap ⌖ and allow, with a simulated location: no error, ⌖ is filled. Deny: no error, volume-only ranking. Airplane mode + ⌖: still works (GPS needs no internet). The flight list order never changes with location (D17). | | |
 | Q3 | Date range Feb 10 – Feb 12: flights on the 10th and the 12th are present, the 9th and the 13th are absent | | |
 | Q4 | Max points at a value equal to some flight's points → that flight is included | | |
 | Q5 | Programs {Avios, Aeroplan} → only those two programs; plus Business → AND | | |

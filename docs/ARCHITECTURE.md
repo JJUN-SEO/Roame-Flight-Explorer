@@ -123,7 +123,7 @@ val state: StateFlow<ExplorerState> = combine(
 
 ### 4.4 Search engine
 
-**Status:** implemented and tested in `shared`. It isn't wired into a store or screens yet. The rules are in DOMAIN_RULES §2 and §2b, and the decisions are D11–D16.
+**Status:** implemented and tested in `shared`. It isn't wired into a store or screens yet. The rules are in DOMAIN_RULES §2 and §2b. The design is the owner's (D11–D17); D18 and D19 are Claude's details.
 
 ```mermaid
 flowchart LR
@@ -148,7 +148,7 @@ flowchart LR
 
 **Data sources for ranking.**
 - **Passenger volume** comes from `fixtures/airports.json` (`{"airports":[{"code","annualPassengers"}…]}`). The plan is to serve it as `GET /airports` (M1) and to cache it like flights (M2). When it is missing, a 404 or a decode failure means volume = flight counts from `flights.json` (P4).
-- **User location** comes from a platform `LocationProvider` that returns `GeoPoint?`. Its source is *pending an owner decision* (on-device location vs geo-IP). The shared code only ever sees an optional point.
+- **User location** comes from the device (D16), through a small platform `LocationProvider` that returns `GeoPoint?`: Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only. There is no geo-IP endpoint and no third party.
 
 **Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
@@ -307,13 +307,19 @@ Rules for the Swift-facing API:
 
 The app creates `AppGraph` once in `@main struct … : App`, and passes the model down through `.environment(model)`.
 
+**Location (D16).** Core Location with `requestWhenInUseAuthorization()`, triggered only by "Use my location". Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
+
 ## 9. Android integration
 
 - `RoameApp : Application` builds `AppGraph(DriverFactory(this), BuildConfig.API_BASE_URL)`. Register it in the manifest.
 - Screens read `app.graph.explorerStore.state.collectAsStateWithLifecycle()`. There is no Android `ViewModel` layer, because the shared store already outlives configuration changes.
 - Navigation uses `rememberSaveable` tab state. Two tabs don't need a navigation library.
 - Lists use `LazyColumn(items(results, key = { it.id }))`, with stable and immutable models (`@Immutable` where helpful).
-- Add these dependencies: `material3`, `lifecycle-runtime-compose`, the map SDK, and `leakcanary-android` (debug only).
+- Add these dependencies: `material3`, `lifecycle-runtime-compose`, the map SDK (D8, open), and `leakcanary-android` (debug only).
+- **Location (D16):**
+  - Fused Location Provider comes from Google Play services (`com.google.android.gms:play-services-location`), so the emulator needs a "Google Play" or "Google APIs" system image.
+  - Declare `ACCESS_COARSE_LOCATION` and request it only when the user taps "Use my location".
+  - Read one location with `getCurrentLocation(PRIORITY_BALANCED_POWER_ACCURACY)` and pass it to the store as a `GeoPoint`.
 
 ## 10. Libraries
 
@@ -330,7 +336,8 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | Flow testing | Turbine | Readable Flow assertions | Collect into lists manually |
 | iOS bridge | Hand-written `observe()` wrapper | No dependency on Kotlin-version-specific plugins | SKIE, if compatible |
 | iOS map | MapKit for SwiftUI (`Map`, `Annotation`, `MapPolyline(…, contourStyle: .geodesic)`) | Built in, iOS 17, no API key | — |
-| Android map | **MapLibre Native Android** with OpenFreeMap tiles, no API key | Reviewers can run it with no setup | Google Maps Compose, which has the best Compose API (`MarkerComposable`) but needs a Maps API key in `local.properties` |
+| Android map *(D8, open)* | Suggested: **MapLibre Native Android** with OpenFreeMap tiles, no API key | Reviewers can run it with no setup | Google Maps Compose, which has the best Compose API (`MarkerComposable`) but needs a Maps API key in `local.properties` |
+| Device location *(D16)* | Android: Fused Location Provider (`play-services-location`). iOS: Core Location (built in) | Works offline, no third party | — |
 | Leaks | LeakCanary (Android debug), Xcode Memory Graph and Leaks instrument | — | — |
 | Phonetic matching | **Vendored** Double Metaphone: a Kotlin port of Apache Commons Codec 1.23.0, Apache-2.0 | No KMP library exists, and commons-codec is JVM-only (no iOS) | — |
 | Port verification | `commons-codec:commons-codec:1.23.0`, **test-only** (`jvmTest`) | The original library acts as the oracle for the port | — |
@@ -338,24 +345,29 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 
 ## 11. Decision log
 
-| # | Decision | Why | Rejected alternatives |
-|---|---|---|---|
-| D1 | The local API is a Ktor JVM module in the same Gradle build | One language and one command. It reuses the Gradle and JDK setup that already exists. | Node or Python, which add a runtime dependency for reviewers |
-| D2 | Share **presentation state** (`ExplorerStore`), not just repositories | Selection, map grouping, active filters and offline state then behave identically on both platforms and are unit-tested once | Separate per-platform view models over shared repositories, which duplicates rules |
-| D3 | SQLite via SQLDelight | Transactions for atomic cache replacement, upsert for saved flights, reactive queries, and in-memory JVM tests | DataStore or JSON files: no transactions or queries. Room KMP is a close second. |
-| D4 | Saved flights are snapshots in their own table | They survive being missing from the API response (V4) and cache wipes | A saved-ids table joined to the cache, which loses flights that vanish from the API |
-| D5 | Replace the whole cache on every successful refresh | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct | Merge or diff, which is unnecessary complexity |
-| D6 | Filter in memory on `Dispatchers.Default`, not in SQL | Only 1,000 rows. Pure functions are easier to test, and there is one code path. | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
-| D7 | A hand-written Swift bridge | No plugin coupled to Kotlin 2.4.21 | SKIE or KMP-NativeCoroutines, which carry version risk |
-| D8 | MapLibre on Android | No API key, so the map works for any reviewer | Google Maps Compose, which needs a key (the fallback if the MapLibre spike takes more than 1.5 h) |
-| D9 | Add a `jvm()` target for tests | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
-| D10 | One app-scoped store per process | It survives rotation, avoids leaks, and gives one source of truth for list and map | Per-screen view models, which risk divergent state |
-| D11 | **Tiered search:** prefix tree first; fuzzy only when the prefix tier finds nothing *(owner)* | Predictable while typing; fuzzy never adds noise to good prefix results | A blended score over every signal (passed the same tests, but less predictable) |
-| D12 | **Fuzzy = typo distance + Double Metaphone + trigram n-grams** *(owner)* | Covers typos, sound-alike spellings, partial spellings and accents | Prefix only (no tolerance); Soundex (misses `shicago`, `okland`) |
-| D13 | **Double Metaphone is a vendored port** of Apache Commons Codec, with credit, verified against the jar *(owner)* | There is no KMP library and the Java one can't run on iOS. A port keeps one shared implementation. | Android-only library (platforms would diverge); our own Metaphone-lite |
-| D14 | **"Showing … (CODE)" hint** when results come from fuzzy matching *(owner)* | Silent corrections confuse people | A suggestions dropdown (more UI work); silent |
-| D15 | **Ranking by proximity + passenger volume.** Volume lives in a separate `fixtures/airports.json` and falls back to flight counts from `flights.json` *(owner)* | Familiar and nearby airports first, without touching the provided data | Editing `flights.json` (rejected: the API must serve it verbatim) |
-| D16 | Search runs on **airports, not flights**, behind indexes | Search cost doesn't grow with the number of flights (SCALE-1) | Matching each flight's strings |
+The rationale and the rejected alternatives for each decision. **Origin** and **status** match the decision record in [SUBMISSION_NOTES.md §2](SUBMISSION_NOTES.md#2-decision-record). "Claude" means Claude's choice of *how* to meet a brief requirement; it isn't a requirement in itself.
+
+| # | Decision | Origin | Why | Rejected alternatives |
+|---|---|---|---|---|
+| D1 | The local API is a Ktor JVM module in the same Gradle build | Claude; awaiting review | One language and one command. It reuses the Gradle and JDK setup that already exists. | Node or Python, which add a runtime dependency for reviewers |
+| D2 | Share **presentation state** (`ExplorerStore`), not just repositories | Claude; awaiting review | Selection, map grouping, active filters and offline state then behave identically on both platforms and are unit-tested once | Separate per-platform view models over shared repositories, which duplicates rules |
+| D3 | SQLite via SQLDelight | Claude; awaiting review | Transactions for atomic cache replacement, upsert for saved flights, reactive queries, and in-memory JVM tests | DataStore or JSON files: no transactions or queries. Room KMP is a close second. |
+| D4 | Saved flights are snapshots in their own table | Claude; awaiting review | They survive being missing from the API response (V4) and cache wipes | A saved-ids table joined to the cache, which loses flights that vanish from the API |
+| D5 | Replace the whole cache on every successful refresh | Claude; awaiting review | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct | Merge or diff, which is unnecessary complexity |
+| D6 | Filter in memory on `Dispatchers.Default`, not in SQL | Claude; awaiting review | Only 1,000 rows. Pure functions are easier to test, and there is one code path. | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
+| D7 | A hand-written Swift bridge | Claude; awaiting review | No plugin coupled to Kotlin 2.4.21 | SKIE or KMP-NativeCoroutines, which carry version risk |
+| D8 | Android map library | **Open: owner to choose.** Claude suggested MapLibre | MapLibre needs no API key, so the map works for any reviewer | Google Maps Compose, which has the best Compose API but needs a Google Cloud API key; osmdroid (older, View-based) |
+| D9 | Add a `jvm()` target for tests | Claude; built, awaiting review | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
+| D10 | One app-scoped store per process | Claude; awaiting review | It survives rotation, avoids leaks, and gives one source of truth for list and map | Per-screen view models, which risk divergent state |
+| D11 | **Tiered search:** walk a prefix tree node by node in O(m); fuzzy only when the prefix tier finds nothing | **Owner** | Predictable while typing; fuzzy never adds noise to good prefix results | A blended score over every signal (it passed the same tests but is less predictable) |
+| D12 | **Fuzzy = phonetic + n-gram + accent folding**, built on the owner's four mistyping cases; Claude added an edit-distance typo signal | **Owner** (+ Claude) | Covers typos, sound-alike spellings, partial spellings and accents | Prefix only (no tolerance); Soundex (misses `shicago`, `okland`) |
+| D13 | **Double Metaphone comes from a library** (Apache Commons Codec), translated to Kotlin with credit and verified against the jar | **Owner** (a library, disclosed); translation route: owner's choice | No KMP library exists, and the Java one can't run on iOS. A port keeps one shared implementation. | Android-only library (platforms would diverge); our own Metaphone-lite |
+| D14 | A **"Showing … (CODE)" hint** when results come from fuzzy matching | Owner's choice | Silent corrections confuse people | A suggestions dropdown (more UI work); silent |
+| D15 | **Ranking by location + passenger volume.** Volume lives in a separate `fixtures/airports.json`, with a fallback to flight counts from `flights.json` | **Owner** | Familiar and nearby airports first, without touching the provided data | Editing `flights.json` (rejected: the API must serve it verbatim) |
+| D16 | **Location comes from the device** (Fused Location Provider / Core Location), approximate accuracy, only on "Use my location" | **Owner** | Works offline (GPS needs no internet), more accurate, no third party, no extra endpoint | Geo-IP through the local API (Claude's earlier proposal): it would locate the developer's machine rather than the user, and needs an outside geo-IP service |
+| D17 | **Ranking only orders the matched airports.** The flight list keeps O1 | Owner's choice (option A) | Earlier and cheaper flights are never pushed down; the list order doesn't depend on where you are | Reordering the flight list by airport priority (option B) |
+| D18 | Search runs on **airports, not flights**, behind indexes | Claude; built, awaiting review | Search cost doesn't grow with the number of flights (SCALE-1) | Matching each flight's strings |
+| D19 | Ranking weights: origin 0.7 / 0.3, destination 0.2 / 0.8 | Claude; assumption A13, awaiting review | You fly *from* near you; *where* you go is mostly about popularity | Equal weights for both fields |
 
 ## 12. Scalability
 

@@ -116,6 +116,7 @@ These were found in the starter and the fixture.
   - 364 routes cross the antimeridian, so draw them as geodesics or unwrap longitudes.
 - **Date pickers:** Android's Material 3 date picker returns **UTC** midnight millis, so convert them with UTC.
 - **Server working directory:** the Gradle `run` task's default working directory is the module dir. Set it to the repo root so `fixtures/` resolves.
+- **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Only request it when the user taps "Use my location".
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"
