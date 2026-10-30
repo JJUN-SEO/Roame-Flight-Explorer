@@ -54,13 +54,19 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 
 ```
 server/ †              Ktor JVM app: GET /flights (raw fixture bytes)
-shared/                KMP module → Android library + static Shared.framework
-  src/commonMain/kotlin/travel/roame/takehome/{model,domain,data,presentation,di} †
-  src/commonMain/sqldelight/ †     src/commonTest/ †     src/jvmMain|jvmTest/ †
+shared/                KMP module → Android library + static Shared.framework (+ test-only jvm target)
+  src/commonMain/kotlin/travel/roame/takehome/
+    domain/search/       airport search engine: trie, fuzzy, ranking (DOMAIN_RULES §2, §2b)
+    vendor/commonscodec/ DoubleMetaphone — THIRD-PARTY port (Apache-2.0), see THIRD_PARTY_NOTICES.md
+    {model,data,presentation,di} †
+  src/commonMain/sqldelight/ †
+  src/commonTest/        rule tests (run on JVM and iOS)
+  src/jvmTest/           fixture contracts + DoubleMetaphoneOracleTest (port vs commons-codec jar)
   src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = Swift bridge †)
 androidApp/            Compose app, package travel.roame.takehome.android
 iosApp/                SwiftUI app: RoameStarter.xcodeproj, iOS 17, Swift 6
-fixtures/flights.json  1,000 flights, envelope {"flights":[…]}
+fixtures/flights.json  1,000 flights, envelope {"flights":[…]} — provided; never edit
+fixtures/airports.json ours: approximate annual passengers for ranking; optional (P4 fallback)
 docs/                  planning docs (see table above)
 ```
 
@@ -70,7 +76,7 @@ docs/                  planning docs (see table above)
 |---|---|
 | Run local API † | `./gradlew :server:run` → `http://localhost:8080/flights` |
 | API in QA modes † | `./gradlew :server:run --args="--mode=empty"` (also `error`, `slow`) |
-| Shared tests, any OS † | `./gradlew :shared:jvmTest` |
+| Shared tests, any OS | `./gradlew :shared:jvmTest` |
 | Shared tests on iOS sim (Mac) | `./gradlew :shared:iosSimulatorArm64Test` |
 | Build Android | `./gradlew :androidApp:assembleDebug` |
 | Install on emulator | `./gradlew :androidApp:installDebug` |
@@ -90,6 +96,8 @@ When a † command starts working, update this table and `README.md`.
 - Inject `CoroutineDispatcher`s and a `Clock` so tests are deterministic. Test with `runTest`, Turbine and fakes from `commonTest/.../testing/`.
 - Shared code returns typed values (enums and sealed types), never user-facing copy. The copy lives in the platform apps and matches UI_SPEC §4.
 - Commits are small and focused, with messages like `area: summary` (e.g. `shared: inclusive points boundary`). Reference requirement IDs when useful.
+- Test-only libraries go in `gradle/libs.versions.toml` and are added only to `*Test` source sets.
+- Don't edit `vendor/` by hand. To update it, re-port from upstream and rerun `DoubleMetaphoneOracleTest`.
 
 ## Gotchas
 
@@ -108,6 +116,7 @@ These were found in the starter and the fixture.
   - 364 routes cross the antimeridian, so draw them as geodesics or unwrap longitudes.
 - **Date pickers:** Android's Material 3 date picker returns **UTC** midnight millis, so convert them with UTC.
 - **Server working directory:** the Gradle `run` task's default working directory is the module dir. Set it to the repo root so `fixtures/` resolves.
+- **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"
 

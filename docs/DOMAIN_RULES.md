@@ -27,6 +27,7 @@ Profiled from `fixtures/flights.json` on 2026‑10‑29. Use these as test expec
 | Cities | Tokyo has two airports (HND and NRT). "Sao Paulo" is stored without the tilde. |
 | Geometry | 364 flights have \|Δlongitude\| > 180° (for example JFK→HKG and SEA→SYD), so route lines must handle the antimeridian. |
 | Busiest destinations | NRT 55 · HND 55 · MAD 54 flights |
+| Supplementary file | `fixtures/airports.json` (added by us, not part of the provided fixture): approximate 2024 annual passengers for all 32 airports, used only for ranking (P3). The app works without it (P4). |
 
 ## 1. Data model (DM)
 
@@ -50,30 +51,113 @@ data class Flight(
 
 ## 2. Search (S)
 
-- **S1** Normalise each query: trim it, lowercase it (locale-invariant `lowercase()`), and collapse internal runs of whitespace to a single space.
-- **S2** A blank query matches every flight.
-- **S3** The origin field matches only the flight's origin airport, and the destination field only its destination airport. When both are filled, a flight must match both (AND).
-- **S4** A normalised query matches an airport when it is a **prefix** of any of the following:
-  - the airport code,
-  - the city name,
-  - any word in the city name.
+Implemented in `shared/src/commonMain/kotlin/travel/roame/takehome/domain/search/` (`AirportSearchEngine`). The owner chose the design (SUBMISSION_NOTES §2, D11–D13): **tiered search, with prefix first and fuzzy as the fallback**.
 
-  *(assumption: prefix rather than substring, so typing narrows results predictably and `"a"` doesn't match every city that contains an "a")*
-- **S5** Examples. These are also the test table:
+Search resolves each text field to a set of **airports**. Flights are then filtered by those airport codes. Matching never scans flights (SCALE-1).
 
-  | Field | Query | Matches | Why |
-  |---|---|---|---|
-  | origin | `"  BOS "` | BOS | trim + case |
-  | origin | `"bo"` | BOS | code prefix, and the city "Boston" |
-  | origin | `"york"` | JFK | prefix of a word in "New York" |
-  | origin | `"new   york"` | JFK | internal whitespace is collapsed |
-  | origin | `"angeles"` | LAX | prefix of a word in "Los Angeles" |
-  | origin | `"san"` | SFO | "San Francisco" |
-  | destination | `"tokyo"` | HND, NRT | the city has two airports |
-  | destination | `"nrt"` | NRT | code |
-  | destination | `"ondon"` | nothing | not a prefix |
-  | origin | `"paris"` | nothing | Paris only appears as a destination |
-- **S6** There is no fuzzy matching or accent folding, so `"são paulo"` does not match "Sao Paulo". *(known limitation; stretch goal: fold common Latin diacritics on both sides)*
+```
+query → S1 normalise → Tier 1: prefix tree (S4) ──found──▶ matches
+                              │ found nothing
+                              ▼
+                        Tier 2: fuzzy (S6–S10)
+                        typo · phonetic · n-gram ──▶ matches, or no match
+      → ranked by P1–P6 → "Showing …" hint in the UI when fuzzy (S13)
+```
+
+The four ways people mistype a place, and what catches each:
+
+| Case | Example | Caught by |
+|---|---|---|
+| 1. Typo | `sydeny`, `bostno` | Typo distance (S7) |
+| 2. Doesn't know the spelling but knows the sound | `sidnee`, `shicago`, `okland` | Phonetic, Double Metaphone (S8) |
+| 3. Roughly knows the spelling | `johanesburg`, `amstedam` | N-gram (S9) and partial typo (S7) |
+| 4. Accents | `São Paulo`, `MÉXICO`, `Páriss` | Normalisation (S1), then any tier |
+
+### Rules
+
+- **S1 Normalisation.** The same normalisation is applied to the query and to the index:
+  - lowercase,
+  - fold Latin accents (`São` → `sao`, `ß` → `ss`, `Ł` → `l`),
+  - drop apostrophes (`O'Hare` → `ohare`),
+  - treat every other character that isn't a letter or digit as a separator,
+  - collapse separators into single spaces and trim.
+- **S2** A blank query is tier `Blank`, and every airport on that side matches.
+- **S3** The origin field searches only origin airports, and the destination field only destination airports. When both are filled, a flight must match both (AND).
+- **S4 Tier 1: prefix tree (trie).** Each airport is indexed under:
+  - its code,
+  - its city name,
+  - its city name without spaces (`hongkong`),
+  - every word start in the city name (`york`, `angeles`, `paulo`).
+
+  The query walks the tree one character at a time (n → e → w), so a lookup is O(m) for a query of length m. Every node stores the ids of the matching airports, precomputed, so the result is ready as soon as the walk ends. `completions()` branches from that node into the full names beneath it (`new` → `new york`). It always shows the display name, never an internal key such as `newyork`. It's ready for autocomplete but not used by the UI yet.
+- **S5** In Tier 1, an exact code match ranks first. Other prefix matches are ordered by priority (P6).
+- **S6 Tier 2 gate.** Fuzzy matching runs **only when Tier 1 found nothing** and the query has at least 4 letters (spaces ignored).
+  - Airport codes are never fuzzy-matched: 3 letters are too short to tell a typo from another code.
+  - Fuzzy matching compares the query, with spaces removed, against two kinds of terms: each whole city name without spaces, and each word of 4 or more letters in multi-word names.
+  - Candidates come from inverted indexes (trigram → terms, phonetic code → terms), not from a full scan.
+- **S7 Typo signal.** Uses Optimal String Alignment distance, where an insert, delete, substitution or adjacent swap each costs 1.
+  - Allowed distance: 1 for queries of 4–7 letters, 2 for 8 or more.
+  - **Partial typo:** a query of 5 or more letters also matches when it is within 1 edit of the first |q|−1 … |q|+1 letters of a term. For example, `johanesb` matches while the user is still typing.
+- **S8 Phonetic signal.** Uses Double Metaphone: a vendored port of Apache Commons Codec (SUBMISSION_NOTES §8), with code length 6, using both the primary and the alternate codes.
+  - A query matches when it shares any code with a term. For example, `yohannesburg` matches Johannesburg's alternate code `AHNSPR`.
+  - Codes of only 2 characters count only against a **whole** city name, never against a single word. So `roam` matches Rome (`RM`), but `sitty` does **not** match "Mexico City" through the word "city" (`ST`).
+- **S9 N-gram signal.** Trigram Dice similarity of at least 0.55, with the words padded at the edges (`"  r"`, `" ro"`, …).
+- **S10 Fuzzy scoring.** The signals score as follows:
+  - typo: 0.90 − 0.05 × distance,
+  - partial typo: 0.80,
+  - phonetic: 0.85,
+  - n-gram: 0.9 × Dice.
+
+  An airport's score is its best signal over all its terms. Airports more than 0.10 below the best fuzzy score are dropped. Fuzzy scores always stay below the prefix score (0.95) and the exact-code score (1.0). Each match reports the signal that won (`MatchKind`).
+- **S11 Examples.** A subset of the test tables (`PrefixSearchTest`, `FuzzySearchTest`: 90+ cases):
+
+  | Field | Query | Tier | Matches | Why |
+  |---|---|---|---|---|
+  | origin | `"  BOS "` | Prefix | BOS | trim + case |
+  | origin | `"york"` | Prefix | JFK | a word start in "New York" |
+  | destination | `"tokyo"` | Prefix | HND, NRT | the city has two airports |
+  | destination | `"dub"` | Prefix | DUB, DXB | branches to every match |
+  | destination | `"São Paulo"` | Prefix | GRU | accent folding |
+  | destination | `"hongkong"` | Prefix | HKG | no-space key |
+  | destination | `"ondon"` | Fuzzy | LHR | typo: one letter missing |
+  | destination | `"sydeny"` | Fuzzy | SYD | typo: swapped letters |
+  | destination | `"sidnee"` | Fuzzy | SYD | phonetic `STN` = `STN` |
+  | origin | `"shicago"` | Fuzzy | ORD | phonetic `XKK` |
+  | destination | `"okland"` | Fuzzy | AKL | phonetic `AKLNT` |
+  | destination | `"johanesburg"` | Fuzzy | JNB | partly right spelling |
+  | destination | `"roma"` | Fuzzy | FCO | local name, 1 edit |
+  | destination | `"berlin"` | NoMatch | — | not in the data |
+  | destination | `"sitty"` | NoMatch | — | the 2-character-code rule (S8) |
+  | origin | `"paris"` | NoMatch | — | Paris is only a destination |
+- **S12 Known behaviour and limitations:**
+  - Non-Latin scripts are not transliterated (`東京` finds nothing).
+  - There are no nicknames or aliases (`NYC`, `LA`).
+  - Places outside the data can sound like places in it: `newark` → New York (both encode to `NRK`). The hint line (S13) makes this visible. There is a test that documents it.
+  - The thresholds were tuned on 32 airports and should be re-validated on a larger dataset.
+- **S13 UI feedback** (owner decision: hint line).
+  - When a field's tier is `Fuzzy`, both apps show a hint under that field: "Showing Sydney (SYD)". It lists the matches in ranked order: the first two, then "+N more".
+  - No hint is shown for the `Prefix` or `Blank` tier.
+  - `NoMatch` shows the filtered-empty state.
+  - *Engine implemented; the UI comes with the store and screens.*
+
+## 2b. Prioritisation (P)
+
+Implemented in `AirportRanking`. Priority **orders** matched airports. It never adds or removes matches.
+
+- **P1** Priority is a value in [0, 1]:
+
+  `(w_proximity · proximity + w_volume · volume) / (w_proximity + w_volume)`
+- **P2** `proximity = exp(−distance_km / 1000)`, where the distance is the great-circle (haversine) distance from the user's location to the airport.
+  - Without a location (unknown, permission denied, or not available yet), priority is volume only.
+  - *The location source is **pending an owner decision**. Proposed: on-device location (Fused Location Provider / Core Location) instead of geo-IP.*
+- **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched.
+- **P4 Fallback to the original data.**
+  - If `airports.json` is missing or fails to load, `volume = flights per airport in flights.json / max`.
+  - If only some airports have passenger figures, the rest use their flight counts (`VolumeSource.Mixed`).
+  - Search and ranking always work with `flights.json` alone. *(assumption: "fall back to the original data" means deriving volume from the flight counts in `flights.json`)*
+- **P5** The weights are origin 0.7 proximity / 0.3 volume (you usually fly from somewhere near you), and destination 0.2 / 0.8 (where you go is mostly about popularity). *(assumption)*
+- **P6 Order of matches:** match score ↓, then priority ↓, then code ↑. A blank query is ordered by priority ↓, then code ↑.
+- **P7** Whether priority also reorders the **flight list** is *pending an owner decision*. Until then, the flight list keeps O1.
 
 ## 3. Filters (F)
 
@@ -191,6 +275,7 @@ The rules are written so that their cost stays predictable as the data grows (RE
 
 | Area | Cost | At 10× / 100× the data |
 |---|---|---|
+| Search (S, P) | Prefix: O(m) trie walk. Fuzzy: inverted-index lookups, then edit distance on the candidates only. Ranking: one priority per airport, precomputed. All of it runs on **airports**, not flights. | Trie memory grows with the total length of the names (≈ 50k nodes for 5k airports, est.). With many thousands of airports, cap the stored ids per node to the top K by priority, and move fuzzy candidate generation to the server. |
 | Filters (F) | Per-flight predicates: O(n) per input change, off the main thread | Same rules evaluated as indexed SQL `WHERE` clauses. Semantics and tests unchanged. |
 | Ordering (O) | O(n log n). Every ordering ends with an `id` tiebreak | The deterministic order makes paging safe |
 | Map (M) | O(n) grouping by destination | Beyond ~200 markers, clustering changes the *rendering*, not M1–M3 |

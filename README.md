@@ -2,7 +2,7 @@
 
 A Roame-inspired award-flight explorer, built natively twice: **SwiftUI** on iOS and **Jetpack Compose** on Android. Both apps sit on one **Kotlin Multiplatform** layer that handles networking, persistence, search, filtering and map aggregation. A small local API serves `fixtures/flights.json`.
 
-> **Status: planning.** The starter apps still display the shared "Hello world!". The docs below describe what will be built. Commands marked † don't exist yet; this README will be finalised before submission.
+> **Status: in progress.** Built so far: the shared airport search engine (prefix tree + fuzzy fallback + ranking; [DOMAIN_RULES §2](docs/DOMAIN_RULES.md#2-search-s)). The starter apps still display the shared "Hello world!". Commands marked † don't exist yet; this README will be finalised before submission.
 
 ## Docs
 
@@ -45,7 +45,7 @@ This serves `GET http://localhost:8080/flights`.
 
 **3. iOS.** Open `iosApp/RoameStarter.xcodeproj`, select the `RoameStarter` scheme and an iPhone simulator, then Run. On first open, build once (⌘B) to generate the `Shared` module. The initial "No such module 'Shared'" editor error clears after that build.
 
-## Tests †
+## Tests
 
 Shared tests on any OS:
 
@@ -68,8 +68,9 @@ server/        Local API (Ktor) †
 shared/        Kotlin Multiplatform: models, networking, SQLite, search/filter, ExplorerStore
 androidApp/    Jetpack Compose UI
 iosApp/        SwiftUI UI
-fixtures/      flights.json: 1,000 fictional flights across 32 airports
+fixtures/      flights.json: 1,000 fictional flights across 32 airports (provided)
+               airports.json: approximate annual passengers, used for search ranking (ours, optional)
 docs/          Planning and submission docs
 ```
 
-The Gradle wrapper's upstream license is included in `LICENSE`.
+The Gradle wrapper's upstream license is included in `LICENSE`. Third-party code (a Kotlin port of Apache Commons Codec's Double Metaphone) is credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

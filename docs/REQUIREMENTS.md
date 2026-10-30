@@ -35,9 +35,14 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| SRCH-1 | Separate origin and destination search fields | There are two fields. Each one only constrains its own side of the route. | S3 | ⬜ |
-| SRCH-2 | Fields match airport codes or city names | `jfk` and `new york` both find JFK flights. `tokyo` finds both HND and NRT. | S4, S5 | ⬜ |
-| SRCH-3 | Search ignores capitalisation and surrounding whitespace | `"  BoStOn "` behaves exactly like `boston`. | S1 | ⬜ |
+| SRCH-1 | Separate origin and destination search fields | There are two fields. Each one only constrains its own side of the route. | S3 | 🟨 engine done (one index per side); UI pending |
+| SRCH-2 | Fields match airport codes or city names | `jfk` and `new york` both find JFK flights. `tokyo` finds both HND and NRT. | S4, S5 | 🟨 engine done and tested; UI pending |
+| SRCH-3 | Search ignores capitalisation and surrounding whitespace | `"  BoStOn "` behaves exactly like `boston`. | S1 | 🟨 engine done and tested; UI pending |
+| SRCH-4 | *(owner-requested)* Prefix search walks a prefix tree in O(m) | Typing `new` walks n→e→w and returns every airport under that node. `completions()` returns full names. | S4 | ✅ engine |
+| SRCH-5 | *(owner-requested)* Fuzzy fallback for typos, sound-alike spellings, partial spellings and accents | `sydeny`, `sidnee`, `johanesburg` and `São Paulo` all find the right airport. Unrelated places (`berlin`) find nothing. Fuzzy only runs when prefix finds nothing. | S6–S12 | ✅ engine |
+| SRCH-6 | *(owner-requested)* Phonetic matching with Double Metaphone, as credited third-party code | The vendored port matches commons-codec on 150k+ generated words (oracle test). Credited in THIRD_PARTY_NOTICES.md and SUBMISSION_NOTES §8. | S8 | ✅ |
+| SRCH-7 | *(owner-requested)* Ranking by user location and annual airport volume, falling back to the original data | Matches are ordered by priority. Without `airports.json`, ranking uses flight counts from `flights.json`. Without a location, it uses volume only. | P1–P6 | 🟨 engine done; location source and flight-list scope pending owner decisions |
+| SRCH-8 | *(owner-requested)* A "Showing … (CODE)" hint when fuzzy matching was used | Both apps show the hint under the field when the tier is `Fuzzy`. | S13 | ⬜ UI pending |
 | FILT-1 | Departure date range filter that includes both boundary dates | Flights on `start` and on `end` are included. Flights on the day before `start` and the day after `end` are excluded. | F1–F3 | ⬜ |
 | FILT-2 | Cabin filter | Choosing a cabin shows only that cabin. Choosing "Any" shows all cabins. | F5 | ⬜ |
 | FILT-3 | Maximum points filter that includes the selected limit | A flight whose points equal the limit is included. A flight 500 points above it is excluded. | F4 | ⬜ |
@@ -104,7 +109,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| TEST-1 | Focused tests for the shared filtering rules | See [TEST_PLAN.md](TEST_PLAN.md) §2: search and filter test classes. | S, F | ⬜ |
+| TEST-1 | Focused tests for the shared filtering rules | See [TEST_PLAN.md](TEST_PLAN.md) §2: search and filter test classes. | S, F | 🟨 search tests done; filter tests pending |
 | TEST-2 | Tests for date and points boundaries | Inclusive and exclusive edge cases for both. | F1, F4 | ⬜ |
 | TEST-3 | Tests for map aggregation | Grouping, counts, minimum points, empty input, and consistency with the filters. | M | ⬜ |
 | TEST-4 | Tests for persistence | Atomic cache replacement, survival across reopen, upsert without duplicates, and saved flights independent of the cache. | V, R3 | ⬜ |
@@ -128,7 +133,7 @@ The brief only requires the app to stay smooth with the 1,000-flight fixture (PE
 
 | ID | Requirement | Target / acceptance | Status |
 |---|---|---|---|
-| SCALE-1 | Text search doesn't scan flights | Search resolves each field to a set of *airports* through indexes. Flights are then filtered once by airport code. Search cost grows with the query length and the number of airports, not the number of flights. | ⬜ |
+| SCALE-1 | Text search doesn't scan flights | Search resolves each field to a set of *airports* through indexes. Flights are then filtered once by airport code. Search cost grows with the query length and the number of airports, not the number of flights. | ✅ engine (D16). Benchmark pending (TEST_PLAN §4.1) |
 | SCALE-2 | Each keystroke stays within one frame at 10× and 100× the data | On a JVM benchmark with synthetic data (10k and 100k flights, up to 5k airports), search + filter + sort + aggregate stays under 16 ms at 10k flights. At 100k the work stays off the main thread with latest-wins (`mapLatest`), and the UI never stalls. | ⬜ |
 | SCALE-3 | The cache refresh scales | One transaction with batched inserts. Beyond ~100k rows, switch to incremental sync (ETag / `If-None-Match`, deltas) instead of a full replace. | Documented |
 | SCALE-4 | The API contract can grow without breaking clients | Pagination, compression and conditional requests can be added alongside `GET /flights` without changing its current response. | Documented |

@@ -1,0 +1,6 @@
+[versions]
+commons-codec = "1.23.0"
+
+[libraries]
+# Test-only: the original Java Double Metaphone, used as the oracle for our Kotlin port (jvmTest).
+commons-codec = { module = "commons-codec:commons-codec", version.ref = "commons-codec" }

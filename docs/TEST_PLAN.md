@@ -26,8 +26,15 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 
 | Test class | Rules | Cases |
 |---|---|---|
-| `SearchNormalizationTest` | S1, S2 | trim; mixed case; internal spaces collapsed; blank and whitespace-only → matches all |
-| `SearchMatchTest` | S3–S5 | Every row of the S5 table; origin and destination fields are independent; both filled → AND; no false positives (`"ondon"`) |
+| ✅ `SearchTextTest` | S1 | trim and case; internal whitespace; accent folding (São, MÉXICO, Zürich, ß, Łódź); apostrophes and punctuation; blank input |
+| ✅ `PrefixTrieTest` | S4 | node-by-node traversal returns everything under a prefix; word-start keys; unknown/empty prefix; completions shortest-first; labels instead of index keys; duplicates |
+| ✅ `PrefixSearchTest` | S2–S5 | blank → all; sides independent; code/city/word/no-space prefixes; short prefixes branch (`s`, `dub`); accented queries; exact code first; completions |
+| ✅ `FuzzySearchTest` | S6–S12 | 87 table cases: 66 that must match, grouped by typo, sound-alike, partly right and accents/local names, plus 21 unrelated places that must match nothing; 4-letter gate; no fuzzy when prefix matches; codes never fuzzy; match kinds; `newark` known behaviour |
+| ✅ `SimilarityTest` | S7, S9 | OSA distance including transpositions and the early exit; padded trigrams; trigram index Dice |
+| ✅ `AirportRankingTest` | P1–P6 | ranking orders but never filters; volume-only without location; location promotes nearby airports and can flip the order (SFO/SEA); passenger stats source; **missing `airports.json` → flight-count fallback**; mixed sources; no data at all; haversine distance |
+| ✅ `DoubleMetaphoneTest` | S8 | commons-codec's own primary and alternate vectors; sound-alike city names share codes; blank input. Runs on every target, including iOS |
+| ✅ `DoubleMetaphoneOracleTest` (jvmTest) | S8 | the port vs the original commons-codec jar: curated tricky words, every 1–3 letter string, and 150,000 seeded generated words, at code lengths 1/4/6/12, primary and alternate |
+| ✅ `FixtureContractTest` (jvmTest) | §0, P3 | the test airports and flight counts equal `flights.json`; `airports.json` covers exactly the 32 fixture airports once |
 | `DateFilterTest` | F1–F3 | start-only; end-only; both; **flight on start included**; **flight on end included**; day before start and day after end excluded; start == end matches a single day; start > end → empty; null/null → all |
 | `PointsFilterTest` | F4 | **points == max included**; max − 500 → excluded flight at max; max + 500 → included; null → all; max below the dataset min → empty |
 | `CabinFilterTest` | F5, DM1 | single cabin; null → all; unknown cabin value decodes and sorts last |
@@ -47,6 +54,8 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 | `ExplorerStoreSavedTest` | V3, V7 | save → `isSaved` true in both results and markers; **save failure → `isSaved` unchanged + `UserMessage`**; remove failure, likewise; `pendingWriteIds` is set during the write and cleared after |
 | `ExplorerStoreLatestWinsTest` | PERF-3 | type "b", "bo", "bos" rapidly with a slow reducer → the only final results are for "bos", and no intermediate state from an older query arrives after a newer one |
 | `FixtureContractTest` (jvmTest) | §0 facts | 1,000 flights; 32 airports; 60 dates; three cabins; five programs; ids unique; six ids not in the `fx-` format |
+
+✅ = implemented and passing (`./gradlew :shared:jvmTest`). The others are planned.
 
 Target: every rule ID in DOMAIN_RULES is referenced by at least one test name. Check with:
 
@@ -104,6 +113,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | P2 | `./gradlew :server:run` → `curl` returns 200 and the body matches the fixture | | — |
 | Q1 | Fresh install with the API running → loading state → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | | |
 | Q2 | From `"  BoStOn "` → BOS only. To `tokyo` → HND and NRT. To `nrt` → NRT only. | | |
+| Q2b | Fuzzy search: To `sidnee` → SYD with the hint "Showing Sydney (SYD)"; `sydeny` → SYD; `berlin` → filtered-empty state; `São Paulo` → GRU with no hint | | |
 | Q3 | Date range Feb 10 – Feb 12: flights on the 10th and the 12th are present, the 9th and the 13th are absent | | |
 | Q4 | Max points at a value equal to some flight's points → that flight is included | | |
 | Q5 | Programs {Avios, Aeroplan} → only those two programs; plus Business → AND | | |

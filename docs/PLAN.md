@@ -45,6 +45,20 @@ Gate: nothing else starts until M0 is done.
 - [ ] `AppGraph` + the iOS bridge `ExplorerStoreIos`.
 - [ ] ✅ Checkpoint: `jvmTest` green, and every DOMAIN_RULES ID is covered.
 
+### M3a · Search engine (shared) → SRCH-4…SRCH-7, SCALE-1
+
+Requested by the owner. Implemented ahead of the rest of M3, under review.
+
+- [x] Normalisation with accent folding (S1); prefix tree with O(m) traversal and completions (S4).
+- [x] Tiered fuzzy fallback: typo distance, Double Metaphone and trigram n-grams (S6–S10).
+- [x] Vendored Double Metaphone port with license and credit, verified against commons-codec (S8).
+- [x] Ranking by proximity + volume, with the `flights.json` fallback when `airports.json` is missing (P1–P6).
+- [x] `fixtures/airports.json` (separate file; `flights.json` untouched).
+- [x] Tests: 54 shared tests passing on the JVM; the iOS klib compiles.
+- [ ] **Owner review** → push.
+- [ ] *Decisions pending:* the location source (on-device location vs geo-IP, P2) and whether ranking reorders the flight list (P7).
+- [ ] *Later:* `GET /airports` in M1, plus loading and caching in M2. Wire the engine into `ExplorerStore` and the hint UI (S13) in M3–M5.
+
 ### M4 · Android app
 
 - [ ] Platform setup: INTERNET permission, network security config, `BuildConfig.API_BASE_URL`, `RoameApp`, StrictMode, LeakCanary.

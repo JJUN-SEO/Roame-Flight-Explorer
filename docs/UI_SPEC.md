@@ -14,6 +14,7 @@ Both platforms follow the same information architecture and copy, but each uses 
 Tab bar
 ├── Explore                       ← discovery
 │   ├── Search header: From / To fields
+│   │     └── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
 │   ├── Filter bar: [Dates] [Cabin] [Points] [Programs]  ·  Reset
 │   ├── Summary line: "238 flights · 2 filters"
 │   ├── Segmented control: List | Map      (switching never changes the selection, L4)
@@ -103,7 +104,7 @@ Each sheet shows a live **"Show N flights"** button. N is the count if the user 
 
 | Component | Purpose | States |
 |---|---|---|
-| `SearchField` | From / To text input | empty · typing · has text (ⓧ clears it) |
+| `SearchField` | From / To text input | empty · typing · has text (ⓧ clears it) · fuzzy hint visible |
 | `FilterChip` | Opens a filter sheet | default · active (filled, accent, shows the value) · pressed |
 | `ResultSummary` | "N flights · K filters" + Reset | Reset is hidden when nothing is active |
 | `FlightRow` | One result | default · pressed · selected · saved (filled heart) |
@@ -130,6 +131,7 @@ Use the same copy on both platforms.
 | Unavailable: bad data | `Unavailable(InvalidData)` | "We received flight data we couldn't read." + **Try again** |
 | Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights. Pull to refresh later." No error styling. |
 | Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
+| Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
 | Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |
 | Saved empty | `saved` is empty | "No saved flights yet" + "Tap ♡ on any flight to keep it here — even offline." |
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
@@ -211,6 +213,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
+| Location for ranking *(pending decision)* | Core Location, "when in use", reduced (approximate) accuracy is enough | Fused Location Provider, `ACCESS_COARSE_LOCATION` |
 
 ## 10. Scalability
 
@@ -223,4 +226,6 @@ The fixture fits on screen comfortably. These rules keep the UI usable when the 
 | Marker sheet | Lists every flight for the destination | Virtualised, with the count in the header |
 | Programs filter | Checklist of 5 | Beyond ~15 options, a searchable list with the selected items pinned on top |
 | Active filter chips | Fit on one row | Scroll horizontally, with a "+N" overflow chip that opens the full list |
+| Fuzzy hint | One or two airports | Never more than one line: the first two in ranked order, then "+N more" |
+| Search suggestions | Not shown (the engine's `completions()` is ready) | If autocomplete is added later, show the top-K completions ranked by priority |
 | Saved tab | Small list | Virtualised; grouped by month when long |

@@ -39,8 +39,11 @@ KMP targets are the existing `android`, `iosArm64`, `iosSimulatorArm64` and `ios
 shared/src/
   commonMain/kotlin/travel/roame/takehome/
     model/          Flight, Airport, FlightFilters, FilterOptions, ActiveFilter, FetchError
-    domain/         FlightSearch, FlightFilter, Ordering, MapAggregator, ActiveFilters,
-                    GreatCircle, PointsFormat          ← pure functions, no IO, no coroutines
+    domain/         FlightFilter, Ordering, MapAggregator, ActiveFilters, GreatCircle,
+                    PointsFormat                       ← pure functions, no IO, no coroutines
+    domain/search/  AirportSearchEngine, PrefixTrie, Similarity (trigrams, edit distance),
+                    SearchText, AirportRanking         ← implemented (§4.4)
+    vendor/commonscodec/  DoubleMetaphone              ← third-party port (Apache-2.0), see §4.4
     data/remote/    FlightsApi, FlightsEnvelopeDto, FlightDto, error mapping
     data/local/     DriverFactory (expect), FlightCacheDao, SavedFlightDao
     data/           FlightRepository, SavedFlightsRepository (interfaces + impls)
@@ -53,7 +56,7 @@ shared/src/
   iosMain/          DriverFactory(), Darwin engine, ios/ExplorerStoreIos.kt (Swift bridge)
   jvmMain/          DriverFactory (JdbcSqliteDriver), engine for completeness
   commonTest/       rule tests, fakes, builders
-  jvmTest/          fixture contract test (reads ../fixtures/flights.json)
+  jvmTest/          fixture contract tests; DoubleMetaphoneOracleTest (port vs the commons-codec jar)
 ```
 
 ## 4. State & data flow
@@ -117,6 +120,37 @@ val state: StateFlow<ExplorerState> = combine(
 - `reduce` is a pure function, so it can be unit-tested without coroutines. On 1,000 flights it runs in about a millisecond, so search needs no debounce. Add a debounce of about 100 ms only if profiling shows a problem.
 - The search index is rebuilt only when the cache emits, never on each keystroke.
 - `Dispatchers.Default` keeps the CPU work off the main thread. `stateIn` hands the result to collectors.
+
+### 4.4 Search engine
+
+**Status:** implemented and tested in `shared`. It isn't wired into a store or screens yet. The rules are in DOMAIN_RULES §2 and §2b, and the decisions are D11–D16.
+
+```mermaid
+flowchart LR
+  Q["query text"] --> N["SearchText.normalize<br/>(lowercase, accents, punctuation)"]
+  N --> T{"Tier 1<br/>PrefixTrie walk, O(m)"}
+  T -- "ids found" --> R["rank: score, then AirportRanking priority"]
+  T -- "nothing" --> F["Tier 2 candidates<br/>TrigramIndex + phonetic index"]
+  F --> S["score: OSA typo distance,<br/>Double Metaphone, trigram Dice"]
+  S --> R
+  R --> OUT["AirportSearchResult<br/>(tier, ranked matches, codes)"]
+```
+
+| Component | Role | Cost |
+|---|---|---|
+| `SearchText` | One normalisation shared by the query and the index (S1) | O(query length) |
+| `PrefixTrie` | Node-by-node walk with airport ids precomputed per node; `completions()` for autocomplete (S4) | Lookup O(m); memory O(total length of the keys) |
+| `TrigramIndex` | Inverted index trigram → terms; Dice similarity from shared counts (S9) | O(trigrams in the query × posting length) |
+| `editDistance` | Optimal String Alignment with an early exit once over budget (S7) | O(len²) on candidates only |
+| `DoubleMetaphone` (vendored) | Phonetic codes, primary + alternate, length 6 (S8) | O(len) per word, precomputed for the index |
+| `AirportRanking` | Proximity + volume priority per airport, with the `flights.json` fallback (P1–P6) | Precomputed per airport; an O(1) lookup |
+| `AirportSearchEngine` | Builds the indexes once per dataset and side; `search()` has no side effects | — |
+
+**Data sources for ranking.**
+- **Passenger volume** comes from `fixtures/airports.json` (`{"airports":[{"code","annualPassengers"}…]}`). The plan is to serve it as `GET /airports` (M1) and to cache it like flights (M2). When it is missing, a 404 or a decode failure means volume = flight counts from `flights.json` (P4).
+- **User location** comes from a platform `LocationProvider` that returns `GeoPoint?`. Its source is *pending an owner decision* (on-device location vs geo-IP). The shared code only ever sees an optional point.
+
+**Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
 ## 5. Persistence (SQLDelight)
 
@@ -183,6 +217,7 @@ withContext(io) {
   ```
   This is not part of the required contract. It exists to demo and QA R4, R5 and R7.
 - Request logging uses Ktor's `CallLogging` plugin.
+- *Planned with the search ranking:* `GET /airports` serves `fixtures/airports.json` the same way, as raw bytes. If the file is absent, it returns 404, and the app falls back to flight counts (DOMAIN_RULES P4). It is optional and never required for the app to work.
 
 ### 6.3 Client (`FlightsApi`)
 
@@ -297,6 +332,9 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | iOS map | MapKit for SwiftUI (`Map`, `Annotation`, `MapPolyline(…, contourStyle: .geodesic)`) | Built in, iOS 17, no API key | — |
 | Android map | **MapLibre Native Android** with OpenFreeMap tiles, no API key | Reviewers can run it with no setup | Google Maps Compose, which has the best Compose API (`MarkerComposable`) but needs a Maps API key in `local.properties` |
 | Leaks | LeakCanary (Android debug), Xcode Memory Graph and Leaks instrument | — | — |
+| Phonetic matching | **Vendored** Double Metaphone: a Kotlin port of Apache Commons Codec 1.23.0, Apache-2.0 | No KMP library exists, and commons-codec is JVM-only (no iOS) | — |
+| Port verification | `commons-codec:commons-codec:1.23.0`, **test-only** (`jvmTest`) | The original library acts as the oracle for the port | — |
+| Other search algorithms | Our own code: trie, trigram index, OSA edit distance, ranking | Small, explainable, tested | — |
 
 ## 11. Decision log
 
@@ -312,6 +350,12 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | D8 | MapLibre on Android | No API key, so the map works for any reviewer | Google Maps Compose, which needs a key (the fallback if the MapLibre spike takes more than 1.5 h) |
 | D9 | Add a `jvm()` target for tests | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
 | D10 | One app-scoped store per process | It survives rotation, avoids leaks, and gives one source of truth for list and map | Per-screen view models, which risk divergent state |
+| D11 | **Tiered search:** prefix tree first; fuzzy only when the prefix tier finds nothing *(owner)* | Predictable while typing; fuzzy never adds noise to good prefix results | A blended score over every signal (passed the same tests, but less predictable) |
+| D12 | **Fuzzy = typo distance + Double Metaphone + trigram n-grams** *(owner)* | Covers typos, sound-alike spellings, partial spellings and accents | Prefix only (no tolerance); Soundex (misses `shicago`, `okland`) |
+| D13 | **Double Metaphone is a vendored port** of Apache Commons Codec, with credit, verified against the jar *(owner)* | There is no KMP library and the Java one can't run on iOS. A port keeps one shared implementation. | Android-only library (platforms would diverge); our own Metaphone-lite |
+| D14 | **"Showing … (CODE)" hint** when results come from fuzzy matching *(owner)* | Silent corrections confuse people | A suggestions dropdown (more UI work); silent |
+| D15 | **Ranking by proximity + passenger volume.** Volume lives in a separate `fixtures/airports.json` and falls back to flight counts from `flights.json` *(owner)* | Familiar and nearby airports first, without touching the provided data | Editing `flights.json` (rejected: the API must serve it verbatim) |
+| D16 | Search runs on **airports, not flights**, behind indexes | Search cost doesn't grow with the number of flights (SCALE-1) | Matching each flight's strings |
 
 ## 12. Scalability
 
@@ -322,7 +366,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Local API | Returns the whole fixture on every request | O(n) bytes (~430 KB today) | ~10k flights (~4 MB) | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
 | Cache (SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departure_date`, `origin`, `destination`, `points` |
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default` | O(n) filter + O(k log k) sort per input change | ~100k flights | Push predicates into indexed SQL that returns ids; page the results |
-| Text search | Resolves airports first, then filters flights by airport code | Grows with the number of airports, not flights | Thousands of airports | Server-side search; see the search engine design |
+| Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²) | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n) | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
 | State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
 | Saved flights | Snapshot table | O(saved) | 10k+ | Paging in the Saved tab |
