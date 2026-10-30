@@ -184,3 +184,17 @@ data class Flight(
   - The card shows `Mon, Feb 1, 2027`.
   - Dates cross the KMP boundary as ISO `yyyy-MM-dd` strings.
 - **T4** `lastSuccessAt` **is** an instant (epoch milliseconds). Format it in local time, for example "today 3:42 PM".
+
+## 11. Scale notes
+
+The rules are written so that their cost stays predictable as the data grows (REQUIREMENTS §11, ARCHITECTURE §12).
+
+| Area | Cost | At 10× / 100× the data |
+|---|---|---|
+| Filters (F) | Per-flight predicates: O(n) per input change, off the main thread | Same rules evaluated as indexed SQL `WHERE` clauses. Semantics and tests unchanged. |
+| Ordering (O) | O(n log n). Every ordering ends with an `id` tiebreak | The deterministic order makes paging safe |
+| Map (M) | O(n) grouping by destination | Beyond ~200 markers, clustering changes the *rendering*, not M1–M3 |
+| Selection (L) | O(1) membership check against the result ids | Unchanged |
+| Saved (V) | One upsert or delete per id; independent of cache size | Unchanged; the Saved tab pages |
+| Refresh (R) | Full replace is O(n) in one transaction | Incremental sync keeps R3's atomicity: one transaction per sync |
+

@@ -211,3 +211,16 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
+
+## 10. Scalability
+
+The fixture fits on screen comfortably. These rules keep the UI usable when the data grows (REQUIREMENTS §11):
+
+| Element | Today | When the data grows |
+|---|---|---|
+| Result list | Virtualised (`LazyColumn` / `List`) with stable ids | Unchanged. If the API paginates, add a "Loading more…" footer, and the summary reads "1,000+ flights". |
+| Map markers | 24 individual pills | Beyond ~200 markers, cluster by zoom. A cluster bubble shows the total count and the lowest points; tap it to zoom in. |
+| Marker sheet | Lists every flight for the destination | Virtualised, with the count in the header |
+| Programs filter | Checklist of 5 | Beyond ~15 options, a searchable list with the selected items pinned on top |
+| Active filter chips | Fit on one row | Scroll horizontally, with a "+N" overflow chip that opens the full list |
+| Saved tab | Small list | Virtualised; grouped by month when long |

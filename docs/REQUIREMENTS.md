@@ -12,7 +12,6 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 - Follow the starter README and **make sure both starter apps build before writing any code**.
 - If something is ambiguous, document a reasonable assumption and proceed.
 - AI tools are allowed. Explain how they were used and how their output was checked. You must understand and be able to modify every line you submit.
-- The deadline is **two days** from start.
 
 ## 1. Local API
 
@@ -112,7 +111,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | TEST-5 | Tests for failure handling | Offline, timeout, 5xx, malformed body, success-empty, and save/remove failures. | R, V7 | ⬜ |
 | TEST-6 | Document the checks actually performed on both platforms | The QA checklist in TEST_PLAN §5 is filled in with real results and dates. | — | ⬜ |
 
-## 10. Deliverables (due within two days)
+## 10. Deliverables
 
 | ID | Deliverable | Acceptance criteria | Status |
 |---|---|---|---|
@@ -122,3 +121,17 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | DEL-4 | Screen recording walkthrough of **both** apps showing search, filters, map selection, saving flights, and reopening the app with the API stopped | Follows the demo script in TEST_PLAN §7. | ⬜ |
 | DEL-5 | Ambiguities documented as assumptions | Every *(assumption)* rule in DOMAIN_RULES appears in the submission notes. | ⬜ |
 | DEL-6 | Both starter apps built before implementation | Recorded in TEST_PLAN §5 (pre-flight). | ⬜ |
+
+## 11. Scalability (non-functional, self-imposed)
+
+The brief only requires the app to stay smooth with the 1,000-flight fixture (PERF-1). These rows record how the design should behave as the data grows, so scale is considered from the start rather than bolted on. "Documented" means the scaling path is written down in [ARCHITECTURE.md §12](ARCHITECTURE.md#12-scalability) but not built, because the fixture doesn't need it.
+
+| ID | Requirement | Target / acceptance | Status |
+|---|---|---|---|
+| SCALE-1 | Text search doesn't scan flights | Search resolves each field to a set of *airports* through indexes. Flights are then filtered once by airport code. Search cost grows with the query length and the number of airports, not the number of flights. | ⬜ |
+| SCALE-2 | Each keystroke stays within one frame at 10× and 100× the data | On a JVM benchmark with synthetic data (10k and 100k flights, up to 5k airports), search + filter + sort + aggregate stays under 16 ms at 10k flights. At 100k the work stays off the main thread with latest-wins (`mapLatest`), and the UI never stalls. | ⬜ |
+| SCALE-3 | The cache refresh scales | One transaction with batched inserts. Beyond ~100k rows, switch to incremental sync (ETag / `If-None-Match`, deltas) instead of a full replace. | Documented |
+| SCALE-4 | The API contract can grow without breaking clients | Pagination, compression and conditional requests can be added alongside `GET /flights` without changing its current response. | Documented |
+| SCALE-5 | The map stays smooth with many destinations | Up to ~200 markers render individually. Beyond that, markers are clustered by zoom level. The fixture has 24. | Documented |
+| SCALE-6 | Lists are virtualised | `LazyColumn` / SwiftUI `List` with stable ids, so memory is proportional to the visible rows. Marker sheets and the Saved list use the same approach. | ⬜ |
+| SCALE-7 | In-memory indexes have a known memory budget | The size of the search indexes and the in-memory dataset is measured at 10k and 100k flights and written down. If a budget is exceeded, filtering moves into indexed SQL queries (ARCHITECTURE §12). | ⬜ |

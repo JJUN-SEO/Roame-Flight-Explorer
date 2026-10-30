@@ -13,8 +13,30 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 | `docs/ARCHITECTURE.md` | Modules, data flow, persistence schema, networking, threading, iOS interop, libraries, decision log |
 | `docs/UI_SPEC.md` | Screens, the state catalogue with copy, components, design tokens, platform notes |
 | `docs/TEST_PLAN.md` | Shared test matrix, the manual QA checklist, the demo script |
-| `docs/PLAN.md` | Milestones, risks, cut lines |
+| `docs/PLAN.md` | Working agreement, milestones, risks, priority tiers |
 | `docs/SUBMISSION_NOTES.md` | Decisions, assumptions, limitations, the AI usage log |
+
+## How we work (owner's rules — follow every time)
+
+1. **One functionality at a time, behind a review gate.**
+   - Implement one feature end to end: code, tests and docs. Run the checks.
+   - Then **stop and ask the owner to review** it. Summarise what changed, what was verified and what wasn't.
+   - Commit locally, but **push only after the owner explicitly accepts**. Never bundle unrelated features in one review.
+2. **Ask before any significant architectural decision.** That includes:
+   - a new module, endpoint, library, data source or permission,
+   - changes to the data model or the shared API surface,
+   - behaviour that differs between platforms,
+   - sending data to a third party.
+
+   Present the options with tradeoffs and a recommendation, in plain language with a concrete example. Don't implement until the owner answers.
+3. **Record every notable architectural decision**, including the ones the owner makes, in two places:
+   - the decision record in `docs/SUBMISSION_NOTES.md` §2 (what, why, who decided, date),
+   - the decision log in `docs/ARCHITECTURE.md` §11.
+4. **Consider scalability in every design and doc.** State the cost (time and memory) and what breaks or changes at 10× and 100× the data. Keep the Scalability sections of each doc current.
+5. **Third-party code is never copied silently.**
+   - Vendored code lives under a `vendor/` package and keeps its license header.
+   - It is listed in `THIRD_PARTY_NOTICES.md` and disclosed in `docs/SUBMISSION_NOTES.md`.
+   - Verify it against the original wherever possible.
 
 ## Golden rules
 
@@ -93,3 +115,6 @@ These were found in the starter and the fixture.
 - [ ] New behaviour has a rule in DOMAIN_RULES, a test, and a status update in REQUIREMENTS.
 - [ ] Nothing in `androidApp/` or `iosApp/` decides anything about flight data.
 - [ ] Notable AI-assisted work has a row in the `docs/SUBMISSION_NOTES.md` AI usage log.
+- [ ] Architectural decisions are in the SUBMISSION_NOTES decision record and the ARCHITECTURE decision log.
+- [ ] Scalability impact is noted in the relevant docs.
+- [ ] The owner has reviewed and accepted the change **before** you push.

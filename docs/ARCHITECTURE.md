@@ -312,3 +312,23 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | D8 | MapLibre on Android | No API key, so the map works for any reviewer | Google Maps Compose, which needs a key (the fallback if the MapLibre spike takes more than 1.5 h) |
 | D9 | Add a `jvm()` target for tests | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
 | D10 | One app-scoped store per process | It survives rotation, avoids leaks, and gives one source of truth for list and map | Per-screen view models, which risk divergent state |
+
+## 12. Scalability
+
+The fixture is small (1,000 flights, 32 airports), but every layer has a known cost and a known next step. **Current** is what we build. **Next step** is what changes when the limit is reached; it is not built unless needed. The limits are *estimates* until the M6 benchmarks (TEST_PLAN §4.1) measure them; the measured numbers go in SUBMISSION_NOTES §6.
+
+| Layer | Current design | Cost per operation | Comfortable up to (est.) | Next step beyond that |
+|---|---|---|---|---|
+| Local API | Returns the whole fixture on every request | O(n) bytes (~430 KB today) | ~10k flights (~4 MB) | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
+| Cache (SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departure_date`, `origin`, `destination`, `points` |
+| Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default` | O(n) filter + O(k log k) sort per input change | ~100k flights | Push predicates into indexed SQL that returns ids; page the results |
+| Text search | Resolves airports first, then filters flights by airport code | Grows with the number of airports, not flights | Thousands of airports | Server-side search; see the search engine design |
+| Map aggregation | Group results by destination | O(n) | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
+| State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
+| Saved flights | Snapshot table | O(saved) | 10k+ | Paging in the Saved tab |
+| Memory | Dataset + indexes in memory | A few MB at 1k flights | ~100k flights (tens of MB, est.) | Keep rows in SQLite and hold only windows plus indexes in memory |
+
+Two principles make the "next step" column cheap to reach:
+
+- **Rules are pure functions with tests** (DOMAIN_RULES). Moving a filter from memory into SQL keeps its rule ID and its test table. Only the implementation behind the interface changes.
+- **Ordering always has a deterministic tiebreak** (O1–O3), so paging can be added without rows jumping between pages.

@@ -8,14 +8,14 @@ A Roame-inspired award-flight explorer, built natively twice: **SwiftUI** on iOS
 
 | Doc | Contents |
 |---|---|
-| [Requirements](docs/REQUIREMENTS.md) | Every requirement from the brief, with IDs and acceptance criteria |
+| [Requirements](docs/REQUIREMENTS.md) | Every requirement from the brief, with IDs and acceptance criteria, plus scalability targets |
 | [Domain rules](docs/DOMAIN_RULES.md) | Exact search, filter, map, selection, saved and offline behaviour, plus fixture facts |
-| [Architecture](docs/ARCHITECTURE.md) | Modules, data flow, persistence, networking, iOS interop, libraries, decision log |
+| [Architecture](docs/ARCHITECTURE.md) | Modules, data flow, persistence, networking, iOS interop, libraries, decision log, scalability |
 | [UI spec](docs/UI_SPEC.md) | Screens, state catalogue, components, design tokens |
 | [Test plan](docs/TEST_PLAN.md) | Shared test matrix, manual QA checklist, demo script |
-| [Plan](docs/PLAN.md) | Milestones, risks, cut lines |
-| [Submission notes](docs/SUBMISSION_NOTES.md) | Approach, assumptions, tradeoffs, limitations, AI usage |
-| [CLAUDE.md](CLAUDE.md) | Working agreement for AI coding agents |
+| [Plan](docs/PLAN.md) | Working agreement, milestones, risks, priority tiers |
+| [Submission notes](docs/SUBMISSION_NOTES.md) | Approach, decision record, assumptions, tradeoffs, limitations, scalability, AI usage |
+| [CLAUDE.md](CLAUDE.md) | Working agreement for AI coding agents, including the review-before-push rule |
 
 ## Prerequisites
 

@@ -78,6 +78,22 @@ The second and third commands need a Mac. `allTests` runs every target that is a
 | Leaks | LeakCanary installed in debug; rotate, switch tabs and open/close sheets 10× → no leak reports | Debug Memory Graph after the same steps → no leaked `ExplorerModel` or cycles; Instruments › Leaks clean |
 | Memory | Android Studio Profiler: heap stable after repeated filter changes | Instruments › Allocations: no unbounded growth |
 
+### 4.1 Scalability benchmarks (M6)
+
+These measure the SCALE-* targets in REQUIREMENTS §11. Record the medians in SUBMISSION_NOTES §6.
+
+- **Synthetic data:** a seeded generator in `jvmTest` (`SyntheticData.flights(count, airports, seed)`) that keeps the fixture's shape: random routes, dates, cabins, programs and points.
+- **Cases**, each with warm-up runs and the median of 20 runs:
+
+  | Case | Sizes | Target |
+  |---|---|---|
+  | `reduce()` (search → filter → sort → aggregate) | 1k / 10k / 100k flights | < 16 ms at 10k |
+  | Airport search per keystroke | 32 / 1,000 / 5,000 airports | < 1 ms at 5k |
+  | SQLite cache replace (JVM driver) | 10k / 100k rows | < 2 s at 100k |
+  | Map aggregation | 100k flights | < 16 ms |
+  | Memory: dataset + indexes | 10k / 100k flights | Recorded, not gated |
+- **Tooling:** plain timed loops are enough. `kotlinx-benchmark` is optional. JVM numbers are a proxy for devices; spot-check the 10k case on a real phone.
+
 ## 5. Manual QA checklist
 
 Fill this in as you go: date, ✅/❌, and a short note. This table *is* the record of "checks actually performed" required by TEST-6.
