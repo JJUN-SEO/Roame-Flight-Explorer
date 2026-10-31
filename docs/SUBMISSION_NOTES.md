@@ -38,7 +38,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | # | Decision | Serves | Origin | Status | Date |
 |---|---|---|---|---|---|
 | D1 | Build the local API as a Ktor (Kotlin) module inside the existing Gradle build, run with `./gradlew :server:run`. The owner's reasoning: a natural fit for a Kotlin Multiplatform project. | API-1, API-2 | Owner's choice (Claude's recommendation over Node or Python) | Decided | 2026‑10‑30 |
-| D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires | DATA-3, VIEW-1, SEL-2 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires. The owner's reasoning: the bridging code should be smaller than writing the same state in both apps. | DATA-3, VIEW-1, SEL-2 | Owner's choice (Claude's recommendation over a view model per platform) | Decided; not built yet | 2026‑10‑30 |
 | D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in M0. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in M0 | 2026‑10‑30 |
 | D4 | Store saved flights as full snapshots in their own table | OFF-6, OFF-7 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
@@ -93,7 +93,7 @@ Every technology choice made so far: the options considered, what each one gives
 | ✅ SwiftUI + Compose | What the brief asks for; each app feels native | Two UIs to build and keep consistent |
 | Compose Multiplatform on iOS | One UI codebase | The brief allows it only without a Mac, and prefers SwiftUI |
 
-**Share presentation state, not only data** (D2, Claude)
+**Share presentation state, not only data** (D2, owner's choice: shared store)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
