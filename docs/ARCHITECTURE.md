@@ -107,7 +107,7 @@ Every intent is a plain, non-suspending function, so it is easy to call from Swi
 private val inputs = MutableStateFlow(ExplorerInputs())  // queries, filters, selection ids, pending ids, messages
 
 val state: StateFlow<ExplorerState> = combine(
-    flightRepository.cache.map(::index),  // CacheSnapshot → IndexedFlights: normalised search keys computed once
+    flightRepository.cache.map(::index),  // CacheSnapshot → IndexedFlights: O1 and O2 orders and normalised search keys computed once
     flightRepository.syncStatus,          // Idle | Refreshing | Failed(FetchError)
     savedRepository.saved,                // Flow<List<SavedFlight>>
     inputs,
@@ -118,8 +118,8 @@ val state: StateFlow<ExplorerState> = combine(
     .stateIn(scope, SharingStarted.Eagerly, ExplorerState.Initial)
 ```
 
-- `reduce` is a pure function, so it can be unit-tested without coroutines. On 1,000 flights it runs in about a millisecond, so search needs no debounce. Add a debounce of about 100 ms only if profiling shows a problem.
-- The search index is rebuilt only when the cache emits, never on each keystroke.
+- `reduce` is a pure function, so it can be unit-tested without coroutines. On 1,000 flights it runs in well under a millisecond (0.1 ms on a Mac, excluding text search), so search needs no debounce. Add a debounce of about 100 ms only if profiling shows a problem.
+- The search index and the two sorted lists (O1 for results, O2 for marker flights) are rebuilt only when the cache emits, never on each keystroke. Filtering keeps their order, so `reduce` doesn't sort.
 - `Dispatchers.Default` keeps the CPU work off the main thread. `stateIn` hands the result to collectors.
 
 ### 4.4 Search engine
@@ -411,7 +411,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D3 | **Room KMP on its bundled SQLite** | Owner's choice | One identical SQLite build on every phone and on iOS, so behaviour and bugs reproduce the same everywhere; transactions, `@Upsert` and `Flow` queries; familiar to Android reviewers. Accepted risk: KSP/Room support for Kotlin 2.4.21, checked first in M0 | SQLDelight (visible SQL and the longest multiplatform record, but it uses each phone's own SQLite, whose version varies by device); DataStore or JSON files (no transactions or queries) |
 | D4 | Saved flights are snapshots in their own table | Owner's choice (Claude's recommendation) | They survive being missing from the API response (V4) and cache wipes, and refresh never deletes them. The extra storage is minimal (about 98 bytes per saved flight, measured). | A saved-ids table joined to the cache, which loses flights that vanish from the API; one flight table plus saved ids that keeps saved rows on refresh, which is more bug-prone for a minimal storage saving |
 | D5 | Replace the whole cache on every successful refresh | Owner's choice (Claude's recommendation) | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct. A diff showed no real speed gain (136 ms vs 130 ms at 100,000 rows, measured on a Mac with Python and SQLite, not Room on a phone). | Merge or diff, which is unnecessary complexity |
-| D6 | Filter in memory on `Dispatchers.Default`, not in SQL | Claude; awaiting review | Only 1,000 rows. Pure functions are easier to test, and there is one code path. | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
+| D6 | Filter in memory on `Dispatchers.Default`, not in SQL, sorting once per data change | Owner's choice (Claude's recommendation) | Only 1,000 rows today. Pure functions are easier to test, and there is one code path. Sorting once keeps each input change at 9.6 ms at 100,000 flights, compared with 35 ms when sorting every time (measured on a Mac in Java, excluding text search). | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
 | D7 | A hand-written Swift bridge | Claude; awaiting review | No plugin coupled to Kotlin 2.4.21 | SKIE or KMP-NativeCoroutines, which carry version risk |
 | D8 | **MapLibre** on Android (MapKit on iOS) | Owner's choice (Claude's recommendation) | Open source with no API key, so the map works for any reviewer. GPU-drawn vector tiles give smooth, sharp rendering, and we don't target low-end phones, so a lighter library buys nothing | Google Maps Compose (mandatory Google Cloud billing account and API key; reviewers without one see a blank map); osmdroid (raster tiles in a classic View, with known visual glitches) |
 | D9 | Add a `jvm()` target for tests | Claude; built, awaiting review | Fast `jvmTest` runs on any machine and in CI, with a real SQLite in memory | Android host tests, which are slower and awkward under the new AGP 9 KMP plugin |
@@ -435,12 +435,12 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 |---|---|---|---|---|
 | Local API | Returns the whole fixture on every request | O(n) bytes (~430 KB today) | ~10k flights (~4 MB) | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
 | Cache (Room + bundled SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
-| Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default` | O(n) filter + O(k log k) sort per input change | ~100k flights | Push predicates into indexed SQL that returns ids; page the results |
+| Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default`, sorted once per data change | O(n) filter per input change: 0.1 ms / 1 ms / 9.6 ms at 1k / 10k / 100k. O(n log n) sort per data change: 69 ms at 100k. Measured on a Mac in Java, excluding text search. | ~100k flights | Build a marker's flights only when its sheet opens (4.1 ms per change + 1.6 ms per sheet at 100k); then push predicates into indexed SQL that returns ids and page the results |
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²) | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n) | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
 | State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
 | Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved) | 10k+ | Paging in the Saved tab |
-| Memory | Dataset + indexes in memory | A few MB at 1k flights | ~100k flights (tens of MB, est.) | Keep rows in SQLite and hold only windows plus indexes in memory |
+| Memory | Dataset + indexes in memory | Flights alone: 0.4 MB at 1k, 3.4 MB at 10k, 35 MB at 100k (measured on the JVM, about 350 bytes per flight) | ~100k flights | Keep rows in SQLite and hold only windows plus indexes in memory |
 
 Two principles make the "next step" column cheap to reach:
 

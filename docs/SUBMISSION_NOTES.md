@@ -42,7 +42,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in M0. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in M0 | 2026‑10‑30 |
 | D4 | Store saved flights as full snapshots in their own table. The owner's reasoning: a design without copies is more bug-prone, and its storage advantage is too small to be worth that. | OFF-6, OFF-7 | Owner's choice (Claude's recommendation over a shared flight table with saved ids) | Decided; not built yet | 2026‑10‑31 |
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Owner's choice (Claude's recommendation over writing only what changed) | Decided; not built yet | 2026‑10‑31 |
-| D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins. Flights are sorted once when new data arrives, because filtering keeps the order. | PERF-2, PERF-3 | Owner's choice (Claude's recommendation over SQL queries) | Decided; not built yet | 2026‑10‑31 |
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D8 | **MapLibre** is the Android map library: open source, no API key, GPU-drawn vector maps, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). Google Maps was rejected for its mandatory billing account and key; osmdroid for its raster rendering and visual glitches (§4.5). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
 | D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Claude | Built with the search engine; awaiting owner review | 2026‑10‑30 |
@@ -164,12 +164,14 @@ Neither database is strictly better. Room's edge here is one consistent, modern 
 
 Both timings are medians of 5 runs on a Mac, using Python and the system's SQLite rather than Room on a phone, so a phone will be slower. Sizes above 1,000 repeat the fixture.
 
-**Filtering** (D6, Claude)
+**Filtering** (D6, owner's choice: in memory)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ In memory, off the main thread, latest input wins | Pure functions that are easy to test at the boundaries; ~1 ms at 1,000 flights | The whole dataset sits in memory; at ~100k flights it moves to SQL (ARCHITECTURE §12) |
-| SQL `WHERE` clauses | Scales to very large data | Harder to compose and to test, and needs the database for every unit test |
+| ✅ In memory, off the main thread, latest input wins, sorted once per data change | Pure functions that are easy to test at the boundaries. Each input change with no filters takes 0.1 ms at 1,000 flights, 1 ms at 10,000 and 9.6 ms at 100,000 (35 ms at 100,000 if it sorted every time). | The whole dataset sits in memory: 0.4 MB at 1,000 flights, 3.4 MB at 10,000, 35 MB at 100,000. Sorting takes 69 ms per data change at 100,000. At ~100k flights it moves to SQL (ARCHITECTURE §12) |
+| SQL `WHERE` clauses | Scales to very large data | Harder to compose and to test, and needs the database for every unit test. Took 0.9 ms, 10 ms and 124 ms at those sizes, without ordering each marker's flights |
+
+In-memory timings are medians on a Mac in Java and exclude text search. SQL timings are medians in Python with the system's SQLite, so the comparison isn't exact. A phone will be slower, and sizes above 1,000 repeat the fixture.
 
 ### 4.3 Search
 

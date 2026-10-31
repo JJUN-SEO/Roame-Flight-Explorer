@@ -291,7 +291,7 @@ The rules are written so that their cost stays predictable as the data grows (RE
 |---|---|---|
 | Search (S, P) | Prefix: O(m) trie walk. Fuzzy: inverted-index lookups, then edit distance on the candidates only. Ranking: one priority per airport, precomputed. All of it runs on **airports**, not flights. | Trie memory grows with the total length of the names (≈ 50k nodes for 5k airports, est.). With many thousands of airports, cap the stored ids per node to the top K by priority, and move fuzzy candidate generation to the server. |
 | Filters (F) | Per-flight predicates: O(n) per input change, off the main thread | Same rules evaluated as indexed SQL `WHERE` clauses. Semantics and tests unchanged. |
-| Ordering (O) | O(n log n). Every ordering ends with an `id` tiebreak | The deterministic order makes paging safe |
+| Ordering (O) | O(n log n), once per data change, because filtering keeps the order (D6). Every ordering ends with an `id` tiebreak | The deterministic order makes paging safe |
 | Map (M) | O(n) grouping by destination | Beyond ~200 markers, clustering changes the *rendering*, not M1–M3 |
 | Selection (L) | O(1) membership check against the result ids | Unchanged |
 | Saved (V) | One upsert or delete per id; independent of cache size | Unchanged; the Saved tab pages |

@@ -41,7 +41,7 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 | `ProgramFilterTest` | F6 | one program; two programs (OR); empty → all; "Mileage Plan" ≠ "MileagePlus" |
 | `CombinedFilterTest` | F7 | search + date + cabin + points + programs → only flights that satisfy every one; removing one filter widens the results |
 | `FilterOptionsTest` | F2, F8 | bounds come from the data; options don't shrink while filtering; a selected program missing after a refresh is dropped |
-| `OrderingTest` | O1–O3 | date, then points, then id tiebreak; marker sheet ordered by points; saved ordering |
+| `OrderingTest` | O1–O3 | date, then points, then id tiebreak; marker sheet ordered by points; saved ordering; filtering keeps the O1 and O2 orders without re-sorting (D6) |
 | `ActiveFiltersTest` | C1–C4 | defaults → no chips; each filter → one chip in a fixed order; clearing one chip; resetAll restores every default; `hasAnythingToReset` is true for search text |
 | `MapAggregatorTest` | M1–M6 | groups by destination; count = number of flights; `minPoints` correct; marker counts sum to `resultCount`; empty input → no markers; NRT and HND are separate markers; coordinates taken from the data |
 | `GreatCircleTest` | M7 | endpoints exact; returns N+1 points; JFK→HKG and SEA→SYD have no consecutive jump > 180° after unwrapping; the same point twice is handled |
