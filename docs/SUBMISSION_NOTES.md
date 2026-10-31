@@ -40,7 +40,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D1 | Build the local API as a Ktor (Kotlin) module inside the existing Gradle build, run with `./gradlew :server:run`. The owner's reasoning: a natural fit for a Kotlin Multiplatform project. | API-1, API-2 | Owner's choice (Claude's recommendation over Node or Python) | Decided | 2026‑10‑30 |
 | D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires. The owner's reasoning: the bridging code should be smaller than writing the same state in both apps. | DATA-3, VIEW-1, SEL-2 | Owner's choice (Claude's recommendation over a view model per platform) | Decided; not built yet | 2026‑10‑30 |
 | D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in M0. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in M0 | 2026‑10‑30 |
-| D4 | Store saved flights as full snapshots in their own table | OFF-6, OFF-7 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D4 | Store saved flights as full snapshots in their own table. The owner's reasoning: a design without copies is more bug-prone, and its storage advantage is too small to be worth that. | OFF-6, OFF-7 | Owner's choice (Claude's recommendation over a shared flight table with saved ids) | Decided; not built yet | 2026‑10‑31 |
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
@@ -145,12 +145,13 @@ Neither database is strictly better. Room's edge here is one consistent, modern 
 
 **Owner's reasoning for Room:** with SQLDelight, each phone runs its own built-in SQLite (a 2015 version on Android 6, a newer one on iOS), so a database issue could depend on the device and be hard to reproduce. Room's bundled SQLite is the same build everywhere, so what works, or breaks, on one device behaves the same on all of them. SQLDelight's fully visible SQL would make reading queries easier, but engine differences between devices are the harder kind of problem to debug. The accepted cost is Room's build setup and its version risk with Kotlin 2.4.21, which the PLAN M0 check confirms first; if it fails, the options go back to the owner.
 
-**Saved flights as snapshots** (D4, Claude)
+**Saved flights as snapshots** (D4, owner's choice: full copies)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
 | ✅ A full copy per saved flight, in its own table | Saved flights survive being removed from the API (OFF-7) and cache wipes | The data is duplicated between the cache and saved flights, so a refresh must update both in one transaction (V5) |
 | A table of saved ids joined to the cache | No duplication | Loses saved flights that disappear from the API, which breaks OFF-7 |
+| One flight table plus saved ids, keeping saved rows on refresh | No duplicated details, so details can't disagree; about 66 bytes per saved flight instead of about 164 (measured with 1,000 saved, using hand-written tables in the system's SQLite, not Room) | A refresh bug could delete saved flights; every flight-list query must exclude delisted rows; removal takes two steps. The saving is at most 96 KB in the fixture, and each phone has its own database, so the number of users doesn't change it |
 
 **Cache refresh** (D5, Claude)
 
