@@ -58,13 +58,13 @@ Requested by the owner. Implemented ahead of the rest of M3, under review.
 - [x] Tests: 54 shared tests passing on the JVM; the iOS klib compiles.
 - [ ] **Owner review** → push.
 - [x] Owner decisions: location comes from the device (D16); ranking orders matched airports only, never the flight list (D17).
-- [ ] *Later:* `GET /airports` in M1, plus loading and caching in M2. Wire the engine into `ExplorerStore` and the hint UI (S13) in M3–M5. Add device location in M4 and M5.
+- [ ] *Later:* `GET /airports` in M1, plus loading and caching in M2. Wire the engine into `ExplorerStore`, the hint UI (S13) and the suggestions dropdown (S14) in M3–M5. Add device location in M4 and M5.
 
 ### M4 · Android app
 
 - [ ] Platform setup: INTERNET permission, network security config, `BuildConfig.API_BASE_URL`, `RoameApp`, StrictMode, LeakCanary.
 - [ ] Theme + tokens; tab shell (Explore, Saved).
-- [ ] Search header, filter chips + sheets, summary + Reset.
+- [ ] Search header with suggestions (S14), filter chips + sheets, summary + Reset.
 - [ ] List with rows, selection, pull-to-refresh, every state from UI_SPEC §4.
 - [ ] Map: markers, marker sheet, route line, camera rules.
 - [ ] Selection card + Save/Remove with pending and error states; snackbar.

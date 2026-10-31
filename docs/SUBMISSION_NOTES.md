@@ -56,9 +56,10 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D14 | A **"Showing Sydney (SYD)" hint** under a field when fuzzy matching was used | SRCH-8 | Owner's choice (the option Claude recommended) | Engine ready; UI pending | 2026‑10‑30 |
 | D15 | **Rank matches by the user's location and annual airport volume.** Volume lives in a separate new file; `flights.json` is never edited. When the file is missing, the app falls back to the original data. | SRCH-7 | **Owner** (the idea, the separate file, the fallback); Claude (the file format, and reading "fallback" as flight counts, A12) | Built | 2026‑10‑30 |
 | D16 | **Location comes from the device**: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy, requested only when the user taps "Use my location". Without it, ranking uses volume only. Nothing is sent to a third party. This replaces Claude's earlier geo-IP proposal. | SRCH-7 | **Owner** (suggested on-device location instead of geo-IP) | Decided; platform code in M4/M5 | 2026‑10‑30 |
-| D17 | **Ranking only orders the matched airports** (the hint line, and autocomplete later). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
+| D17 | **Ranking only orders the matched airports** (the hint line and the suggestions, D20). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
 | D18 | Search runs on **airports, not flights**, behind indexes | SCALE-1 | Claude | Built; awaiting owner review | 2026‑10‑30 |
 | D19 | Ranking weights: origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8 | SRCH-7 | Claude (assumption A13) | Built; awaiting owner review | 2026‑10‑30 |
+| D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, and using only what's in the data); Claude (5 rows and the tap behaviour, A14) | Decided; UI in M4/M5 | 2026‑10‑31 |
 
 ## 3. Assumptions
 
@@ -79,6 +80,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A11 | Whether an extra API surface is allowed | The required contract is untouched; `--mode` is a QA-only switch | — |
 | A12 | What "fall back to the original data" means when `airports.json` is missing | Volume = each airport's number of flights in `flights.json` | P4 |
 | A13 | How much location vs popularity should count | Origin 0.7 / 0.3, destination 0.2 / 0.8 (D19) | P5 |
+| A14 | How many suggestions to show, and what tapping one does | At most 5 rows. Tapping picks exactly that airport, and the field shows "Tokyo (HND)" until it is edited. | S14 |
 
 ## 4. Technical tradeoffs by stack choice
 
@@ -206,7 +208,7 @@ Both timings are medians of 5 runs on a Mac, using Python and the system's SQLit
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
 | ✅ A "Showing Sydney (SYD)" hint under the field | Corrections are never silent; small UI cost | One more line in the header |
-| A suggestions dropdown | The best UX, and where ranking would shine | Much more UI work on both platforms |
+| A suggestions dropdown | The best UX, and where ranking would shine | Much more UI work on both platforms. The owner later added one alongside the hint (D20) |
 | Silent | Nothing to build | The user can't tell why `sidnee` shows Sydney flights |
 
 **What search runs on** (D18, Claude)
@@ -238,7 +240,7 @@ Both timings are medians of 5 runs on a Mac, using Python and the system's SQLit
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ A: only the matched airports (the hint, and autocomplete later) | The flight list stays in date → points order, so earlier and cheaper flights are never pushed down | Without autocomplete, ranking's visible effect is small (the order inside the hint) |
+| ✅ A: only the matched airports (the hint and the suggestions, D20) | The flight list stays in date → points order, so earlier and cheaper flights are never pushed down | Ranking is visible only in the order of the hint and the suggestions |
 | B: the flight list as well | Ranking is visible everywhere | Hides earlier and cheaper flights (with `tokio`, the Feb 1–3 NRT flights drop to row 56); the list order depends on where you are |
 
 **Ranking weights** (D19, Claude, assumption A13): origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8. Simple and explainable, but chosen by judgement, not measured. Revisit with real usage data.

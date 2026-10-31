@@ -96,7 +96,7 @@ The owner's hypothesis is that people mistype a place in four ways. Here is what
   - its city name without spaces (`hongkong`),
   - every word start in the city name (`york`, `angeles`, `paulo`).
 
-  The query walks the tree one character at a time (n → e → w), so a lookup is O(m) for a query of length m. Every node stores the ids of the matching airports, precomputed, so the result is ready as soon as the walk ends. `completions()` branches from that node into the full names beneath it (`new` → `new york`). It always shows the display name, never an internal key such as `newyork`. It's ready for autocomplete but not used by the UI yet.
+  The query walks the tree one character at a time (n → e → w), so a lookup is O(m) for a query of length m. Every node stores the ids of the matching airports, precomputed, so the result is ready as soon as the walk ends. `completions()` branches from that node into the full names beneath it (`new` → `new york`). It always shows the display name, never an internal key such as `newyork`. The UI doesn't use it: suggestions (S14) use the ranked search matches, which carry the airport code and the priority.
 - **S5** In Tier 1, an exact code match ranks first. Other prefix matches are ordered by priority (P6).
 - **S6 Tier 2 gate.** Fuzzy matching runs **only when Tier 1 found nothing** and the query has at least 4 letters (spaces ignored).
   - Airport codes are never fuzzy-matched: 3 letters are too short to tell a typo from another code.
@@ -146,6 +146,13 @@ The owner's hypothesis is that people mistype a place in four ways. Here is what
   - No hint is shown for the `Prefix` or `Blank` tier.
   - `NoMatch` shows the filtered-empty state.
   - *Engine implemented; the UI comes with the store and screens.*
+- **S14 Suggestions** (owner decision D20). While a field has focus and text, both apps show a dropdown of matching airports under it, updated on every keystroke.
+  - The rows are that field's ranked matches from the search engine, in P6 order. They include fuzzy matches and never the other side's airports (S3). Each row shows the city and code, for example "Tokyo (HND)", and each airport gets its own row.
+  - At most 5 rows are shown. *(assumption)*
+  - Tapping a row picks exactly that airport and closes the dropdown. The field shows "Tokyo (HND)", and flights are filtered by that code alone. Editing the text clears the pick and returns to normal search. The code alone wouldn't be enough, because `dub` also matches Dubai (DXB). *(assumption)*
+  - A blank query or `NoMatch` shows no dropdown.
+  - A picked airport counts as search text for Reset (C2, C4), and Reset clears it.
+  - The S13 hint stays, because it still explains fuzzy results after the dropdown closes. A picked airport shows no hint.
 
 ## 2b. Prioritisation (P)
 
@@ -164,7 +171,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - Search and ranking always work with `flights.json` alone. *(assumption: "fall back to the original data" means deriving volume from the flight counts in `flights.json`)*
 - **P5** The weights are origin 0.7 proximity / 0.3 volume (you usually fly from somewhere near you), and destination 0.2 / 0.8 (where you go is mostly about popularity). *(assumption)*
 - **P6 Order of matches:** match score ↓, then priority ↓, then code ↑. A blank query is ordered by priority ↓, then code ↑.
-- **P7** Priority **never reorders the flight list** (owner decision D17, option A). It only orders the matched airports: the hint line (S13), and autocomplete if added later. The flight list always keeps O1 (date, then points).
+- **P7** Priority **never reorders the flight list** (owner decision D17, option A). It only orders the matched airports: the hint line (S13) and the suggestions (S14). The flight list always keeps O1 (date, then points).
 
 ## 3. Filters (F)
 

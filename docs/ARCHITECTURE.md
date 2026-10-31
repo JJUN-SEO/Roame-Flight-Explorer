@@ -67,6 +67,8 @@ data class ExplorerState(
     val data: DataStatus,                 // Loading | Unavailable(error) | Ready(lastSuccessAt, isRefreshing, refreshError?)
     val originQuery: String,
     val destinationQuery: String,
+    val originSuggestions: List<AirportSuggestion>,      // S14: that side's ranked matches, at most 5
+    val destinationSuggestions: List<AirportSuggestion>,
     val filters: FlightFilters,           // dateStart?, dateEnd?, cabin?, maxPoints?, programs: Set<String>
     val options: FilterOptions,           // date bounds, points bounds, cabins, programs (from the whole cache, F8)
     val activeFilters: List<ActiveFilter>,
@@ -91,7 +93,7 @@ data class ExplorerState(
 
 | Group | Methods |
 |---|---|
-| Search | `setOriginQuery(text)`, `setDestinationQuery(text)` |
+| Search | `setOriginQuery(text)`, `setDestinationQuery(text)`, `pickOrigin(code)`, `pickDestination(code)` |
 | Filters | `setDateRange(startIso?, endIso?)`, `setCabin(cabin?)`, `setMaxPoints(points?)`, `toggleProgram(name)`, `clearFilter(kind)`, `resetAll()` |
 | Selection | `select(flightId?)`, `selectSaved(flightId?)` |
 | Saved | `toggleSave(flightId)`, `removeSaved(flightId)` |
@@ -423,6 +425,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D17 | **Ranking only orders the matched airports.** The flight list keeps O1 | Owner's choice (option A) | Earlier and cheaper flights are never pushed down; the list order doesn't depend on where you are | Reordering the flight list by airport priority (option B) |
 | D18 | Search runs on **airports, not flights**, behind indexes | Claude; built, awaiting review | Search cost doesn't grow with the number of flights (SCALE-1) | Matching each flight's strings |
 | D19 | Ranking weights: origin 0.7 / 0.3, destination 0.2 / 0.8 | Claude; assumption A13, awaiting review | You fly *from* near you; *where* you go is mostly about popularity | Equal weights for both fields |
+| D20 | **A suggestions dropdown under each search field**, built from that field's ranked matches in the data | **Owner** (Claude: 5 rows and the tap behaviour, A14) | Search feels live as the user types, and ranking becomes visible. The engine already ranks matches on every keystroke, over airports rather than flights, and the 5-row cap keeps the dropdown the same size at 10× and 100× the airports. | The hint alone (D14, which stays); the trie's `completions()`, which has no airport codes or ranking |
 
 ## 12. Scalability
 
