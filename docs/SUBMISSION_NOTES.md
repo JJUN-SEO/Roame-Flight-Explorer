@@ -43,7 +43,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D4 | Store saved flights as full snapshots in their own table. The owner's reasoning: a design without copies is more bug-prone, and its storage advantage is too small to be worth that. | OFF-6, OFF-7 | Owner's choice (Claude's recommendation over a shared flight table with saved ids) | Decided; not built yet | 2026‑10‑31 |
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Owner's choice (Claude's recommendation over writing only what changed) | Decided; not built yet | 2026‑10‑31 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins. Flights are sorted once when new data arrives, because filtering keeps the order. | PERF-2, PERF-3 | Owner's choice (Claude's recommendation over SQL queries) | Decided; not built yet | 2026‑10‑31 |
-| D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Owner's choice (Claude's recommendation over SKIE, KMP-NativeCoroutines and Swift export) | Decided; not built yet | 2026‑10‑31 |
 | D8 | **MapLibre** is the Android map library: open source, no API key, GPU-drawn vector maps, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). Google Maps was rejected for its mandatory billing account and key; osmdroid for its raster rendering and visual glitches (§4.5). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
 | D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Claude | Built with the search engine; awaiting owner review | 2026‑10‑30 |
 | D10 | One app-scoped store per process | SEL-2, VIEW-1 | Claude | Awaiting owner review | 2026‑10‑29 |
@@ -109,13 +109,14 @@ Every technology choice made so far: the options considered, what each one gives
 | ✅ One store per process | Survives Android rotation; one source of truth; nothing per screen to leak | State lives in memory for the app's lifetime (small). Android process death loses the in-memory query and filters; the cached data survives in the DB. |
 | A store per screen | Tighter scoping | Risk of list and map holding different state |
 
-**Kotlin → Swift bridge** (D7, Claude)
+**Kotlin → Swift bridge** (D7, owner's choice: hand-written)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
 | ✅ Hand-written `observe()` wrapper | No extra dependency; no compiler plugin tied to Kotlin 2.4.21 | Boilerplate per intent; Kotlin sealed types appear in Swift as class hierarchies (clumsy `switch`) |
 | SKIE | Swift enums and `AsyncSequence`; much nicer Swift code | Must support the exact Kotlin version (2.4.21 is brand new) |
 | KMP-NativeCoroutines | Swift async/await over Flows | Compiler plugin with the same version risk |
+| Swift export (built into Kotlin) | No third-party library; maps Flows to Swift's `AsyncSequence` | Alpha as of Kotlin 2.4.0, according to community write-ups (not confirmed in official docs), so it may change |
 
 ### 4.2 Data and networking
 
