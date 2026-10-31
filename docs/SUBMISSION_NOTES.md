@@ -41,7 +41,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires. The owner's reasoning: the bridging code should be smaller than writing the same state in both apps. | DATA-3, VIEW-1, SEL-2 | Owner's choice (Claude's recommendation over a view model per platform) | Decided; not built yet | 2026‑10‑30 |
 | D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in M0. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in M0 | 2026‑10‑30 |
 | D4 | Store saved flights as full snapshots in their own table. The owner's reasoning: a design without copies is more bug-prone, and its storage advantage is too small to be worth that. | OFF-6, OFF-7 | Owner's choice (Claude's recommendation over a shared flight table with saved ids) | Decided; not built yet | 2026‑10‑31 |
-| D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Owner's choice (Claude's recommendation over writing only what changed) | Decided; not built yet | 2026‑10‑31 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins | PERF-2, PERF-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Claude | Awaiting owner review | 2026‑10‑29 |
 | D8 | **MapLibre** is the Android map library: open source, no API key, GPU-drawn vector maps, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). Google Maps was rejected for its mandatory billing account and key; osmdroid for its raster rendering and visual glitches (§4.5). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
@@ -153,12 +153,14 @@ Neither database is strictly better. Room's edge here is one consistent, modern 
 | A table of saved ids joined to the cache | No duplication | Loses saved flights that disappear from the API, which breaks OFF-7 |
 | One flight table plus saved ids, keeping saved rows on refresh | No duplicated details, so details can't disagree; about 66 bytes per saved flight instead of about 164 (measured with 1,000 saved, using hand-written tables in the system's SQLite, not Room) | A refresh bug could delete saved flights; every flight-list query must exclude delisted rows; removal takes two steps. The saving is at most 96 KB in the fixture, and each phone has its own database, so the number of users doesn't change it |
 
-**Cache refresh** (D5, Claude)
+**Cache refresh** (D5, owner's choice: replace everything)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ Replace everything in one transaction | Simple and atomic; matches an API that always returns the full list | Rewrites every row on every refresh: trivial at 1,000, seconds at 100k |
-| A diff (upsert changed rows, delete missing ones) | Less work per refresh at scale | More code and edge cases, for no benefit at this size |
+| ✅ Replace everything in one transaction | Simple and atomic; matches an API that always returns the full list | Rewrites every row on every refresh, and the app recalculates results and rebuilds its search index even when nothing changed. Measured database time: 1 ms at 1,000 rows, 11 ms at 10,000, 136 ms at 100,000 |
+| A diff (upsert changed rows, delete missing ones) | Writes less when little has changed, and can skip recalculating when nothing has | More code and edge cases. It still reads and compares every row, so it showed no real gain: 1 ms, 11 ms and 130 ms with 1% of rows changed |
+
+Both timings are medians of 5 runs on a Mac, using Python and the system's SQLite rather than Room on a phone, so a phone will be slower. Sizes above 1,000 repeat the fixture.
 
 **Filtering** (D6, Claude)
 
