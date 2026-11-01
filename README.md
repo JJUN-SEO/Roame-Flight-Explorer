@@ -69,7 +69,7 @@ shared/        Kotlin Multiplatform: models, networking, SQLite, search/filter, 
 androidApp/    Jetpack Compose UI
 iosApp/        SwiftUI UI
 fixtures/      flights.json: 1,000 fictional flights across 32 airports (provided)
-               airports.json: approximate annual passengers, used for search ranking (ours, optional)
+               airports.json: approximate annual passengers for search ranking (ours; a copy ships in the app)
 docs/          Planning and submission docs
 ```
 

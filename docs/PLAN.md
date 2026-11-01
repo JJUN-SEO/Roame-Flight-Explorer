@@ -1,8 +1,8 @@
 # Build plan
 
-> **Status: waiting for the owner's approval. Don't start Step 0.1 until the owner approves this plan.**
+> **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** none yet. Update this line at every review gate.
+> **Current step:** 0.1. Update this line at every review gate.
 
 This plan turns the decided design (D1–D20) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -96,13 +96,13 @@ Every step also meets the "Before you say done" list in `CLAUDE.md`.
 | Owner | Approves this plan, reviews each step, accepts pushes, makes decisions, installs the Android SDK (Step 0.1), confirms QA on real interactions, and records the demo (Step 7.2) |
 | Agent | Everything else, stopping at each review gate |
 
-## 6. Additions to approve with this plan
+## 6. Additions approved with this plan
 
 These are small gaps found while writing the plan. Nothing here is built yet. Update ARCHITECTURE in the step that builds each one.
 
 | Addition | Why it's needed | Step |
 |---|---|---|
-| An `airport_stat` table (`code`, `annualPassengers`) | D15 says to cache the passenger figures like flights, but ARCHITECTURE §5.1 has no table for them. Without one, ranking falls back to flight counts whenever the API is off. | 2.2 |
+| The passenger figures ship inside the app as a Kotlin data file, instead of `GET /airports` and a database copy | The ranking order stays the same online and offline, with less to build. Roame's website also ships its airport data with its scripts. | 3.5 |
 | `ExplorerState.originHint` and `destinationHint` (lists of `AirportSuggestion`, empty unless the tier is `Fuzzy`) | ARCHITECTURE §4.1 has nothing the apps can use to draw the S13 hint. | 3.5 |
 | `ExplorerState.originPick` and `destinationPick` | The apps must show "Tokyo (HND)" while a pick is active (S14). | 3.5 |
 | `ExplorerState.isLocationShared` and the intent `setUserLocation(latitude, longitude)` | ARCHITECTURE §4.2 has no way to hand the device location to the store, and the ⌖ button must show when location is on. | 3.5 |
@@ -167,7 +167,6 @@ Nothing else starts until this phase is done. The brief says both starter apps m
 - **Build:**
   - A `:server` module with Ktor and `tasks.run { workingDir = rootDir }`, listening on port 8080 or `PORT`.
   - `GET /flights` returns the raw bytes of `fixtures/flights.json`, reading the file on every request. If the file is missing, fail at startup.
-  - `GET /airports` serves `fixtures/airports.json` the same way, and returns 404 if it's missing (D15).
   - In the README and `CLAUDE.md`, remove the † marks and add the `JAVA_HOME` note from §4.
 - **Done when:** `curl -i localhost:8080/flights` returns 200 with `application/json`, and `curl -s localhost:8080/flights | diff - fixtures/flights.json` shows no differences.
 
@@ -190,17 +189,16 @@ Tests use `MockEngine` and an in-memory or temp-file database. Package layout: A
 - **Build:**
   - `Airport`, `Flight`, the DTOs and their mapping.
   - `FlightsApi` and `FetchError`, with `expect fun Throwable.isConnectivityFailure()`.
-  - A small client for `GET /airports`. Any failure returns empty figures and never counts as a refresh failure (P4).
 - **Tests:** `FlightsApiTest`, and the §0 facts added to `FixtureContractTest`.
 - **Done when:** the real fixture decodes to 1,000 flights, and each failure row in ARCHITECTURE §6.3 has a passing test.
 
 #### [ ] 2.2 Flight cache
 
 - **Goal:** flights survive closing the app, and a failed refresh never loses them.
-- **Covers:** R1, R2, R3, R4, R5, R8, P3, P4, DATA-2, DATA-4, DATA-6, TEST-4, D3, D5.
+- **Covers:** R1, R2, R3, R4, R5, R8, DATA-2, DATA-4, DATA-6, TEST-4, D3, D5.
 - **Read:** ARCHITECTURE §5; DOMAIN_RULES §9.
 - **Build:**
-  - The entities, including `airport_stat` (§6), plus `FlightCacheDao`, `AppDatabase` and the database builders for Android, iOS and the JVM.
+  - The entities, `FlightCacheDao`, `AppDatabase` and the database builders for Android, iOS and the JVM.
   - `FlightRepository`: the cache flow, sync status, an atomic refresh, and one refresh at a time.
 - **Tests:** `FlightCacheTest`.
 - **Done when:** a failure halfway through an insert leaves the old cache intact, data survives reopening the file, and "never synced" differs from "synced empty". Room's schema is exported to `shared/schemas/`.
@@ -260,6 +258,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Covers:** S2, S3, S13, S14, P1, P2, P3, P4, P5, P6, P7, SRCH-1, SRCH-2, SRCH-3, SRCH-7, SRCH-8, SRCH-9, SCALE-1, D14, D15, D17, D18, D19, D20.
 - **Read:** DOMAIN_RULES §2 and §2b; ARCHITECTURE §4.4.
 - **Build:**
+  - `AirportPassengers`: a Kotlin data file holding the figures from `fixtures/airports.json`, with a `FixtureContractTest` check that they match. Update the comments in `AirportRanking` and rename `p4_missingAirportsFileFallsBackToFlightCountsFromFlightsJson` to match (P3, P4).
   - One engine per side, built when the cache emits. Ranking is rebuilt when the location changes.
   - `AirportSuggestion`, including the city row, plus `pickOrigin(codes)`, `pickDestination(codes)` and the §6 additions. Update ARCHITECTURE §4.
 - **Tests:** `SearchSuggestionsTest`, plus store tests for both fields combined with filters.

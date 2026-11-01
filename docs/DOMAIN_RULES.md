@@ -27,7 +27,7 @@ Profiled from `fixtures/flights.json` on 2026‑10‑29. Use these as test expec
 | Cities | Tokyo has two airports (HND and NRT). "Sao Paulo" is stored without the tilde. |
 | Geometry | 364 flights have \|Δlongitude\| > 180° (for example JFK→HKG and SEA→SYD), so route lines must handle the antimeridian. |
 | Busiest destinations | NRT 55 · HND 55 · MAD 54 flights |
-| Supplementary file | `fixtures/airports.json` (added by us, not part of the provided fixture): approximate 2024 annual passengers for all 32 airports, used only for ranking (P3). The app works without it (P4). |
+| Supplementary file | `fixtures/airports.json` (added by us, not part of the provided fixture): approximate 2024 annual passengers for all 32 airports, used only for ranking (P3). A copy ships inside the app (D15). An airport with no figure uses its flight count (P4). |
 
 ## 1. Data model (DM)
 
@@ -165,10 +165,10 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 - **P2** `proximity = 0.5^(distance_km / 250)`, so it halves every 250 km. The distance is the great-circle (haversine) distance from the user's location to the airport.
   - Without a location (unknown, permission denied, or not available yet), priority is volume only.
   - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". There is no geo-IP and no third party.
-- **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched.
+- **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched. A copy ships inside the app (owner decision D15), so ranking is the same online and offline, and a test keeps the copy equal to the file.
 - **P4 Fallback to the original data.**
-  - If `airports.json` is missing or fails to load, `volume = flights per airport in flights.json / max`.
-  - If only some airports have passenger figures, the rest use their flight counts (`VolumeSource.Mixed`).
+  - With no passenger figures at all, `volume = flights per airport in flights.json / max`.
+  - If only some airports have passenger figures, the rest use their flight counts (`VolumeSource.Mixed`). This is what happens if the API returns an airport the app has no figure for.
   - Search and ranking always work with `flights.json` alone. *(assumption: "fall back to the original data" means deriving volume from the flight counts in `flights.json`)*
 - **P5** The weights are origin 0.6 proximity / 0.4 volume (you usually fly from somewhere near you), and destination 0 / 1 (owner decision D19: your location says nothing about where you're flying to, so it never affects the destination field). *(assumption: the origin split and the 250 km in P2 are borrowed from public sources, SUBMISSION_NOTES §4.4)*
 - **P6 Order of matches:** match score ↓, then priority ↓, then code ↑. A blank query is ordered by priority ↓, then code ↑.

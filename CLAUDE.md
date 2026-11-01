@@ -66,7 +66,7 @@ shared/                KMP module → Android library + static Shared.framework 
 androidApp/            Compose app, package travel.roame.takehome.android
 iosApp/                SwiftUI app: RoameStarter.xcodeproj, iOS 17, Swift 6
 fixtures/flights.json  1,000 flights, envelope {"flights":[…]} — provided; never edit
-fixtures/airports.json ours: approximate annual passengers for ranking; optional (P4 fallback)
+fixtures/airports.json ours: approximate annual passengers for ranking; a copy ships in the app (D15)
 docs/                  planning docs (see table above)
 ```
 
