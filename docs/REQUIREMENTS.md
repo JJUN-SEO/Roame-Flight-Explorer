@@ -126,7 +126,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | DEL-3 | Submission notes: approach and key architectural decisions, assumptions and tradeoffs, known limitations, and how AI was used and checked | [SUBMISSION_NOTES.md](SUBMISSION_NOTES.md) is complete, with no TODOs left. | ⬜ |
 | DEL-4 | Screen recording walkthrough of **both** apps showing search, filters, map selection, saving flights, and reopening the app with the API stopped | Follows the demo script in TEST_PLAN §7. | ⬜ |
 | DEL-5 | Ambiguities documented as assumptions | Every *(assumption)* rule in DOMAIN_RULES appears in the submission notes. | ⬜ |
-| DEL-6 | Both starter apps built before implementation | Recorded in TEST_PLAN §5 (pre-flight). | ⬜ |
+| DEL-6 | Both starter apps built before implementation | Recorded in TEST_PLAN §5 (pre-flight). | ✅ 2026‑11‑01, before any app, server or data work. The shared search engine came first, at the owner's request. |
 
 ## 11. Scalability (non-functional, self-imposed)
 

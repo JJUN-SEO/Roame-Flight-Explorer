@@ -110,7 +110,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 
 | # | Check | Android | iOS |
 |---|---|---|---|
-| P1 | The starter app builds and shows "Hello world!" | | |
+| P1 | The starter app builds and shows "Hello world!" | ✅ 2026‑11‑01, Claude: `Medium_Phone_API_37.0` emulator (Google Play image), screenshot checked | ✅ 2026‑11‑01, Claude: iPhone 18 Pro simulator (iOS 27.0), screenshot checked |
 | P2 | `./gradlew :server:run` → `curl` returns 200 and the body matches the fixture | | — |
 | Q1 | Fresh install with the API running → loading state → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | | |
 | Q2 | From `"  BoStOn "` → BOS only. To `tokyo` → HND and NRT. To `nrt` → NRT only. | | |

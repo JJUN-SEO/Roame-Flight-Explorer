@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.1. Update this line at every review gate.
+> **Current step:** 0.1, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D20) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -130,7 +130,7 @@ Nothing else starts until this phase is done. The brief says both starter apps m
 
 #### [ ] 0.1 Set up this Mac and build both starter apps
 
-- **Goal:** both starter apps run here. On 2026‑11‑01, no Android SDK could be found on this Mac.
+- **Goal:** both starter apps run here.
 - **Covers:** DEL-6. QA: P1.
 - **Owner does:** opens Android Studio once and finishes its setup, installs Android SDK 37.0 and build-tools 37.0.0, and creates an emulator using a **Google APIs or Google Play** image, which D16 needs.
 - **Agent does:** points Gradle at the SDK with `local.properties` (already gitignored), then runs the Android build and the iOS build.
@@ -420,7 +420,6 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 
 | Risk | Likelihood | Impact | What to do |
 |---|---|---|---|
-| No Android SDK on this Mac | Certain today | High | Step 0.1, as the first thing |
 | Room or KSP don't support Kotlin 2.4.21 or AGP 9's new KMP plugin | Medium | High | Step 0.2, before anything depends on them. If it fails, the owner chooses between waiting and SQLDelight |
 | MapLibre in Compose takes too long, because of custom pill markers | Medium | Medium | Step 0.3 is time-limited. If it fails, ask before using Google Maps |
 | Swift 6 strict concurrency conflicts with Kotlin callbacks | Medium | Low | Step 3.6 tests this early. Deliver on the main thread and keep the bridge small |
