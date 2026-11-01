@@ -13,7 +13,7 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 | `docs/ARCHITECTURE.md` | Modules, data flow, persistence schema, networking, threading, iOS interop, libraries, decision log |
 | `docs/UI_SPEC.md` | Screens, the state catalogue with copy, components, design tokens, platform notes |
 | `docs/TEST_PLAN.md` | Shared test matrix, the manual QA checklist, the demo script |
-| `docs/PLAN.md` | Working agreement, milestones, risks, priority tiers |
+| `docs/PLAN.md` | What to build next: phases, steps, review gates, risks, priority tiers |
 | `docs/SUBMISSION_NOTES.md` | Decisions, assumptions, limitations, the AI usage log |
 
 ## How we work (owner's rules — follow every time)

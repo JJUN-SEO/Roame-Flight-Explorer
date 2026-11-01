@@ -10,7 +10,7 @@
 | Contract | The real fixture decodes and its facts hold | Read `fixtures/flights.json` | `jvmTest` |
 | Platform UI | Rendering, gestures, states | **Manual QA checklist (§5)**, filled in on both platforms | Emulator / simulator |
 
-The brief asks for *focused* shared tests plus a written record of the checks performed on both platforms. Platform UI automation is out of scope unless time allows (see PLAN cut lines).
+The brief asks for *focused* shared tests plus a written record of the checks performed on both platforms. Platform UI automation is out of scope unless time allows (see the priority tiers in PLAN).
 
 **Naming.** Prefix each test with the rule ID and use camelCase, so it works on Kotlin/Native: `@Test fun f4_pointsEqualToMax_isIncluded()`.
 
@@ -88,7 +88,7 @@ The second and third commands need a Mac. `allTests` runs every target that is a
 | Leaks | LeakCanary installed in debug; rotate, switch tabs and open/close sheets 10× → no leak reports | Debug Memory Graph after the same steps → no leaked `ExplorerModel` or cycles; Instruments › Leaks clean |
 | Memory | Android Studio Profiler: heap stable after repeated filter changes | Instruments › Allocations: no unbounded growth |
 
-### 4.1 Scalability benchmarks (M6)
+### 4.1 Scalability benchmarks (Phase 6)
 
 These measure the SCALE-* targets in REQUIREMENTS §11. Record the medians in SUBMISSION_NOTES §6.
 

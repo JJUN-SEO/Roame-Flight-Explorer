@@ -1,6 +1,6 @@
 # Submission notes
 
-> **Working draft.** Keep this file current while building, and finalise it in M7. Delete this note before submitting.
+> **Working draft.** Keep this file current while building, and finalise it in Phase 7. Delete this note before submitting.
 
 ## 1. Approach
 
@@ -39,7 +39,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 |---|---|---|---|---|---|
 | D1 | Build the local API as a Ktor (Kotlin) module inside the existing Gradle build, run with `./gradlew :server:run`. The owner's reasoning: a natural fit for a Kotlin Multiplatform project. | API-1, API-2 | Owner's choice (Claude's recommendation over Node or Python) | Decided | 2026‑10‑30 |
 | D2 | Share the *presentation state* too (`ExplorerStore`: selection, map grouping, offline state), beyond the four layers the brief requires. The owner's reasoning: the bridging code should be smaller than writing the same state in both apps. | DATA-3, VIEW-1, SEL-2 | Owner's choice (Claude's recommendation over a view model per platform) | Decided; not built yet | 2026‑10‑30 |
-| D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in M0. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in M0 | 2026‑10‑30 |
+| D3 | **Room** (Google's database library) on its **bundled SQLite**. The owner's reasoning: one identical database engine on every phone and on iOS makes behaviour, and bugs, reproducible across devices. Room/KSP support for the new Kotlin 2.4.21 is a known risk, checked first in Step 0.2. | DATA-2, DATA-4, DATA-5 | Owner's choice (over SQLDelight; Claude leaned Room) | Decided; compatibility check in Step 0.2 | 2026‑10‑30 |
 | D4 | Store saved flights as full snapshots in their own table. The owner's reasoning: a design without copies is more bug-prone, and its storage advantage is too small to be worth that. | OFF-6, OFF-7 | Owner's choice (Claude's recommendation over a shared flight table with saved ids) | Decided; not built yet | 2026‑10‑31 |
 | D5 | Replace the whole cache on each successful refresh | DATA-4, OFF-3 | Owner's choice (Claude's recommendation over writing only what changed) | Decided; not built yet | 2026‑10‑31 |
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins. Flights are sorted once when new data arrives, because filtering keeps the order. | PERF-2, PERF-3 | Owner's choice (Claude's recommendation over SQL queries) | Decided; not built yet | 2026‑10‑31 |
@@ -55,11 +55,11 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D13 | **Use Double Metaphone from an existing library, not our own implementation.** No library runs on iOS, so Apache Commons Codec's version is translated to Kotlin, credited, and verified against the original (§8) | SRCH-6 | **Owner** (use a library and disclose it); Claude proposed the translate-and-verify route, which was the owner's choice | Built | 2026‑10‑30 |
 | D14 | A **"Showing Sydney (SYD)" hint** under a field when fuzzy matching was used | SRCH-8 | Owner's choice (the option Claude recommended) | Engine ready; UI pending | 2026‑10‑30 |
 | D15 | **Rank matches by the user's location and annual airport volume.** Volume lives in a separate new file; `flights.json` is never edited. When the file is missing, the app falls back to the original data. Location only counts in the origin field (D19). | SRCH-7 | **Owner** (the idea, the separate file, the fallback); Claude (the file format, and reading "fallback" as flight counts, A12) | Built | 2026‑10‑30 |
-| D16 | **Location comes from the device**: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy, requested only when the user taps "Use my location". Without it, ranking uses volume only. Nothing is sent to a third party. This replaces Claude's earlier geo-IP proposal. | SRCH-7 | **Owner** (suggested on-device location instead of geo-IP) | Decided; platform code in M4/M5 | 2026‑10‑30 |
+| D16 | **Location comes from the device**: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy, requested only when the user taps "Use my location". Without it, ranking uses volume only. Nothing is sent to a third party. This replaces Claude's earlier geo-IP proposal. | SRCH-7 | **Owner** (suggested on-device location instead of geo-IP) | Decided; platform code in Phases 4 and 5 | 2026‑10‑30 |
 | D17 | **Ranking only orders the matched airports** (the hint line and the suggestions, D20). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
 | D18 | Search runs on **airports, not flights**, behind indexes. The owner's reasoning: the brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names". Scale is a side benefit, not the reason. | SRCH-1, SRCH-2, SCALE-1 | Owner's choice (follow Roame; Claude's original design) | Built | 2026‑11‑01 |
 | D19 | Ranking weights: origin 0.6 proximity / 0.4 volume, destination 0 / 1, and proximity halves every 250 km. The owner's reasoning: your location says nothing about where you're flying to. | SRCH-7 | Owner's choice (the destination reasoning, and asking for public sources); Claude found the sources and proposed the numbers (A13) | Built | 2026‑11‑01 |
-| D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. When two or more matches share a city, one extra row picks them all, following Roame. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, using only what's in the data, and the city row); Claude (5 rows and the tap behaviour, A14) | Decided; UI in M4/M5 | 2026‑11‑01 |
+| D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. When two or more matches share a city, one extra row picks them all, following Roame. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, using only what's in the data, and the city row); Claude (5 rows and the tap behaviour, A14) | Decided; UI in Phases 4 and 5 | 2026‑11‑01 |
 
 ## 3. Assumptions
 
@@ -146,7 +146,7 @@ Both options are libraries on top of **SQLite**, the database engine built into 
 
 Neither database is strictly better. Room's edge here is one consistent, modern SQLite on both apps and every Android version, plus reviewer familiarity. SQLDelight's edge is fewer moving parts, visible SQL, the longest multiplatform track record, and the smallest app. Either sits behind our repositories, so switching later only touches the data layer.
 
-**Owner's reasoning for Room:** with SQLDelight, each phone runs its own built-in SQLite (a 2015 version on Android 6, a newer one on iOS), so a database issue could depend on the device and be hard to reproduce. Room's bundled SQLite is the same build everywhere, so what works, or breaks, on one device behaves the same on all of them. SQLDelight's fully visible SQL would make reading queries easier, but engine differences between devices are the harder kind of problem to debug. The accepted cost is Room's build setup and its version risk with Kotlin 2.4.21, which the PLAN M0 check confirms first; if it fails, the options go back to the owner.
+**Owner's reasoning for Room:** with SQLDelight, each phone runs its own built-in SQLite (a 2015 version on Android 6, a newer one on iOS), so a database issue could depend on the device and be hard to reproduce. Room's bundled SQLite is the same build everywhere, so what works, or breaks, on one device behaves the same on all of them. SQLDelight's fully visible SQL would make reading queries easier, but engine differences between devices are the harder kind of problem to debug. The accepted cost is Room's build setup and its version risk with Kotlin 2.4.21, which PLAN Step 0.2 confirms first; if it fails, the options go back to the owner.
 
 **Saved flights as snapshots** (D4, owner's choice: full copies)
 
@@ -330,7 +330,7 @@ How the design behaves as the data grows. The per-layer table, with each layer's
 - **Built for now:** in-memory filtering, a full cache replace, and individual map markers. All are well within budget at 1,000 flights.
 - **Search is built to scale:** it works on airports, not flights. Prefix lookup is O(m) in a trie. Fuzzy candidates come from inverted trigram and phonetic indexes rather than a full scan. Ranking priorities are precomputed (ARCHITECTURE §4.4, §12).
 - **Scaling paths documented, not built:** SQL-side filtering with indexes, incremental sync (ETag and deltas), marker clustering, and paged lists.
-- **Measured numbers:** *fill in from the M6 benchmarks (TEST_PLAN §4.1).*
+- **Measured numbers:** *fill in from the Phase 6 benchmarks (TEST_PLAN §4.1).*
 
 ## 7. Checks performed
 
@@ -410,3 +410,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑10‑30 | `airports.json` | Recalled approximate 2024 passenger totals for the 32 airports | **Not verified**: labelled as approximate in the file and in §5 |
 | 2026‑11‑01 | D18 research | Timed both search designs with a throwaway test, and read Roame's public pages and website scripts to see how its search fields work | Timings were run on the owner's Mac, and both designs picked the same airports on 6 queries. Roame's behaviour comes from reading its minified scripts: not run, not confirmed by Roame, and its mobile app may differ |
 | 2026‑11‑01 | D19 research | Read the code and specs of Photon, Pelias and Amadeus, Google's patent and vendor docs; measured how the weights change the fixture's results; compared the from-memory passenger figures with OpenTravelData and Algolia's airport dataset | Used Photon's code rather than its docs. Three new tests failed on the old numbers before the change. Vendor pages are self-reported, and the patent doesn't show what Google Flights does |
+| 2026‑11‑01 | Build plan | Rewrote `docs/PLAN.md` into 37 reviewable steps, and found four small design gaps (PLAN §6) | A script confirmed that all 72 requirement IDs, all 78 rule IDs and every QA row appear in a step. Owner approval pending |

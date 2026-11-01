@@ -13,7 +13,7 @@ A Roame-inspired award-flight explorer, built natively twice: **SwiftUI** on iOS
 | [Architecture](docs/ARCHITECTURE.md) | Modules, data flow, persistence, networking, iOS interop, libraries, decision log, scalability |
 | [UI spec](docs/UI_SPEC.md) | Screens, state catalogue, components, design tokens |
 | [Test plan](docs/TEST_PLAN.md) | Shared test matrix, manual QA checklist, demo script |
-| [Plan](docs/PLAN.md) | Working agreement, milestones, risks, priority tiers |
+| [Plan](docs/PLAN.md) | Build order: phases, steps, review gates, risks, priority tiers |
 | [Submission notes](docs/SUBMISSION_NOTES.md) | Approach, decision record, assumptions, tradeoffs, limitations, scalability, AI usage |
 | [CLAUDE.md](CLAUDE.md) | Working agreement for AI coding agents, including the review-before-push rule |
 
