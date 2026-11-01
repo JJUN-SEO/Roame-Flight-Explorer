@@ -2,7 +2,7 @@ package travel.roame.takehome.domain.search
 
 import kotlin.math.asin
 import kotlin.math.cos
-import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -28,11 +28,11 @@ internal data class GeoPoint(val latitude: Double, val longitude: Double) {
 /** How much proximity and traffic volume count toward an airport's priority (DOMAIN_RULES P1, P5). */
 internal data class RankingWeights(val proximity: Double, val volume: Double) {
     companion object {
-        /** You usually fly from somewhere near you. */
-        val ORIGIN = RankingWeights(proximity = 0.7, volume = 0.3)
+        /** You usually fly from somewhere near you. The split is Photon's default (SUBMISSION_NOTES §4.4). */
+        val ORIGIN = RankingWeights(proximity = 0.6, volume = 0.4)
 
-        /** Where you fly to is mostly about popularity, not distance. */
-        val DESTINATION = RankingWeights(proximity = 0.2, volume = 0.8)
+        /** Your location says nothing about where you're flying to, so only popularity counts. */
+        val DESTINATION = RankingWeights(proximity = 0.0, volume = 1.0)
     }
 }
 
@@ -68,8 +68,8 @@ internal class AirportRanking private constructor(
     companion object {
         val NONE = AirportRanking(emptyMap(), VolumeSource.None, usesLocation = false)
 
-        /** Distance at which proximity has decayed to 1/e (≈ 0.37). */
-        const val PROXIMITY_SCALE_KM = 1000.0
+        /** Proximity halves every this many kilometres (DOMAIN_RULES P2). */
+        const val PROXIMITY_HALF_DISTANCE_KM = 250.0
 
         /**
          * @param annualPassengers passenger figures by airport code from `fixtures/airports.json`;
@@ -106,7 +106,7 @@ internal class AirportRanking private constructor(
                 val priority = if (userLocation == null) {
                     volume
                 } else {
-                    val proximity = exp(-userLocation.distanceKmTo(airport.location) / PROXIMITY_SCALE_KM)
+                    val proximity = 0.5.pow(userLocation.distanceKmTo(airport.location) / PROXIMITY_HALF_DISTANCE_KM)
                     (weights.proximity * proximity + weights.volume * volume) / (weights.proximity + weights.volume)
                 }
                 airport.code to priority
@@ -118,7 +118,7 @@ internal class AirportRanking private constructor(
                 fromFallback > 0 -> VolumeSource.FlightCountFallback
                 else -> VolumeSource.None
             }
-            return AirportRanking(priorities, source, usesLocation = userLocation != null)
+            return AirportRanking(priorities, source, usesLocation = userLocation != null && weights.proximity > 0.0)
         }
     }
 }

@@ -135,7 +135,7 @@ Use the same copy on both platforms.
 | Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights. Pull to refresh later." No error styling. |
 | Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
 | Location not shared | The user never tapped ⌖, or denied the permission (D16) | Nothing extra is shown and there is no error. Ranking uses airport volume only. ⌖ stays outlined. |
-| Location shared | Permission granted and a location received | ⌖ is filled with the accent colour. Matched airports near the user rank higher in the hint. |
+| Location shared | Permission granted and a location received | ⌖ is filled with the accent colour. In the From field, matched airports near the user rank higher in the hint and suggestions. The To field doesn't use location. |
 | Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
 | Search suggestions | A field has focus and its query has matches (S14) | A dropdown under the field with up to 5 rows, such as "Tokyo (HND)". Hidden for a blank query or no match. |
 | Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |

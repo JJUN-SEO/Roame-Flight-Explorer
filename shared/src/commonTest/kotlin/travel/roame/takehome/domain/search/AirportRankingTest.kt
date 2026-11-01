@@ -9,6 +9,8 @@ class AirportRankingTest {
 
     private val boston = GeoPoint(42.36, -71.01)
     private val seattle = GeoPoint(47.61, -122.33)
+    private val sanFrancisco = GeoPoint(37.62, -122.38)
+    private val barcelona = GeoPoint(41.30, 2.08)
 
     /** Approximate annual passengers (millions) for a few destinations; test data only. */
     private val passengers = mapOf(
@@ -64,6 +66,21 @@ class AirportRankingTest {
     }
 
     @Test
+    fun p2_proximityHalvesEvery250Km() {
+        val here = SearchableAirport("AAA", "Here", GeoPoint(0.0, 0.0))
+        val at250Km = SearchableAirport("BBB", "Near", GeoPoint(2.2483, 0.0)) // 1° of latitude ≈ 111.19 km
+        val at500Km = SearchableAirport("CCC", "Far", GeoPoint(4.4966, 0.0))
+        val r = ranking(
+            listOf(here, at250Km, at500Km),
+            location = here.location,
+            weights = RankingWeights(proximity = 1.0, volume = 0.0),
+        )
+        assertEquals(1.0, r.priorityOf("AAA"), 1e-9)
+        assertEquals(0.5, r.priorityOf("BBB"), 1e-3)
+        assertEquals(0.25, r.priorityOf("CCC"), 1e-3)
+    }
+
+    @Test
     fun p3_passengerStatsAreTheVolumeSourceWhenComplete() {
         val all = TestAirports.destinations.associate { it.code to 1_000_000L }
         assertEquals(VolumeSource.PassengerStats, ranking(TestAirports.destinations, all).volumeSource)
@@ -93,6 +110,32 @@ class AirportRankingTest {
         assertEquals(VolumeSource.None, r.volumeSource)
         assertEquals(0.0, r.priorityOf("CDG"))
         assertEquals(setOf("CDG"), TestAirports.destinationEngine.search("paris", r).codes)
+    }
+
+    @Test
+    fun p5_destinationRankingIgnoresTheUsersLocation() {
+        val volumes = mapOf("BKK" to 62_200_000L, "BCN" to 55_000_000L)
+        val inBarcelona = ranking(TestAirports.destinations, volumes, location = barcelona)
+        val noLocation = ranking(TestAirports.destinations, volumes)
+
+        val order = TestAirports.destinationEngine.search("b", inBarcelona).matches.map { it.airport.code }
+        assertEquals(listOf("BKK", "BCN"), order, "the busier airport first, even when standing in Barcelona")
+        TestAirports.destinations.forEach { assertEquals(noLocation.priorityOf(it.code), inBarcelona.priorityOf(it.code), 1e-9) }
+        assertEquals(false, inBarcelona.usesLocation)
+    }
+
+    @Test
+    fun p5_originRankingBalancesNearbyAndBusyAirports() {
+        val volumes = mapOf(
+            "ORD" to 80_000_000L, "LAX" to 76_600_000L, "JFK" to 63_300_000L, "SEA" to 52_600_000L,
+            "SFO" to 52_000_000L, "YYZ" to 46_800_000L, "BOS" to 43_500_000L, "YVR" to 26_400_000L,
+        )
+        fun orderFrom(location: GeoPoint) = TestAirports.originEngine
+            .search("y", ranking(TestAirports.origins, volumes, location = location, weights = RankingWeights.ORIGIN))
+            .matches.map { it.airport.code }
+
+        assertEquals(listOf("YVR", "JFK", "YYZ"), orderFrom(seattle), "Vancouver is about 205 km from Seattle")
+        assertEquals(listOf("JFK", "YYZ", "YVR"), orderFrom(sanFrancisco), "Vancouver is too far to beat the busier airports")
     }
 
     @Test

@@ -54,11 +54,11 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D12 | **Mixed fuzzy matching**: phonetic and n-gram matching plus accent folding. It covers the owner's hypothesis that people mistype a place in four ways: (1) a typo, (2) knowing the sound but not the spelling, (3) roughly knowing the spelling, (4) accents. Claude added an edit-distance typo signal alongside. | SRCH-5 (beyond the brief) | **Owner** (design and hypothesis); Claude (the edit-distance signal) | Built | 2026‑10‑30 |
 | D13 | **Use Double Metaphone from an existing library, not our own implementation.** No library runs on iOS, so Apache Commons Codec's version is translated to Kotlin, credited, and verified against the original (§8) | SRCH-6 | **Owner** (use a library and disclose it); Claude proposed the translate-and-verify route, which was the owner's choice | Built | 2026‑10‑30 |
 | D14 | A **"Showing Sydney (SYD)" hint** under a field when fuzzy matching was used | SRCH-8 | Owner's choice (the option Claude recommended) | Engine ready; UI pending | 2026‑10‑30 |
-| D15 | **Rank matches by the user's location and annual airport volume.** Volume lives in a separate new file; `flights.json` is never edited. When the file is missing, the app falls back to the original data. | SRCH-7 | **Owner** (the idea, the separate file, the fallback); Claude (the file format, and reading "fallback" as flight counts, A12) | Built | 2026‑10‑30 |
+| D15 | **Rank matches by the user's location and annual airport volume.** Volume lives in a separate new file; `flights.json` is never edited. When the file is missing, the app falls back to the original data. Location only counts in the origin field (D19). | SRCH-7 | **Owner** (the idea, the separate file, the fallback); Claude (the file format, and reading "fallback" as flight counts, A12) | Built | 2026‑10‑30 |
 | D16 | **Location comes from the device**: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy, requested only when the user taps "Use my location". Without it, ranking uses volume only. Nothing is sent to a third party. This replaces Claude's earlier geo-IP proposal. | SRCH-7 | **Owner** (suggested on-device location instead of geo-IP) | Decided; platform code in M4/M5 | 2026‑10‑30 |
 | D17 | **Ranking only orders the matched airports** (the hint line and the suggestions, D20). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
 | D18 | Search runs on **airports, not flights**, behind indexes. The owner's reasoning: the brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names". Scale is a side benefit, not the reason. | SRCH-1, SRCH-2, SCALE-1 | Owner's choice (follow Roame; Claude's original design) | Built | 2026‑11‑01 |
-| D19 | Ranking weights: origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8 | SRCH-7 | Claude (assumption A13) | Built; awaiting owner review | 2026‑10‑30 |
+| D19 | Ranking weights: origin 0.6 proximity / 0.4 volume, destination 0 / 1, and proximity halves every 250 km. The owner's reasoning: your location says nothing about where you're flying to. | SRCH-7 | Owner's choice (the destination reasoning, and asking for public sources); Claude found the sources and proposed the numbers (A13) | Built | 2026‑11‑01 |
 | D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, and using only what's in the data); Claude (5 rows and the tap behaviour, A14) | Decided; UI in M4/M5 | 2026‑10‑31 |
 
 ## 3. Assumptions
@@ -79,7 +79,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A10 | What reset clears | Search fields and all filters; saved flights are untouched | C4 |
 | A11 | Whether an extra API surface is allowed | The required contract is untouched; `--mode` is a QA-only switch | — |
 | A12 | What "fall back to the original data" means when `airports.json` is missing | Volume = each airport's number of flights in `flights.json` | P4 |
-| A13 | How much location vs popularity should count | Origin 0.7 / 0.3, destination 0.2 / 0.8 (D19) | P5 |
+| A13 | How much location vs popularity should count | Origin 0.6 / 0.4, destination 0 / 1, proximity halves every 250 km (D19). Borrowed from public sources, because none publishes a split for airports | P2, P5 |
 | A14 | How many suggestions to show, and what tapping one does | At most 5 rows. Tapping picks exactly that airport, and the field shows "Tokyo (HND)" until it is edited. | S14 |
 
 ## 4. Technical tradeoffs by stack choice
@@ -256,7 +256,20 @@ We differ on purpose in two places: phonetic matching (D12) and a prefix tree in
 | ✅ A: only the matched airports (the hint and the suggestions, D20) | The flight list stays in date → points order, so earlier and cheaper flights are never pushed down | Ranking is visible only in the order of the hint and the suggestions |
 | B: the flight list as well | Ranking is visible everywhere | Hides earlier and cheaper flights (with `tokio`, the Feb 1–3 NRT flights drop to row 56); the list order depends on where you are |
 
-**Ranking weights** (D19, Claude, assumption A13): origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8. Simple and explainable, but chosen by judgement, not measured. Revisit with real usage data.
+**Ranking weights** (D19, owner's choice; assumption A13). Claude first chose origin 0.7 / 0.3, destination 0.2 / 0.8 and a 693 km halving distance by judgement. The owner rejected using location for destinations and asked for public sources, which gave these values:
+
+| Setting | Value | Based on |
+|---|---|---|
+| Destination | 0 proximity / 1 volume | Amadeus's keyword search sorts by traveler count. Duffel ranks by popularity. AirLabs' flight-app guide uses location for departure and popularity for destination. Google's patent infers destinations from flights out of the origin. Roame's website uses an importance score with no location. The closest exception is Booking.com, which requires a country code but takes no user coordinates. |
+| Origin | 0.6 proximity / 0.4 volume | Photon's default, read from its code: the same formula shape, and the same volume-only fallback. It's general place search rather than flights. Amadeus's nearby-airport search also blends distance and traffic, without publishing the formula. Google's patent instead filters by distance and then picks the airport with the most flights. Roame's website doesn't use location. |
+| Proximity halves every | 250 km | The widest range in Google's patent. Amadeus's nearby search stops at 500 km, where proximity is down to a quarter. |
+
+**Effect on the fixture**, over every query typed letter by letter, with the user placed at each of the 32 airports:
+- Destination: 27 of 640 cases change order, all on 1–2 letter queries.
+- Origin: 4 of 64 cases change. Only `s` and `y` match more than one origin airport.
+- The origin top row matches the rule in Google's patent (at 250 km) in 63 of 64 cases, up from 60.
+
+These are sensible defaults rather than proof. No source publishes a split for airports, Photon isn't a flight product, the patent doesn't show what Google Flights does today, and there's no real usage data. Cost is unchanged at 10× and 100× the flights: one priority per airport, computed once. The numbers should be re-checked on a larger airport list (as with S12).
 
 ### 4.5 Maps
 
@@ -302,7 +315,7 @@ We differ on purpose in two places: phonetic matching (D12) and a prefix tree in
 
 - Search doesn't transliterate non-Latin scripts (`東京`) and knows no nicknames (`NYC`, `LA`).
 - Sound-alike places outside the data can match: `newark` → New York (JFK). The hint line makes this visible (DOMAIN_RULES S12).
-- The passenger figures in `fixtures/airports.json` are approximate 2024 totals, recalled by an AI assistant and **not verified** against primary sources. They are good enough to rank airports, not to quote.
+- The passenger figures in `fixtures/airports.json` are approximate 2024 totals, recalled by an AI assistant and **not verified** against primary sources. They are good enough to rank airports, not to quote. Their order broadly agrees with public data, where 1.0 means an identical order: 0.82 with OpenTravelData's older passenger counts, 0.72 with route counts in Algolia's airport dataset, and 0.44 with OpenTravelData's flight-network rank. The fallback's flight counts barely track them (about 0.1), because the fixture's flights are fictional.
 - Map tiles aren't cached offline; markers still render (allowed by the brief).
 - Number formatting is en-US only (`25,000 pts`).
 - Local HTTP only: cleartext is allowed for `localhost` / `10.0.2.2`, and physical devices need extra config.
@@ -395,3 +408,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑10‑30 | Docs | Explained SQLDelight vs Room for the owner's D3 decision; recorded Room and updated the persistence design (ARCHITECTURE §5) | Owner review |
 | 2026‑10‑30 | `airports.json` | Recalled approximate 2024 passenger totals for the 32 airports | **Not verified**: labelled as approximate in the file and in §5 |
 | 2026‑11‑01 | D18 research | Timed both search designs with a throwaway test, and read Roame's public pages and website scripts to see how its search fields work | Timings were run on the owner's Mac, and both designs picked the same airports on 6 queries. Roame's behaviour comes from reading its minified scripts: not run, not confirmed by Roame, and its mobile app may differ |
+| 2026‑11‑01 | D19 research | Read the code and specs of Photon, Pelias and Amadeus, Google's patent and vendor docs; measured how the weights change the fixture's results; compared the from-memory passenger figures with OpenTravelData and Algolia's airport dataset | Used Photon's code rather than its docs. Three new tests failed on the old numbers before the change. Vendor pages are self-reported, and the patent doesn't show what Google Flights does |

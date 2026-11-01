@@ -56,7 +56,7 @@ Implemented in `shared/src/commonMain/kotlin/travel/roame/takehome/domain/search
 **The design is the owner's** (SUBMISSION_NOTES §2, D11–D17):
 - a prefix tree walked node by node,
 - a tiered fallback to fuzzy matching that mixes phonetic and n-gram matching, plus accent folding,
-- ranking by the user's location and airport volume.
+- ranking by airport volume, plus the user's location in the origin field only.
 
 Claude implemented it, added an edit-distance typo signal (D12), and chose the thresholds below.
 
@@ -161,7 +161,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 - **P1** Priority is a value in [0, 1]:
 
   `(w_proximity · proximity + w_volume · volume) / (w_proximity + w_volume)`
-- **P2** `proximity = exp(−distance_km / 1000)`, where the distance is the great-circle (haversine) distance from the user's location to the airport.
+- **P2** `proximity = 0.5^(distance_km / 250)`, so it halves every 250 km. The distance is the great-circle (haversine) distance from the user's location to the airport.
   - Without a location (unknown, permission denied, or not available yet), priority is volume only.
   - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". There is no geo-IP and no third party.
 - **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched.
@@ -169,7 +169,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - If `airports.json` is missing or fails to load, `volume = flights per airport in flights.json / max`.
   - If only some airports have passenger figures, the rest use their flight counts (`VolumeSource.Mixed`).
   - Search and ranking always work with `flights.json` alone. *(assumption: "fall back to the original data" means deriving volume from the flight counts in `flights.json`)*
-- **P5** The weights are origin 0.7 proximity / 0.3 volume (you usually fly from somewhere near you), and destination 0.2 / 0.8 (where you go is mostly about popularity). *(assumption)*
+- **P5** The weights are origin 0.6 proximity / 0.4 volume (you usually fly from somewhere near you), and destination 0 / 1 (owner decision D19: your location says nothing about where you're flying to, so it never affects the destination field). *(assumption: the origin split and the 250 km in P2 are borrowed from public sources, SUBMISSION_NOTES §4.4)*
 - **P6 Order of matches:** match score ↓, then priority ↓, then code ↑. A blank query is ordered by priority ↓, then code ↑.
 - **P7** Priority **never reorders the flight list** (owner decision D17, option A). It only orders the matched airports: the hint line (S13) and the suggestions (S14). The flight list always keeps O1 (date, then points).
 

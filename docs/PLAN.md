@@ -55,7 +55,7 @@ Requested by the owner. Implemented ahead of the rest of M3, under review.
 - [x] Vendored Double Metaphone port with license and credit, verified against commons-codec (S8).
 - [x] Ranking by proximity + volume, with the `flights.json` fallback when `airports.json` is missing (P1–P6).
 - [x] `fixtures/airports.json` (separate file; `flights.json` untouched).
-- [x] Tests: 54 shared tests passing on the JVM; 49 passing on the iOS simulator (the other 5 are JVM-only).
+- [x] Tests: 57 shared tests passing on the JVM; 52 passing on the iOS simulator (the other 5 are JVM-only).
 - [ ] **Owner review** → push.
 - [x] Owner decisions: location comes from the device (D16); ranking orders matched airports only, never the flight list (D17).
 - [ ] *Later:* `GET /airports` in M1, plus loading and caching in M2. Wire the engine into `ExplorerStore`, the hint UI (S13) and the suggestions dropdown (S14) in M3–M5. Add device location in M4 and M5.

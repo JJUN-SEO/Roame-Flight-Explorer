@@ -124,7 +124,7 @@ val state: StateFlow<ExplorerState> = combine(
 
 ### 4.4 Search engine
 
-**Status:** implemented and tested in `shared`. It isn't wired into a store or screens yet. The rules are in DOMAIN_RULES §2 and §2b. The design is the owner's (D11–D18); D19 is Claude's detail.
+**Status:** implemented and tested in `shared`. It isn't wired into a store or screens yet. The rules are in DOMAIN_RULES §2 and §2b. The design is the owner's (D11–D19); Claude proposed the numbers in D19.
 
 ```mermaid
 flowchart LR
@@ -149,7 +149,7 @@ flowchart LR
 
 **Data sources for ranking.**
 - **Passenger volume** comes from `fixtures/airports.json` (`{"airports":[{"code","annualPassengers"}…]}`). The plan is to serve it as `GET /airports` (M1) and to cache it like flights (M2). When it is missing, a 404 or a decode failure means volume = flight counts from `flights.json` (P4).
-- **User location** comes from the device (D16), through a small platform `LocationProvider` that returns `GeoPoint?`: Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only. There is no geo-IP endpoint and no third party.
+- **User location** comes from the device (D16), through a small platform `LocationProvider` that returns `GeoPoint?`: Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
 
 **Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
@@ -424,7 +424,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D16 | **Location comes from the device** (Fused Location Provider / Core Location), approximate accuracy, only on "Use my location" | **Owner** | Works offline (GPS needs no internet), more accurate, no third party, no extra endpoint | Geo-IP through the local API (Claude's earlier proposal): it would locate the developer's machine rather than the user, and needs an outside geo-IP service |
 | D17 | **Ranking only orders the matched airports.** The flight list keeps O1 | Owner's choice (option A) | Earlier and cheaper flights are never pushed down; the list order doesn't depend on where you are | Reordering the flight list by airport priority (option B) |
 | D18 | Search runs on **airports, not flights**, behind indexes | Owner's choice (follow Roame); built | The brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names", and the prefix tree, hint, ranking and suggestions all work on airports. Scale is a side benefit: at most 0.56 ms per keystroke at 100,000 flights (measured on a Mac in Java). | Matching each flight's strings: the same results, up to 49 ms at 100,000 flights, and those features would still need an airport list |
-| D19 | Ranking weights: origin 0.7 / 0.3, destination 0.2 / 0.8 | Claude; assumption A13, awaiting review | You fly *from* near you; *where* you go is mostly about popularity | Equal weights for both fields |
+| D19 | Ranking weights: origin 0.6 / 0.4, destination 0 / 1, and proximity halves every 250 km | Owner's choice (Claude's recommendation); assumption A13; built | Your location says nothing about where you're flying to, so the destination uses popularity alone, as Amadeus's keyword search, Duffel, AirLabs and Roame's website do. The origin split is Photon's default, and 250 km is the widest range in Google's patent. Both are borrowed, not measured on real usage. | 0.7 / 0.3 and 0.2 / 0.8 with proximity halving every 693 km, chosen by judgement; popularity only in both fields, as on Roame's website |
 | D20 | **A suggestions dropdown under each search field**, built from that field's ranked matches in the data | **Owner** (Claude: 5 rows and the tap behaviour, A14) | Search feels live as the user types, and ranking becomes visible. The engine already ranks matches on every keystroke, over airports rather than flights, and the 5-row cap keeps the dropdown the same size at 10× and 100× the airports. | The hint alone (D14, which stays); the trie's `completions()`, which has no airport codes or ranking |
 
 ## 12. Scalability
