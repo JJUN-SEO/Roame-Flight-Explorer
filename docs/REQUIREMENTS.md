@@ -134,7 +134,7 @@ The brief only requires the app to stay smooth with the 1,000-flight fixture (PE
 
 | ID | Requirement | Target / acceptance | Status |
 |---|---|---|---|
-| SCALE-1 | Text search doesn't scan flights | Search resolves each field to a set of *airports* through indexes. Flights are then filtered once by airport code. Search cost grows with the query length and the number of airports, not the number of flights. | ✅ engine (D18). Benchmark pending (TEST_PLAN §4.1) |
+| SCALE-1 | Text search doesn't scan flights | Search resolves each field to a set of *airports* through indexes. Flights are then filtered once by airport code. The airport lookup grows with the query length and the number of airports, not the number of flights. The whole keystroke still grows with flights, because of that one filter pass. | ✅ engine (D18). Benchmark pending (TEST_PLAN §4.1) |
 | SCALE-2 | Each keystroke stays within one frame at 10× and 100× the data | On a JVM benchmark with synthetic data (10k and 100k flights, up to 5k airports), search + filter + sort + aggregate stays under 16 ms at 10k flights. At 100k the work stays off the main thread with latest-wins (`mapLatest`), and the UI never stalls. | ⬜ |
 | SCALE-3 | The cache refresh scales | One transaction with batched inserts. Beyond ~100k rows, switch to incremental sync (ETag / `If-None-Match`, deltas) instead of a full replace. | Documented |
 | SCALE-4 | The API contract can grow without breaking clients | Pagination, compression and conditional requests can be added alongside `GET /flights` without changing its current response. | Documented |

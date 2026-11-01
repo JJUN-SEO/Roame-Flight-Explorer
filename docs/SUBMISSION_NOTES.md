@@ -57,7 +57,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D15 | **Rank matches by the user's location and annual airport volume.** Volume lives in a separate new file; `flights.json` is never edited. When the file is missing, the app falls back to the original data. | SRCH-7 | **Owner** (the idea, the separate file, the fallback); Claude (the file format, and reading "fallback" as flight counts, A12) | Built | 2026‑10‑30 |
 | D16 | **Location comes from the device**: Fused Location Provider (Android) and Core Location (iOS), approximate accuracy, requested only when the user taps "Use my location". Without it, ranking uses volume only. Nothing is sent to a third party. This replaces Claude's earlier geo-IP proposal. | SRCH-7 | **Owner** (suggested on-device location instead of geo-IP) | Decided; platform code in M4/M5 | 2026‑10‑30 |
 | D17 | **Ranking only orders the matched airports** (the hint line and the suggestions, D20). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
-| D18 | Search runs on **airports, not flights**, behind indexes | SCALE-1 | Claude | Built; awaiting owner review | 2026‑10‑30 |
+| D18 | Search runs on **airports, not flights**, behind indexes. The owner's reasoning: the brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names". Scale is a side benefit, not the reason. | SRCH-1, SRCH-2, SCALE-1 | Owner's choice (follow Roame; Claude's original design) | Built | 2026‑11‑01 |
 | D19 | Ranking weights: origin 0.7 proximity / 0.3 volume, destination 0.2 / 0.8 | SRCH-7 | Claude (assumption A13) | Built; awaiting owner review | 2026‑10‑30 |
 | D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, and using only what's in the data); Claude (5 rows and the tap behaviour, A14) | Decided; UI in M4/M5 | 2026‑10‑31 |
 
@@ -214,12 +214,22 @@ In-memory timings are medians on a Mac in Java and exclude text search. SQL timi
 | A suggestions dropdown | The best UX, and where ranking would shine | Much more UI work on both platforms. The owner later added one alongside the hint (D20) |
 | Silent | Nothing to build | The user can't tell why `sidnee` shows Sydney flights |
 
-**What search runs on** (D18, Claude)
+**What search runs on** (D18, owner's choice: airports, following Roame)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ Airports (32 here), behind indexes; flights are then filtered by airport code | Cost doesn't grow with the number of flights (SCALE-1) | Text search only covers places (cabin, program and the rest are filters anyway) |
-| Each flight's text | No separate index | Work grows with the number of flights on every keystroke |
+| ✅ Airports (32 here), behind indexes; flights are then filtered by airport code | Matches the brief ("match airport codes or city names") and Roame's website. The prefix tree, hint, ranking and suggestions all work on airports. One keystroke takes at most 0.006 ms at 1,000 flights and 0.56 ms at 100,000. | Text search only covers places (cabin, program and the rest are filters anyway) |
+| Each flight's text | No separate index. Also fast enough at 1,000 flights (at most 0.35 ms per keystroke). | 49 ms per keystroke at 100,000 flights. The prefix tree would no longer drive search (D11), and the hint, ranking and suggestions would have to turn flights back into airports. |
+
+Timings are the slowest of 6 queries in the destination field, and cover finding the matching flights only. They were measured on a Mac in Java with a throwaway test, which is the only place the flight-by-flight design exists. Both designs picked the same airports. A phone will be slower.
+
+**How Roame's website does it.** This comes from reading the scripts its site sends to browsers on 2026‑11‑01. Roame hasn't documented it, its mobile app may differ, and no Roame code was copied.
+
+- Each field runs a matcher in the browser over a built-in list of places. The search then carries the chosen place (its code and type), not the typed text.
+- Each step runs only if the one before found nothing: exact name or code, prefix, word start (3+ letters), then fuzzy (4+ letters, using Fuse.js). Our tiers have the same shape (S4, S6).
+- It shows at most 5 airport rows, like ours (A14), ordered by match quality and then a per-airport importance score.
+
+We differ on purpose in two places: phonetic matching (D12) and a prefix tree instead of a sorted list (D11). Roame also offers regions, countries and "Anywhere", which neither the brief nor the fixture has.
 
 ### 4.4 Ranking and location
 
@@ -384,3 +394,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑10‑30 | Docs | Wrote up every stack tradeoff from the planning conversation (§4), including the owner's reasoning for MapLibre | Owner review |
 | 2026‑10‑30 | Docs | Explained SQLDelight vs Room for the owner's D3 decision; recorded Room and updated the persistence design (ARCHITECTURE §5) | Owner review |
 | 2026‑10‑30 | `airports.json` | Recalled approximate 2024 passenger totals for the 32 airports | **Not verified**: labelled as approximate in the file and in §5 |
+| 2026‑11‑01 | D18 research | Timed both search designs with a throwaway test, and read Roame's public pages and website scripts to see how its search fields work | Timings were run on the owner's Mac, and both designs picked the same airports on 6 queries. Roame's behaviour comes from reading its minified scripts: not run, not confirmed by Roame, and its mobile app may differ |
