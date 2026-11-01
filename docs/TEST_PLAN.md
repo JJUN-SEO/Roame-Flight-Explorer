@@ -53,7 +53,7 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 | `ExplorerStoreSelectionTest` | L1–L5, L7 | select → `selected` set; a filter that excludes it → cleared; undoing the filter → still cleared; reset → a selection still in the results is kept; the saved-view selection is independent; removing a saved flight clears the saved selection |
 | `ExplorerStoreSavedTest` | V3, V7 | save → `isSaved` true in both results and markers; **save failure → `isSaved` unchanged + `UserMessage`**; remove failure, likewise; `pendingWriteIds` is set during the write and cleared after |
 | `ExplorerStoreLatestWinsTest` | PERF-3 | type "b", "bo", "bos" rapidly with a slow reducer → the only final results are for "bos", and no intermediate state from an older query arrives after a newer one |
-| `SearchSuggestionsTest` | S14 | rows follow the ranked matches for that side only; at most 5 rows; blank and `NoMatch` → none; fuzzy query → a row; picking DUB excludes DXB; picking one Tokyo airport excludes the other; editing the text clears the pick; Reset clears the pick |
+| `SearchSuggestionsTest` | S14 | rows follow the ranked matches for that side only; at most 5 rows; blank and `NoMatch` → none; fuzzy query → a row; picking DUB excludes DXB; picking one Tokyo airport excludes the other; a city row sits above its airports when 2+ matches share a city, and picking it keeps both; `nrt` → no city row; the 5-row cap counts city rows; editing the text clears the pick; Reset clears the pick |
 | `FixtureContractTest` (jvmTest) | §0 facts | 1,000 flights; 32 airports; 60 dates; three cabins; five programs; ids unique; six ids not in the `fx-` format |
 
 ✅ = implemented and passing (`./gradlew :shared:jvmTest`). The others are planned.
@@ -116,7 +116,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q2 | From `"  BoStOn "` → BOS only. To `tokyo` → HND and NRT. To `nrt` → NRT only. | | |
 | Q2b | Fuzzy search: To `sidnee` → SYD with the hint "Showing Sydney (SYD)"; `sydeny` → SYD; `berlin` → filtered-empty state; `São Paulo` → GRU with no hint | | |
 | Q2c | Location (D16): with no location, typing To `tokio` shows "Showing Tokyo (HND), Tokyo (NRT)" (HND is busier). Tap ⌖ and allow, with a simulated Seattle location: no error, ⌖ is filled, From `y` lists Vancouver (YVR) first, and To `tokio` doesn't change (P5). Deny: no error, volume-only ranking. Airplane mode + ⌖: still works (GPS needs no internet). The flight list order never changes with location (D17). | | |
-| Q2d | Suggestions (S14): From `new` → New York (JFK); delete it and type `sea` → Seattle (SEA); `s` → San Francisco and Seattle. To `to` → both Tokyo rows; tap Tokyo (HND) → only HND flights; editing the field clears the pick. To `dub`, tap Dublin (DUB) → no Dubai flights. To `sydeny` → a Sydney (SYD) row. | | |
+| Q2d | Suggestions (S14): From `new` → New York (JFK); delete it and type `sea` → Seattle (SEA); `s` → San Francisco and Seattle. To `to` → Tokyo (all airports), Tokyo (HND), Tokyo (NRT); tap Tokyo (all airports) → HND and NRT flights; tap Tokyo (HND) → only HND flights; editing the field clears the pick. To `dub`, tap Dublin (DUB) → no Dubai flights. To `sydeny` → a Sydney (SYD) row. | | |
 | Q3 | Date range Feb 10 – Feb 12: flights on the 10th and the 12th are present, the 9th and the 13th are absent | | |
 | Q4 | Max points at a value equal to some flight's points → that flight is included | | |
 | Q5 | Programs {Avios, Aeroplan} → only those two programs; plus Business → AND | | |

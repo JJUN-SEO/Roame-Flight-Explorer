@@ -59,7 +59,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D17 | **Ranking only orders the matched airports** (the hint line and the suggestions, D20). The flight list keeps its date → points order (O1). | SRCH-7 | Owner's choice (option A) | Decided | 2026‑10‑30 |
 | D18 | Search runs on **airports, not flights**, behind indexes. The owner's reasoning: the brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names". Scale is a side benefit, not the reason. | SRCH-1, SRCH-2, SCALE-1 | Owner's choice (follow Roame; Claude's original design) | Built | 2026‑11‑01 |
 | D19 | Ranking weights: origin 0.6 proximity / 0.4 volume, destination 0 / 1, and proximity halves every 250 km. The owner's reasoning: your location says nothing about where you're flying to. | SRCH-7 | Owner's choice (the destination reasoning, and asking for public sources); Claude found the sources and proposed the numbers (A13) | Built | 2026‑11‑01 |
-| D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, and using only what's in the data); Claude (5 rows and the tap behaviour, A14) | Decided; UI in M4/M5 | 2026‑10‑31 |
+| D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. When two or more matches share a city, one extra row picks them all, following Roame. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, using only what's in the data, and the city row); Claude (5 rows and the tap behaviour, A14) | Decided; UI in M4/M5 | 2026‑11‑01 |
 
 ## 3. Assumptions
 
@@ -80,7 +80,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A11 | Whether an extra API surface is allowed | The required contract is untouched; `--mode` is a QA-only switch | — |
 | A12 | What "fall back to the original data" means when `airports.json` is missing | Volume = each airport's number of flights in `flights.json` | P4 |
 | A13 | How much location vs popularity should count | Origin 0.6 / 0.4, destination 0 / 1, proximity halves every 250 km (D19). Borrowed from public sources, because none publishes a split for airports | P2, P5 |
-| A14 | How many suggestions to show, and what tapping one does | At most 5 rows. Tapping picks exactly that airport, and the field shows "Tokyo (HND)" until it is edited. | S14 |
+| A14 | How many suggestions to show, and what tapping one does | At most 5 rows, counting city rows. Tapping picks exactly what the row names, and the field shows "Tokyo (HND)" or "Tokyo (all airports)" until it is edited. | S14 |
 
 ## 4. Technical tradeoffs by stack choice
 
@@ -228,6 +228,7 @@ Timings are the slowest of 6 queries in the destination field, and cover finding
 - Each field runs a matcher in the browser over a built-in list of places. The search then carries the chosen place (its code and type), not the typed text.
 - Each step runs only if the one before found nothing: exact name or code, prefix, word start (3+ letters), then fuzzy (4+ letters, using Fuse.js). Our tiers have the same shape (S4, S6).
 - It shows at most 5 airport rows, like ours (A14), ordered by match quality and then a per-airport importance score.
+- It offers one row for all of a city's airports, placed first, such as "Chicago (All Airports)". We follow this with "Tokyo (all airports)" (S14).
 
 We differ on purpose in two places: phonetic matching (D12) and a prefix tree instead of a sorted list (D11). Roame also offers regions, countries and "Anywhere", which neither the brief nor the fixture has.
 

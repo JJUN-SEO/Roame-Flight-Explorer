@@ -137,7 +137,7 @@ Use the same copy on both platforms.
 | Location not shared | The user never tapped ⌖, or denied the permission (D16) | Nothing extra is shown and there is no error. Ranking uses airport volume only. ⌖ stays outlined. |
 | Location shared | Permission granted and a location received | ⌖ is filled with the accent colour. In the From field, matched airports near the user rank higher in the hint and suggestions. The To field doesn't use location. |
 | Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
-| Search suggestions | A field has focus and its query has matches (S14) | A dropdown under the field with up to 5 rows, such as "Tokyo (HND)". Hidden for a blank query or no match. |
+| Search suggestions | A field has focus and its query has matches (S14) | A dropdown under the field with up to 5 rows, such as "Tokyo (all airports)" and "Tokyo (HND)". Hidden for a blank query or no match. |
 | Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |
 | Saved empty | `saved` is empty | "No saved flights yet" + "Tap ♡ on any flight to keep it here — even offline." |
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
@@ -147,7 +147,7 @@ Use the same copy on both platforms.
 ## 5. Interaction details
 
 - **Typing** updates results live, without a submit button. The keyboard's Search or Done key dismisses the keyboard. Scrolling the list also dismisses the keyboard.
-- **Tapping a suggestion** picks that airport, closes the dropdown and shows "Tokyo (HND)" in the field. Editing the text clears the pick.
+- **Tapping a suggestion** picks what it names, closes the dropdown and shows "Tokyo (HND)" or "Tokyo (all airports)" in the field. Editing the text clears the pick.
 - **Tapping a row** selects it, highlights it and shows the card. Tapping the selected row again, or ✕, deselects it.
 - **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the snackbar with no haptic.
 - **Pull to refresh** on the List (`.refreshable` on iOS, `PullToRefreshBox` on Android). Map mode has a ⟳ button in the toolbar.

@@ -148,11 +148,12 @@ The owner's hypothesis is that people mistype a place in four ways. Here is what
   - *Engine implemented; the UI comes with the store and screens.*
 - **S14 Suggestions** (owner decision D20). While a field has focus and text, both apps show a dropdown of matching airports under it, updated on every keystroke.
   - The rows are that field's ranked matches from the search engine, in P6 order. They include fuzzy matches and never the other side's airports (S3). Each row shows the city and code, for example "Tokyo (HND)", and each airport gets its own row.
-  - At most 5 rows are shown. *(assumption)*
-  - Tapping a row picks exactly that airport and closes the dropdown. The field shows "Tokyo (HND)", and flights are filtered by that code alone. Editing the text clears the pick and returns to normal search. The code alone wouldn't be enough, because `dub` also matches Dubai (DXB). *(assumption)*
+  - **City row** (owner decision, following Roame). When two or more matches share a city, one row for all of them, for example "Tokyo (all airports)", comes directly above that city's first airport row. It comes from the data, so no city is hardcoded, and `nrt` shows no city row because it matches one airport.
+  - At most 5 rows are shown, counting city rows. *(assumption)*
+  - Tapping a row picks exactly what it names and closes the dropdown. The field shows "Tokyo (HND)" and flights are filtered by that code alone, or it shows "Tokyo (all airports)" and flights are filtered by that city's matched codes. Editing the text clears the pick and returns to normal search. A pick is needed because the text alone isn't enough: `dub` also matches Dubai (DXB). *(assumption)*
   - A blank query or `NoMatch` shows no dropdown.
-  - A picked airport counts as search text for Reset (C2, C4), and Reset clears it.
-  - The S13 hint stays, because it still explains fuzzy results after the dropdown closes. A picked airport shows no hint.
+  - A pick counts as search text for Reset (C2, C4), and Reset clears it.
+  - The S13 hint stays, because it still explains fuzzy results after the dropdown closes. A pick shows no hint.
 
 ## 2b. Prioritisation (P)
 

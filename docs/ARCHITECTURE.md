@@ -67,7 +67,7 @@ data class ExplorerState(
     val data: DataStatus,                 // Loading | Unavailable(error) | Ready(lastSuccessAt, isRefreshing, refreshError?)
     val originQuery: String,
     val destinationQuery: String,
-    val originSuggestions: List<AirportSuggestion>,      // S14: that side's ranked matches, at most 5
+    val originSuggestions: List<AirportSuggestion>,      // S14: city + codes + isCityRow, at most 5 rows
     val destinationSuggestions: List<AirportSuggestion>,
     val filters: FlightFilters,           // dateStart?, dateEnd?, cabin?, maxPoints?, programs: Set<String>
     val options: FilterOptions,           // date bounds, points bounds, cabins, programs (from the whole cache, F8)
@@ -93,7 +93,7 @@ data class ExplorerState(
 
 | Group | Methods |
 |---|---|
-| Search | `setOriginQuery(text)`, `setDestinationQuery(text)`, `pickOrigin(code)`, `pickDestination(code)` |
+| Search | `setOriginQuery(text)`, `setDestinationQuery(text)`, `pickOrigin(codes)`, `pickDestination(codes)` |
 | Filters | `setDateRange(startIso?, endIso?)`, `setCabin(cabin?)`, `setMaxPoints(points?)`, `toggleProgram(name)`, `clearFilter(kind)`, `resetAll()` |
 | Selection | `select(flightId?)`, `selectSaved(flightId?)` |
 | Saved | `toggleSave(flightId)`, `removeSaved(flightId)` |
@@ -425,7 +425,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D17 | **Ranking only orders the matched airports.** The flight list keeps O1 | Owner's choice (option A) | Earlier and cheaper flights are never pushed down; the list order doesn't depend on where you are | Reordering the flight list by airport priority (option B) |
 | D18 | Search runs on **airports, not flights**, behind indexes | Owner's choice (follow Roame); built | The brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names", and the prefix tree, hint, ranking and suggestions all work on airports. Scale is a side benefit: at most 0.56 ms per keystroke at 100,000 flights (measured on a Mac in Java). | Matching each flight's strings: the same results, up to 49 ms at 100,000 flights, and those features would still need an airport list |
 | D19 | Ranking weights: origin 0.6 / 0.4, destination 0 / 1, and proximity halves every 250 km | Owner's choice (Claude's recommendation); assumption A13; built | Your location says nothing about where you're flying to, so the destination uses popularity alone, as Amadeus's keyword search, Duffel, AirLabs and Roame's website do. The origin split is Photon's default, and 250 km is the widest range in Google's patent. Both are borrowed, not measured on real usage. | 0.7 / 0.3 and 0.2 / 0.8 with proximity halving every 693 km, chosen by judgement; popularity only in both fields, as on Roame's website |
-| D20 | **A suggestions dropdown under each search field**, built from that field's ranked matches in the data | **Owner** (Claude: 5 rows and the tap behaviour, A14) | Search feels live as the user types, and ranking becomes visible. The engine already ranks matches on every keystroke, over airports rather than flights, and the 5-row cap keeps the dropdown the same size at 10× and 100× the airports. | The hint alone (D14, which stays); the trie's `completions()`, which has no airport codes or ranking |
+| D20 | **A suggestions dropdown under each search field**, built from that field's ranked matches in the data, with one extra row when two or more matches share a city | **Owner** (Claude: 5 rows and the tap behaviour, A14) | Search feels live as the user types, and ranking becomes visible. The city row follows Roame, and lets a tap give what typing `tokyo` already gives. The engine already ranks matches on every keystroke, over airports rather than flights, and the 5-row cap keeps the dropdown the same size at 10× and 100× the airports. | The hint alone (D14, which stays); the trie's `completions()`, which has no airport codes or ranking |
 
 ## 12. Scalability
 
