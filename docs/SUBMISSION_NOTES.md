@@ -45,7 +45,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D6 | Filter in memory, off the main thread, with `mapLatest` so the latest input wins. Flights are sorted once when new data arrives, because filtering keeps the order. | PERF-2, PERF-3 | Owner's choice (Claude's recommendation over SQL queries) | Decided; not built yet | 2026‑10‑31 |
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Owner's choice (Claude's recommendation over SKIE, KMP-NativeCoroutines and Swift export) | Decided; not built yet | 2026‑10‑31 |
 | D8 | **MapLibre** is the Android map library: open source, no API key, GPU-drawn vector maps, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). Google Maps was rejected for its mandatory billing account and key; osmdroid for its raster rendering and visual glitches (§4.5). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
-| D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Claude | Built with the search engine; awaiting owner review | 2026‑10‑30 |
+| D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Owner's choice (Claude's recommendation over Android host tests) | Built | 2026‑10‑31 |
 | D10 | One app-scoped store per process | SEL-2, VIEW-1 | Claude | Awaiting owner review | 2026‑10‑29 |
 | P1 | Keep the agent guide as `CLAUDE.md` (no `AGENTS.md`) | — | Owner | Decided | 2026‑10‑30 |
 | P2 | One functionality at a time; the owner reviews it; push only after acceptance | — | Owner | Decided | 2026‑10‑30 |
@@ -269,12 +269,12 @@ In-memory timings are medians on a Mac in Java and exclude text search. SQL timi
 
 ### 4.6 Tooling and tests
 
-**A test-only JVM target** (D9, Claude)
+**A test-only JVM target** (D9, owner's choice)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ `jvm()` target for shared tests | Fast, runs on any OS and in CI; in-memory SQLite; lets the oracle test run the original Java Double Metaphone | The JVM isn't a shipped platform, so the same tests should also run on the iOS simulator (Mac) to cover Kotlin/Native |
-| Android host tests | Closer to a shipped platform | Slower, and awkward under AGP 9's new multiplatform plugin |
+| ✅ `jvm()` target for shared tests | Runs on any OS and in CI; in-memory SQLite; lets the oracle test run the original Java Double Metaphone | The JVM isn't a shipped platform, so the same tests should also run on the iOS simulator (Mac) to cover Kotlin/Native. No tests run on Android itself yet. It isn't meaningfully faster than the iOS simulator on a Mac: 3–4 s vs 3–6 s after a small code change |
+| Android host tests | Closer to a shipped platform | Expected to be slower, and awkward under AGP 9's new multiplatform plugin (neither was measured) |
 
 **Agent instructions file** (P1, owner)
 
@@ -340,6 +340,19 @@ See [TEST_PLAN.md §5](TEST_PLAN.md#5-manual-qa-checklist) for the filled-in QA 
 - 150,000 seeded generated words built from the letter groups that trigger special rules,
 
 at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must match exactly. `DoubleMetaphoneTest` (commonTest) also runs commons-codec's own published vectors on every target, including iOS.
+
+**How strong that check is** (measured 2026‑10‑31 with JaCoCo, on the JVM):
+
+| What was measured | Lines | Branches |
+|---|---|---|
+| The original library, under the oracle test | 98.2% | 98.2% |
+| Our port, under the oracle test | 99.1% | 98.7% |
+| Our port, under only the tests that also run on iOS | 71.9% | 55.8% |
+
+- We also planted 30 random small mistakes in a throwaway copy of the port, one at a time. The oracle test caught all 30. The tests that also run on iOS caught 4. This is a sample, not proof.
+- Of the missed code we read, some is an unused helper or null handling, and some can never run. For example, the `WITZ` check follows a `W` check. We didn't prove this for every missed line.
+- The port matches the original exactly, so it would share any bugs the original has.
+- The lower iOS numbers are acceptable. Both apps use the same Kotlin source, this code only handles letters and strings, and search folds accents before calling it. Claude withdrew its suggestion to add more iOS checks for it after the owner questioned the need.
 
 **How the search engine uses it** (DOMAIN_RULES S8):
 - code length 6 instead of the default 4, which gives fewer accidental collisions on long city names,
