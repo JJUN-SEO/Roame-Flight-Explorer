@@ -46,7 +46,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D7 | A hand-written Kotlin→Swift bridge | DATA-3 | Owner's choice (Claude's recommendation over SKIE, KMP-NativeCoroutines and Swift export) | Decided; not built yet | 2026‑10‑31 |
 | D8 | **MapLibre** is the Android map library: open source, no API key, GPU-drawn vector maps, with map tiles from OpenFreeMap's free public server (which, like Apple for MapKit, sees which map areas are viewed). Google Maps was rejected for its mandatory billing account and key; osmdroid for its raster rendering and visual glitches (§4.5). iOS uses Apple's built-in MapKit. | MAP-1 – MAP-4 | Owner's choice (Claude's recommendation over Google Maps and osmdroid) | Decided | 2026‑10‑30 |
 | D9 | A test-only `jvm()` target in `:shared` | TEST-1 – TEST-5 | Owner's choice (Claude's recommendation over Android host tests) | Built | 2026‑10‑31 |
-| D10 | One app-scoped store per process | SEL-2, VIEW-1 | Claude | Awaiting owner review | 2026‑10‑29 |
+| D10 | One app-scoped store per process | SEL-2, VIEW-1 | Owner's choice (Claude's recommendation over a store per screen) | Decided; not built yet | 2026‑11‑01 |
 | P1 | Keep the agent guide as `CLAUDE.md` (no `AGENTS.md`) | — | Owner | Decided | 2026‑10‑30 |
 | P2 | One functionality at a time; the owner reviews it; push only after acceptance | — | Owner | Decided | 2026‑10‑30 |
 | P3 | Ask the owner before significant architectural decisions, and record them here | — | Owner | Decided | 2026‑10‑30 |
@@ -102,12 +102,12 @@ Every technology choice made so far: the options considered, what each one gives
 | ✅ Shared `ExplorerStore` (selection, map grouping, offline state) | List and map can't disagree; selection and offline rules are written and tested once | More Kotlin→Swift interop, and less idiomatic for SwiftUI developers, who expect their own view models |
 | A view model per platform over shared repositories | More native on each side | Selection, grouping and offline rules would be written twice and could drift |
 
-**One app-scoped store** (D10, Claude)
+**One app-scoped store** (D10, owner's choice: one per process)
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ One store per process | Survives Android rotation; one source of truth; nothing per screen to leak | State lives in memory for the app's lifetime (small). Android process death loses the in-memory query and filters; the cached data survives in the DB. |
-| A store per screen | Tighter scoping | Risk of list and map holding different state |
+| ✅ One store per process | Survives Android rotation; one source of truth; nothing per screen to leak | State lives in memory while the app runs (flights take 0.4 MB today and 35 MB at 100,000, measured on the JVM). If Android closes the app in the background, the search text, filters and selection reset; cached and saved flights survive in the DB. Skips Android's usual `ViewModel`. |
+| A store per screen | Tighter scoping; can free memory when a screen closes; the `ViewModel` pattern Android developers expect | Risk of list and map holding different state; more objects to clean up correctly |
 
 **Kotlin → Swift bridge** (D7, owner's choice: hand-written)
 
