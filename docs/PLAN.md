@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 2.2, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 2.3, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -185,7 +185,7 @@ Tests use `MockEngine` and an in-memory or temp-file database. Package layout: A
 - **Tests:** `FlightsApiTest`, and the §0 facts added to `FixtureContractTest`.
 - **Done when:** the real fixture decodes to 1,000 flights, and each failure row in ARCHITECTURE §6.3 has a passing test.
 
-#### [ ] 2.2 Flight cache
+#### [x] 2.2 Flight cache
 
 - **Goal:** flights survive closing the app, and a failed refresh never loses them.
 - **Covers:** R1, R2, R3, R4, R5, R8, DATA-2, DATA-4, DATA-6, TEST-4, D3, D5.
