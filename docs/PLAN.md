@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.3, in progress. Update this line at every review gate.
+> **Current step:** 0.3, committed and waiting for the owner's review, with one decision open: what the map shows if it has never loaded online. Update this line at every review gate.
 
-This plan turns the decided design (D1–D22) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D23) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D22 doesn't work in practice.
+- finding that any of D1–D23 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -319,6 +319,13 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Covers:** M1, M2, M3, M4, M5, M6, M7, M8, T2, MAP-1, MAP-2, MAP-3, MAP-4, VIEW-1, SEL-1, OFF-9, D8. QA: Q8, Q9, Q10.
 - **Read:** UI_SPEC §2.2 and §5.
 - **Build:** the List and Map switch, MapLibre markers, the marker sheet, the route line from `GreatCircle`, and the camera rules.
+- **Found in Step 0.3** (working code is on the local branch `scratch/maplibre-probe`):
+  - Use `org.maplibre.gl:android-sdk-opengl` (D23), wrapped in `AndroidView`. Forward the lifecycle to `MapView`.
+  - Remove `ACCESS_FINE_LOCATION` and `ACCESS_WIFI_STATE` with `tools:node="remove"`. MapLibre adds both, and D16 allows approximate location only.
+  - Pills are one `SymbolLayer`: text plus a stretched image with `iconTextFit`. `symbolSortKey` keeps the selected pill on top of a nearby one, such as HND and NRT (M4).
+  - `LatLngBounds.from` rejects east less than west. To fit a route across the antimeridian, pass unwrapped longitudes, such as west -219.61 and east -122.38. Leave room for the pills: 80 px of padding clipped one.
+  - Keep the camera in `rememberSaveable`, or rotating resets it and breaks M8.
+  - Keep MapLibre's attribution button, and check that it shows OpenStreetMap's credit. The probe didn't open it.
 - **Done when:** those QA rows pass, and changing filters never moves the camera.
 
 #### [ ] 4.6 Refresh and offline
@@ -422,7 +429,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 |---|---|---|---|
 | Room or KSP don't support Kotlin 2.4.21 or AGP 9's new KMP plugin | Checked | High | Step 0.2 found they work (D21) |
 | The development Mac has 8 GB of RAM, so the emulator can freeze or restart while other heavy tools run | High | Low | Before emulator checks, shut down the simulator and run `./gradlew --stop`. Treat "isn't responding" dialogs and `DeadSystemException` as emulator trouble until the app's own log says otherwise |
-| MapLibre in Compose takes too long, because of custom pill markers | Medium | Medium | Step 0.3 is time-limited. If it fails, ask before using Google Maps |
+| MapLibre in Compose takes too long, because of custom pill markers | Checked | Medium | Step 0.3 found pills work (D23) |
 | Swift 6 strict concurrency conflicts with Kotlin callbacks | Medium | Low | Step 3.6 tests this early. Deliver on the main thread and keep the bridge small |
 | An emulator or simulator can't reach the API | High if forgotten | Medium | The setup in Steps 4.1 and 5.1, and ARCHITECTURE §6.4 |
 | Passenger figures are approximate | Certain | Low | They only order airports. Already disclosed in SUBMISSION_NOTES §5 |
