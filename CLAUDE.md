@@ -60,11 +60,13 @@ shared/                KMP module → Android library + static Shared.framework 
     vendor/commonscodec/ DoubleMetaphone — THIRD-PARTY port (Apache-2.0), see THIRD_PARTY_NOTICES.md
     model/               Flight, Airport, FetchError
     data/remote/         fetch, decode and classify failures (ARCHITECTURE §6.3)
-    {data/local,data,presentation,di} †   (data/local = Room database, ARCHITECTURE §5)
-  shared/schemas/ †      Room's exported schema JSON
+    data/                FlightRepository: cache flow, sync status, refresh
+    data/local/          Room database (ARCHITECTURE §5)
+    {presentation,di} †
+  shared/schemas/        Room's exported schema JSON
   src/commonTest/        rule tests (run on JVM and iOS)
   src/jvmTest/           fixture contracts, DoubleMetaphoneOracleTest (port vs commons-codec jar), real OkHttp failures
-  src/iosTest/           real Darwin failures
+  src/iosTest/           real Darwin failures, the app's database file
   src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = Swift bridge †)
 androidApp/            Compose app, package travel.roame.takehome.android
 iosApp/                SwiftUI app: RoameStarter.xcodeproj, iOS 17, Swift 6
@@ -117,6 +119,7 @@ These were found in the starter and the fixture.
   - Register `room-compiler` with KSP for every target.
   - Keep `sqlite-bundled` on the version Room is built against (2.6.2 for Room 2.8.5). Later versions, and Room 3, publish no `iosX64` target, which the starter builds (D21).
   - Re-saving a flight must keep its original `savedAt` (V2), so use the `@Transaction` save in ARCHITECTURE §5.2 rather than a bare `@Upsert`.
+  - Read related tables in one `@Transaction`. Otherwise observers can see two refreshes mixed (ARCHITECTURE §5.2).
 - **Fixture traps:**
   - "Mileage Plan" and "MileagePlus" are different programs.
   - Tokyo has two airports (HND and NRT).

@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 2.2, in progress. Update this line at every review gate.
+> **Current step:** 2.2, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -191,7 +191,7 @@ Tests use `MockEngine` and an in-memory or temp-file database. Package layout: A
 - **Covers:** R1, R2, R3, R4, R5, R8, DATA-2, DATA-4, DATA-6, TEST-4, D3, D5.
 - **Read:** ARCHITECTURE §5; DOMAIN_RULES §9.
 - **Build:**
-  - The entities, `FlightCacheDao`, `AppDatabase` and the database builders for Android, iOS and the JVM.
+  - The cache entities, `FlightCacheDao`, `AppDatabase` and the database builders for Android and iOS. Tests build their own.
   - `FlightRepository`: the cache flow, sync status, an atomic refresh, and one refresh at a time.
 - **Tests:** `FlightCacheTest`.
 - **Done when:** a failure halfway through an insert leaves the old cache intact, data survives reopening the file, and "never synced" differs from "synced empty". Room's schema is exported to `shared/schemas/`.

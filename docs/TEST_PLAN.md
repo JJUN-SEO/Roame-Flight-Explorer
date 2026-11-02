@@ -17,7 +17,7 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 **Test helpers** live in `commonTest/.../testing/`:
 
 - `flight(id = "x", origin = "BOS", destination = "CDG", date = "2027-02-01", points = 25_000, cabin = "Economy", program = "Avios")`: a builder with sensible defaults.
-- `FakeFlightsApi`: a scripted queue of responses or errors, with a configurable delay.
+- `FakeFlightsApi`: a scripted queue of responses or errors, with an optional gate that holds a fetch in flight.
 - `FakeSavedFlightsRepository(failOn = setOf(Op.Save))`: for V7.
 - `TestClock`: a settable `now`.
 - `testDb()`: `Room.inMemoryDatabaseBuilder<AppDatabase>()` with the bundled SQLite driver on the JVM, or a temp-file database for the "survives reopen" tests.
@@ -49,7 +49,8 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 | ✅ `FlightsApiTest` | DM1–DM3, R3–R5, R9, R10, R12, PERF-2 | 200 + valid → flights; any 2xx; unknown fields ignored; 200 + `[]` → success with empty list; unknown cabin and program; trimming and uppercasing; 503, 500 and 404 → `Server(status)`; malformed JSON, wrong shapes, a non-JSON content type, a missing field and a bad date → `InvalidData`, and one bad record fails the whole response; every timeout type → `Timeout`; 15 s boundary in virtual time; anything else → `Unknown`; cancellation is rethrown, not mapped; work runs on the given dispatcher |
 | ✅ `FlightsApiRealEngineTest` (jvmTest) | R3, R9 | real sockets through OkHttp: a valid response; refused, unknown host, closed with no response and lost partway → `Offline`; no answer and a stalled body → `Timeout` |
 | ✅ `ConnectivityFailureTest` (iosTest) | R9 | which `NSURLErrorDomain` codes count as `Offline`; a real refused connection through Darwin → `Offline` |
-| `FlightCacheTest` | R3, R8 | replace is atomic (a failure in the middle of the insert leaves the old cache intact); `lastSuccessAt` is set only on success; never synced vs synced empty; **data survives closing and reopening the DB file** |
+| ✅ `FlightCacheTest` | R1–R5, R8, R11, R12 | cached data is readable while a fetch runs; a second refresh is ignored; replace is atomic (a failure in the middle of the insert leaves the old cache intact); every field survives the database; observers never see two refreshes mixed, on a real file; `lastSuccessAt` is set only on success; every failed fetch leaves the cache untouched; never synced vs synced empty; the error stays during a retry; a cancelled refresh isn't an error and doesn't block the next one; **data survives closing and reopening the DB file** |
+| ✅ `AppDatabaseBuilderTest` (iosTest) | R1 | the file the iOS app really uses, in Documents, survives reopening |
 | `SavedFlightsTest` | V1, V2, V4–V6 | save → one row; **save again with changed points → still one row, new points, original `savedAt`**; remove; saved survives a cache replace that drops its id; V5 updates details on refresh; data survives reopen |
 | `ExplorerStoreOfflineTest` | R1, R2, R4–R7, R11 | cached data appears before the network responds; success clears the stale state; failure with cache → `Ready` + `refreshError`, data unchanged; failure without cache → `Unavailable(kind)`; success-empty → `Ready` + empty cache (not an error); concurrent `refresh()` calls → one API call |
 | `ExplorerStoreSelectionTest` | L1–L5, L7 | select → `selected` set; a filter that excludes it → cleared; undoing the filter → still cleared; reset → a selection still in the results is kept; the saved-view selection is independent; removing a saved flight clears the saved selection |

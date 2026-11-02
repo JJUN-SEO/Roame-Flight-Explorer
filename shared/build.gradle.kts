@@ -9,6 +9,8 @@ plugins {
 }
 
 kotlin {
+    // Room's generated database constructor is an expect/actual object, which Kotlin still calls Beta.
+    compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
     // Test-only target: runs shared tests on any OS (docs/ARCHITECTURE.md, D9). Not shipped.
     jvm()
     android {
@@ -48,6 +50,9 @@ kotlin {
 }
 
 room { schemaDirectory("$projectDir/schemas") }
+
+// Silences a JDK 24+ warning when the JVM tests load the bundled SQLite library.
+tasks.withType<Test>().configureEach { jvmArgs("--enable-native-access=ALL-UNNAMED") }
 
 // Room's code generator runs once per target (docs/ARCHITECTURE.md §5.4).
 dependencies {

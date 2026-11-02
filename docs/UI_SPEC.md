@@ -132,6 +132,7 @@ Use the same copy on both platforms.
 | Unavailable: timeout | `Unavailable(Timeout)` | "The server took too long to respond." + **Try again** |
 | Unavailable: server | `Unavailable(Server(503))` | "The server had a problem (503)." + **Try again** |
 | Unavailable: bad data | `Unavailable(InvalidData)` | "We received flight data we couldn't read." + **Try again** |
+| Unavailable: other | `Unavailable(Unknown)` | "Something went wrong while loading flights." + **Try again** |
 | Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights. Pull to refresh later." No error styling. |
 | Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
 | Location not shared | The user never tapped ⌖, or denied the permission (D16) | Nothing extra is shown and there is no error. Ranking uses airport volume only. ⌖ stays outlined. |

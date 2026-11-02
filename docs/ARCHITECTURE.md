@@ -52,10 +52,11 @@ shared/src/
     di/             AppGraph                            ← the single composition root
   androidMain/      Room database builder (file path from Context), OkHttp engine
   iosMain/          Room database builder (Documents dir), Darwin engine, ios/ExplorerStoreIos.kt (Swift bridge)
-  jvmMain/          Room database builder (tests use in-memory), engine for completeness
+  jvmMain/          isConnectivityFailure for the test-only target; tests build their own databases
 shared/schemas/     Room's exported schema JSON (version 1)
   commonTest/       rule tests, fakes, builders
-  jvmTest/          fixture contract tests; DoubleMetaphoneOracleTest (port vs the commons-codec jar)
+  jvmTest/          fixture contract tests; DoubleMetaphoneOracleTest (port vs the commons-codec jar); real OkHttp failures
+  iosTest/          real Darwin failures; the app's database file
 ```
 
 ## 4. State & data flow
@@ -108,7 +109,7 @@ private val inputs = MutableStateFlow(ExplorerInputs())  // queries, filters, se
 
 val state: StateFlow<ExplorerState> = combine(
     flightRepository.cache.map(::index),  // CacheSnapshot → IndexedFlights: O1 and O2 orders and normalised search keys computed once
-    flightRepository.syncStatus,          // Idle | Refreshing | Failed(FetchError)
+    flightRepository.syncStatus,          // isRefreshing + the latest error, which stays during a retry (R11)
     savedRepository.saved,                // Flow<List<SavedFlight>>
     inputs,
 ) { cache, sync, saved, input -> Snapshot(cache, sync, saved, input) }
@@ -185,8 +186,11 @@ data class SyncMetaEntity(@PrimaryKey val id: Int = 0, val lastSuccessAt: Long)
 ```kotlin
 @Dao
 abstract class FlightCacheDao {
-    @Query("SELECT * FROM cached_flight") abstract fun observeAll(): Flow<List<CachedFlightEntity>>
-    @Query("SELECT * FROM sync_meta WHERE id = 0") abstract fun observeMeta(): Flow<SyncMetaEntity?>
+    @Query("SELECT lastSuccessAt FROM sync_meta WHERE id = 0") abstract fun observeLastSuccessAt(): Flow<Long?>
+
+    /** One transaction, so the flights and the timestamp always come from the same refresh. */
+    @Transaction
+    open suspend fun read(): CachedRows = CachedRows(getAll(), getLastSuccessAt())
 
     /** R3 + V5: one transaction, so a failure part-way leaves the old cache intact. */
     @Transaction
@@ -196,7 +200,7 @@ abstract class FlightCacheDao {
         upsertMeta(SyncMetaEntity(lastSuccessAt = now))
         flights.forEach { updateSavedDetails(/* id + new details */) }   // V5: refresh saved snapshots
     }
-    // deleteAll / insertAll / upsertMeta / updateSavedDetails: @Query / @Insert / @Upsert
+    // getAll / getLastSuccessAt / deleteAll / insertAll / upsertMeta / updateSavedDetails: @Query / @Insert / @Upsert
 }
 
 @Dao
@@ -217,12 +221,14 @@ abstract class SavedFlightDao {
 ```
 
 - **Reads** are `Flow`s, so the UI updates whenever a table changes. This is what makes "no optimistic UI" (V7) possible.
+- **The cache flow** watches `sync_meta`, which every refresh writes, then calls `read()`. Tests in Step 2.2 showed why. Observing the two tables separately gives results that mix two refreshes. So does reading them without a transaction: on a real file, 36 of 373 observed results mixed two refreshes without it, and 0 of 394 with it.
 - **Writes** are `suspend` functions. The database runs them on `Dispatchers.IO` (`setQueryCoroutineContext`), so they never block the main thread. Failures surface as exceptions that the repositories turn into `Result` (V7).
 - With Room's multiplatform support, DAO functions must be `suspend` or return `Flow`. Blocking DAO calls are Android-only, so we never use them.
 
 ### 5.3 Database and per-platform builders
 
 ```kotlin
+// All of this is `internal`, so none of it reaches the Swift header.
 @Database(entities = [CachedFlightEntity::class, SavedFlightEntity::class, SyncMetaEntity::class], version = 1)
 @ConstructedBy(AppDatabaseConstructor::class)          // lets iOS/JVM find Room's generated code
 abstract class AppDatabase : RoomDatabase() {
@@ -443,7 +449,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 |---|---|---|---|---|
 | Local API | Returns the whole fixture on every request | O(n) bytes. Measured on a Mac over localhost, with server memory: 0.4 MB in 2.1 ms (88 MB), 10× 4.1 MB in 4.9 ms (130 MB), 100× 41.3 MB in 32.8 ms (474 MB) | ~10k flights (~4 MB); the server still copes at 100×, so the limit is the phone decoding that much JSON | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
 | Fetch and decode | Reads the whole response, then decodes it on `Dispatchers.Default` | O(n). Measured on a Mac JVM with a fake network, after warm-up: 0.4 MB in 6–13 ms, 10× 4.3 MB in 36–109 ms, 100× 43 MB in 178–274 ms. Used heap right after decoding, garbage included: 10, 53 and 332 MB. Phones are slower; not measured | ~100k flights | Stream the array with `decodeToSequence`, or page the API |
-| Cache (Room + bundled SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
+| Cache (Room + bundled SQLite) | Full replace in one transaction | O(n). Replace / read on a file, measured on a Mac JVM: 3–9 / 1–10 ms at 1k, 31–72 / 12–34 ms at 10k, 270–549 / 112–279 ms at 100k. On the iOS simulator's debug build: 17–23 / 27–50 ms, 169–181 / 289–371 ms, 1.8–2.1 / 2.9–3.2 s. Both run off the main thread. File size: 147 KB, 1.3 MB, 13 MB, about 130 bytes per flight. Android not measured yet | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default`, sorted once per data change | O(n) filter per input change: 0.1 ms / 1 ms / 9.6 ms at 1k / 10k / 100k. O(n log n) sort per data change: 69 ms at 100k. Measured on a Mac in Java, excluding text search. | ~100k flights | Build a marker's flights only when its sheet opens (4.1 ms per change + 1.6 ms per sheet at 100k); then push predicates into indexed SQL that returns ids and page the results |
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. The pass over flights brings one keystroke to at most 0.006 ms at 1k, 0.047 ms at 10k and 0.56 ms at 100k (measured on a Mac in Java). | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n) | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |

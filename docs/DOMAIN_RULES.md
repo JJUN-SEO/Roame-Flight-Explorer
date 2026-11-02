@@ -263,7 +263,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - Replace the cache **atomically** in one transaction: delete all rows, insert all flights, set `lastSuccessAt`.
   - Then apply V5.
 - **R4** A successful response with `"flights": []` **is a success**. The cache becomes empty, `lastSuccessAt` is set, and the UI shows "No flights available". It is never shown as an error. *(assumption: a 200 response is authoritative)*
-- **R5** **Failure** means any of: no connection or connection refused (for example, the API is stopped), a timeout, a non-2xx status, or an invalid body. On failure, the cache and saved flights are left untouched.
+- **R5** **Failure** means any of: no connection or connection refused (for example, the API is stopped), a timeout, a non-2xx status, or an invalid body. A valid response that can't be written to the database also counts as a failure, reported as `Unknown`. *(assumption)* On failure, the cache and saved flights are left untouched.
 - **R6** On failure after at least one successful sync:
   - Keep showing the cached data, with a stale indicator: "Couldn't refresh · showing results from \<lastSuccessAt\>", plus Retry.
   - Search, filters, map, save and remove all keep working.
