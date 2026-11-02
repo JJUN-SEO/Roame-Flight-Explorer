@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.1, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 0.2, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D20) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -128,7 +128,7 @@ These are small gaps found while writing the plan. Nothing here is built yet. Up
 
 Nothing else starts until this phase is done. The brief says both starter apps must build first.
 
-#### [ ] 0.1 Set up this Mac and build both starter apps
+#### [x] 0.1 Set up this Mac and build both starter apps
 
 - **Goal:** both starter apps run here.
 - **Covers:** DEL-6. QA: P1.
