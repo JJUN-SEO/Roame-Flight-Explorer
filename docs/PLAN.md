@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.2, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 0.3, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D22) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -136,7 +136,7 @@ Nothing else starts until this phase is done. The brief says both starter apps m
 - **Agent does:** points Gradle at the SDK with `local.properties` (already gitignored), then runs the Android build and the iOS build.
 - **Done when:** both apps show "Hello world!" and QA row P1 is filled in.
 
-#### [ ] 0.2 Prove the shared libraries work together
+#### [x] 0.2 Prove the shared libraries work together
 
 - **Goal:** find out now whether Room and KSP support Kotlin 2.4.21 and AGP 9.3.1. This is the project's biggest technical risk.
 - **Covers:** the D3 compatibility check.
