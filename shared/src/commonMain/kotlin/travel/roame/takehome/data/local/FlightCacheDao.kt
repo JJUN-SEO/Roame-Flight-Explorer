@@ -19,11 +19,12 @@ internal abstract class FlightCacheDao {
     @Transaction
     open suspend fun read(): CachedRows = CachedRows(getAll(), getLastSuccessAt())
 
-    /** R3: one transaction, so a failure partway leaves the old cache intact. */
+    /** R3 and V5: one transaction, so a failure partway leaves the cache and saved flights as they were. */
     @Transaction
     open suspend fun replaceAll(flights: List<CachedFlightEntity>, now: Long) {
         deleteAll()
         insertAll(flights)
+        refreshSavedDetails()
         upsertMeta(SyncMetaEntity(lastSuccessAt = now))
     }
 
@@ -38,6 +39,24 @@ internal abstract class FlightCacheDao {
 
     @Insert
     protected abstract suspend fun insertAll(flights: List<CachedFlightEntity>)
+
+    /** V5: only flights that are both saved and in the new cache change, and they keep their `savedAt`. */
+    @Query(
+        """
+        INSERT OR REPLACE INTO saved_flight (
+            id, origin, originCity, originLat, originLon,
+            destination, destinationCity, destinationLat, destinationLon,
+            departureDate, program, points, cabin, savedAt
+        )
+        SELECT
+            c.id, c.origin, c.originCity, c.originLat, c.originLon,
+            c.destination, c.destinationCity, c.destinationLat, c.destinationLon,
+            c.departureDate, c.program, c.points, c.cabin, s.savedAt
+        FROM saved_flight AS s
+        JOIN cached_flight AS c ON c.id = s.id
+        """,
+    )
+    protected abstract suspend fun refreshSavedDetails()
 
     @Upsert
     protected abstract suspend fun upsertMeta(meta: SyncMetaEntity)

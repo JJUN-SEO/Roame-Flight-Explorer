@@ -1,6 +1,7 @@
 package travel.roame.takehome.model
 
 import kotlinx.datetime.LocalDate
+import kotlin.time.Instant
 
 internal data class Airport(
     val code: String,
@@ -19,3 +20,5 @@ internal data class Flight(
     val points: Int,
     val cabin: String,
 )
+
+internal data class SavedFlight(val flight: Flight, val savedAt: Instant)

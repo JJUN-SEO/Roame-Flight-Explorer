@@ -19,14 +19,14 @@ class AppDatabaseBuilderTest {
         assertTrue(appDatabasePath().endsWith("/Documents/$DATABASE_NAME"), appDatabasePath())
 
         val firstRun = appDatabaseBuilder().configure()
-        firstRun.flightCacheDao().replaceAll(listOf(flight(id = "kept").toEntity()), now = 1_000)
+        firstRun.flightCacheDao().replaceAll(listOf(flight(id = "kept").toCachedEntity()), now = 1_000)
         firstRun.close()
 
         val secondRun = appDatabaseBuilder().configure()
         val rows = secondRun.flightCacheDao().read()
         secondRun.close()
 
-        assertEquals(listOf("kept"), rows.flights.map { it.id })
+        assertEquals(listOf("kept"), rows.flights.map { it.flight.id })
         assertEquals(1_000, rows.lastSuccessAt)
     }
 }

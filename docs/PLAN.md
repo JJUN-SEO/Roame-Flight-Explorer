@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 2.3, in progress. Update this line at every review gate.
+> **Current step:** 2.3, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -199,7 +199,7 @@ Tests use `MockEngine` and an in-memory or temp-file database. Package layout: A
 #### [ ] 2.3 Saved flights
 
 - **Goal:** saved flights live independently of the cache and never duplicate.
-- **Covers:** V1, V2, V4, V5, V6, DATA-5, OFF-6, OFF-7, TEST-4, D4.
+- **Covers:** V1, V2, V4, V5, V6, O3, DATA-5, OFF-6, OFF-7, TEST-4, D4.
 - **Read:** ARCHITECTURE §5.2; DOMAIN_RULES §8.
 - **Build:** `SavedFlightDao` and `SavedFlightsRepository`. Write failures come back as a `Result`, ready for V7.
 - **Tests:** `SavedFlightsTest`.
@@ -212,7 +212,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 #### [ ] 3.1 Filters, ordering and active filters
 
 - **Goal:** every filter rule exists as a pure function with its boundaries tested.
-- **Covers:** F1–F8, O1–O3, C1–C4, DM1, FILT-1–FILT-10, DATA-3, TEST-1, TEST-2.
+- **Covers:** F1–F8, O1, O2, C1–C4, DM1, FILT-1–FILT-10, DATA-3, TEST-1, TEST-2.
 - **Read:** DOMAIN_RULES §3, §4 and §5.
 - **Build:** `FlightFilter`, `FilterOptions`, `Ordering` and `ActiveFilters`. Date bounds, cabins, programs and points come from the data.
 - **Tests:** `DateFilterTest`, `PointsFilterTest`, `CabinFilterTest`, `ProgramFilterTest`, `CombinedFilterTest`, `FilterOptionsTest`, `OrderingTest` and `ActiveFiltersTest`.

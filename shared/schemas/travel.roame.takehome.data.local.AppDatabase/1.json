@@ -2,86 +2,182 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "13f5594742a64babf8702732164950b1",
+    "identityHash": "929ddaf525f1192b0a3d0d892c10b3ed",
     "entities": [
       {
         "tableName": "cached_flight",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `origin` TEXT NOT NULL, `originCity` TEXT NOT NULL, `originLat` REAL NOT NULL, `originLon` REAL NOT NULL, `destination` TEXT NOT NULL, `destinationCity` TEXT NOT NULL, `destinationLat` REAL NOT NULL, `destinationLon` REAL NOT NULL, `departureDate` TEXT NOT NULL, `program` TEXT NOT NULL, `points` INTEGER NOT NULL, `cabin` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
-            "fieldPath": "id",
+            "fieldPath": "flight.id",
             "columnName": "id",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "origin",
+            "fieldPath": "flight.origin",
             "columnName": "origin",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "originCity",
+            "fieldPath": "flight.originCity",
             "columnName": "originCity",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "originLat",
+            "fieldPath": "flight.originLat",
             "columnName": "originLat",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "originLon",
+            "fieldPath": "flight.originLon",
             "columnName": "originLon",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "destination",
+            "fieldPath": "flight.destination",
             "columnName": "destination",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "destinationCity",
+            "fieldPath": "flight.destinationCity",
             "columnName": "destinationCity",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "destinationLat",
+            "fieldPath": "flight.destinationLat",
             "columnName": "destinationLat",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "destinationLon",
+            "fieldPath": "flight.destinationLon",
             "columnName": "destinationLon",
             "affinity": "REAL",
             "notNull": true
           },
           {
-            "fieldPath": "departureDate",
+            "fieldPath": "flight.departureDate",
             "columnName": "departureDate",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "program",
+            "fieldPath": "flight.program",
             "columnName": "program",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "points",
+            "fieldPath": "flight.points",
             "columnName": "points",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "cabin",
+            "fieldPath": "flight.cabin",
+            "columnName": "cabin",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "saved_flight",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`savedAt` INTEGER NOT NULL, `id` TEXT NOT NULL, `origin` TEXT NOT NULL, `originCity` TEXT NOT NULL, `originLat` REAL NOT NULL, `originLon` REAL NOT NULL, `destination` TEXT NOT NULL, `destinationCity` TEXT NOT NULL, `destinationLat` REAL NOT NULL, `destinationLon` REAL NOT NULL, `departureDate` TEXT NOT NULL, `program` TEXT NOT NULL, `points` INTEGER NOT NULL, `cabin` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "savedAt",
+            "columnName": "savedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.origin",
+            "columnName": "origin",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.originCity",
+            "columnName": "originCity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.originLat",
+            "columnName": "originLat",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.originLon",
+            "columnName": "originLon",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.destination",
+            "columnName": "destination",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.destinationCity",
+            "columnName": "destinationCity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.destinationLat",
+            "columnName": "destinationLat",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.destinationLon",
+            "columnName": "destinationLon",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.departureDate",
+            "columnName": "departureDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.program",
+            "columnName": "program",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.points",
+            "columnName": "points",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flight.cabin",
             "columnName": "cabin",
             "affinity": "TEXT",
             "notNull": true
@@ -121,7 +217,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '13f5594742a64babf8702732164950b1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '929ddaf525f1192b0a3d0d892c10b3ed')"
     ]
   }
 }

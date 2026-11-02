@@ -163,9 +163,8 @@ The database file is `roame.db`, at schema version 1, with no migrations. Room w
 ### 5.1 Tables (entities)
 
 ```kotlin
-@Entity(tableName = "cached_flight")
-data class CachedFlightEntity(
-    @PrimaryKey val id: String,
+data class FlightColumns(       // both flight tables embed this, so they can't drift apart
+    val id: String,
     val origin: String, val originCity: String, val originLat: Double, val originLon: Double,
     val destination: String, val destinationCity: String, val destinationLat: Double, val destinationLon: Double,
     val departureDate: String,   // ISO yyyy-MM-dd
@@ -174,11 +173,14 @@ data class CachedFlightEntity(
     val cabin: String,
 )
 
-@Entity(tableName = "saved_flight")   // the same flight columns, plus:
-data class SavedFlightEntity(/* …flight columns… */ val savedAt: Long)   // epoch millis
+@Entity(tableName = "cached_flight", primaryKeys = ["id"])
+data class CachedFlightEntity(@Embedded val flight: FlightColumns)
 
-@Entity(tableName = "sync_meta")      // single row (id = 0); absent = never synced (R8)
-data class SyncMetaEntity(@PrimaryKey val id: Int = 0, val lastSuccessAt: Long)
+@Entity(tableName = "saved_flight", primaryKeys = ["id"])
+data class SavedFlightEntity(@Embedded val flight: FlightColumns, val savedAt: Long)   // epoch millis
+
+@Entity(tableName = "sync_meta", primaryKeys = ["id"])   // single row (id = 0); absent = never synced (R8)
+data class SyncMetaEntity(val id: Int = 0, val lastSuccessAt: Long)
 ```
 
 ### 5.2 Access objects (DAOs) and transactions
@@ -192,15 +194,23 @@ abstract class FlightCacheDao {
     @Transaction
     open suspend fun read(): CachedRows = CachedRows(getAll(), getLastSuccessAt())
 
-    /** R3 + V5: one transaction, so a failure part-way leaves the old cache intact. */
+    /** R3 + V5: one transaction, so a failure partway leaves the cache and saved flights as they were. */
     @Transaction
     open suspend fun replaceAll(flights: List<CachedFlightEntity>, now: Long) {
         deleteAll()
         insertAll(flights)
+        refreshSavedDetails()
         upsertMeta(SyncMetaEntity(lastSuccessAt = now))
-        flights.forEach { updateSavedDetails(/* id + new details */) }   // V5: refresh saved snapshots
     }
-    // getAll / getLastSuccessAt / deleteAll / insertAll / upsertMeta / updateSavedDetails: @Query / @Insert / @Upsert
+
+    /** V5: only flights that are both saved and in the new cache change, and they keep their savedAt. */
+    @Query("""
+        INSERT OR REPLACE INTO saved_flight (/* every flight column */, savedAt)
+        SELECT /* c.every flight column */, s.savedAt
+        FROM saved_flight AS s JOIN cached_flight AS c ON c.id = s.id
+    """)
+    protected abstract suspend fun refreshSavedDetails()
+    // getAll / getLastSuccessAt / deleteAll / insertAll / upsertMeta: @Query / @Insert / @Upsert
 }
 
 @Dao
@@ -210,11 +220,11 @@ abstract class SavedFlightDao {
 
     /** V2 / OFF-6: one row per id; re-saving updates the details but keeps the original savedAt. */
     @Transaction
-    open suspend fun save(flight: SavedFlightEntity) {
-        val existing = findById(flight.id)
-        upsert(flight.copy(savedAt = existing?.savedAt ?: flight.savedAt))
+    open suspend fun save(saved: SavedFlightEntity) {
+        val existing = findById(saved.flight.id)
+        upsert(saved.copy(savedAt = existing?.savedAt ?: saved.savedAt))
     }
-    @Upsert protected abstract suspend fun upsert(flight: SavedFlightEntity)
+    @Upsert protected abstract suspend fun upsert(saved: SavedFlightEntity)
     @Query("SELECT * FROM saved_flight WHERE id = :id") protected abstract suspend fun findById(id: String): SavedFlightEntity?
     @Query("DELETE FROM saved_flight WHERE id = :id") abstract suspend fun remove(id: String)
 }
@@ -454,7 +464,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. The pass over flights brings one keystroke to at most 0.006 ms at 1k, 0.047 ms at 10k and 0.56 ms at 100k (measured on a Mac in Java). | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n) | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
 | State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
-| Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved) | 10k+ | Paging in the Saved tab |
+| Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved). V5 is one statement, so a refresh's cost grows with saved flights, not with the response. A whole refresh of 100k flights on a Mac JVM took 240–284 ms with none saved, 248–268 ms with 1k saved and 264–269 ms with 10k saved. Not measured on iOS or Android | 10k+ | Paging in the Saved tab |
 | Memory | Dataset + indexes in memory | Flights alone: 0.4 MB at 1k, 3.4 MB at 10k, 35 MB at 100k (measured on the JVM, about 350 bytes per flight) | ~100k flights | Keep rows in SQLite and hold only windows plus indexes in memory |
 
 Two principles make the "next step" column cheap to reach:

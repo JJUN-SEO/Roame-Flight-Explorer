@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import travel.roame.takehome.data.local.CachedFlightEntity
 import travel.roame.takehome.data.local.FlightCacheDao
+import travel.roame.takehome.data.local.toCachedEntity
 import travel.roame.takehome.data.local.toDomain
-import travel.roame.takehome.data.local.toEntity
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.FlightsApi
 import travel.roame.takehome.model.FetchError
@@ -70,7 +70,7 @@ internal class RoomFlightRepository(
 
     /** Returns the error if the write failed, in which case the transaction has rolled back. */
     private suspend fun store(flights: List<Flight>): FetchError? = try {
-        dao.replaceAll(flights.map(Flight::toEntity), clock.now().toEpochMilliseconds())
+        dao.replaceAll(flights.map(Flight::toCachedEntity), clock.now().toEpochMilliseconds())
         null
     } catch (e: CancellationException) {
         throw e

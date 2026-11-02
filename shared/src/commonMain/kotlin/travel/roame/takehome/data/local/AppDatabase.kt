@@ -10,10 +10,12 @@ import kotlinx.coroutines.IO
 
 internal const val DATABASE_NAME = "roame.db"
 
-@Database(entities = [CachedFlightEntity::class, SyncMetaEntity::class], version = 1)
+@Database(entities = [CachedFlightEntity::class, SavedFlightEntity::class, SyncMetaEntity::class], version = 1)
 @ConstructedBy(AppDatabaseConstructor::class)
 internal abstract class AppDatabase : RoomDatabase() {
     abstract fun flightCacheDao(): FlightCacheDao
+
+    abstract fun savedFlightDao(): SavedFlightDao
 }
 
 /** Room's generator writes the `actual` for every target. */
