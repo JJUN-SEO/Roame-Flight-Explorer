@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 2.3, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 3.1, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -196,7 +196,7 @@ Tests use `MockEngine` and an in-memory or temp-file database. Package layout: A
 - **Tests:** `FlightCacheTest`.
 - **Done when:** a failure halfway through an insert leaves the old cache intact, data survives reopening the file, and "never synced" differs from "synced empty". Room's schema is exported to `shared/schemas/`.
 
-#### [ ] 2.3 Saved flights
+#### [x] 2.3 Saved flights
 
 - **Goal:** saved flights live independently of the cache and never duplicate.
 - **Covers:** V1, V2, V4, V5, V6, O3, DATA-5, OFF-6, OFF-7, TEST-4, D4.
