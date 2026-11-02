@@ -270,17 +270,29 @@ Only the **file location** differs per platform:
   - `ContentNegotiation(json { ignoreUnknownKeys = true })`
   - `HttpTimeout(connect = 5s, request = 15s)`
 - `expectSuccess = false`; the status code is checked explicitly.
-- Engines: OkHttp on Android, Darwin on iOS, and `MockEngine` in tests.
-- Exceptions are mapped to `FetchError` (R9):
+- Engines: OkHttp on Android, Darwin on iOS, and `MockEngine` in tests. The caller passes the engine in, and `AppGraph` does this in Step 3.3.
+- `FlightsApi` is an interface, so the store's tests can use `FakeFlightsApi`. `KtorFlightsApi` is the real one. `fetchFlights()` returns `FetchResult.Success(flights)` or `FetchResult.Failure(error)`, and only cancellation is thrown.
+- Exceptions are mapped to `FetchError` (R9), checked in this order, because on the JVM and Android every timeout is also an `IOException`:
 
   | Cause | `FetchError` |
   |---|---|
-  | `HttpRequestTimeoutException`, connect or socket timeout | `Timeout` |
-  | Connection refused, unreachable host, DNS failure, no network. Detect this per platform with `expect fun Throwable.isConnectivityFailure()`: Android uses `java.io.IOException` subtypes, iOS uses `NSURLErrorDomain` codes such as -1004 and -1009. | `Offline` |
-  | Non-2xx status | `Server(status)` |
-  | `SerializationException`, `IllegalArgumentException` from date parsing, or a missing field | `InvalidData` |
   | `CancellationException` | **rethrown, never mapped** (R12) |
+  | `HttpRequestTimeoutException`, `ConnectTimeoutException`, `SocketTimeoutException` | `Timeout` |
+  | Connection refused, unreachable host, DNS failure, no network, or a connection lost partway through. Detect this per platform with `expect fun Throwable.isConnectivityFailure()`: Android uses `java.io.IOException`, iOS uses `NSURLErrorDomain` codes such as -1004 and -1009. | `Offline` |
+  | `ContentConvertException` (Ktor wraps every JSON error, including a missing field, in this), `NoTransformationFoundException` (a 2xx that isn't JSON), `IllegalArgumentException` (a bad date) | `InvalidData` |
   | Anything else | `Unknown` |
+  | No exception, but a non-2xx status | `Server(status)` |
+
+  What real failures looked like in Step 2.1, on real sockets (OkHttp on the JVM, not on an Android device; Darwin in the iOS simulator):
+
+  | Failure | OkHttp | Darwin | `FetchError` |
+  |---|---|---|---|
+  | Connection refused | `ConnectException` | -1004 | `Offline` |
+  | Unknown host | `UnknownHostException` | -1003 | `Offline` |
+  | Connection closed with no response | `IOException` | -1005 | `Offline` |
+  | Connection lost partway through the body | `ClosedByteChannelException` | -1005 | `Offline` |
+  | Server never answers, or stalls partway through the body | `HttpRequestTimeoutException` | `HttpRequestTimeoutException` | `Timeout` |
+  | Connection stalls | `ConnectTimeoutException` at the connect limit | `HttpRequestTimeoutException` at the request limit, because Darwin ignores connect timeouts | `Timeout` |
 
 ### 6.4 Base URL & cleartext HTTP
 
@@ -300,6 +312,7 @@ The platform passes the base URL into `AppGraph`. Shared code never hardcodes a 
 | Reduce, search index, aggregation | `Dispatchers.Default` |
 | SQLite reads and writes | Room, on `Dispatchers.IO` via `setQueryCoroutineContext` (`kotlinx.coroutines.IO` on Native) |
 | HTTP | Ktor engine threads (`suspend`) |
+| JSON decoding | `Dispatchers.Default`, inside `KtorFlightsApi`. Ktor decodes on the caller's thread, which would be the main thread (measured in Step 2.1) |
 
 - `AppGraph` is created **once per process** and owns `CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)`. Because the store is app-scoped, Android rotation or configuration changes never lose state, and there are no per-screen stores to leak.
 - UI observers are the only things that come and go. Compose uses `collectAsStateWithLifecycle`, and Swift cancels its `Cancellable` (§8).
@@ -429,6 +442,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Layer | Current design | Cost per operation | Comfortable up to (est.) | Next step beyond that |
 |---|---|---|---|---|
 | Local API | Returns the whole fixture on every request | O(n) bytes. Measured on a Mac over localhost, with server memory: 0.4 MB in 2.1 ms (88 MB), 10× 4.1 MB in 4.9 ms (130 MB), 100× 41.3 MB in 32.8 ms (474 MB) | ~10k flights (~4 MB); the server still copes at 100×, so the limit is the phone decoding that much JSON | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
+| Fetch and decode | Reads the whole response, then decodes it on `Dispatchers.Default` | O(n). Measured on a Mac JVM with a fake network, after warm-up: 0.4 MB in 6–13 ms, 10× 4.3 MB in 36–109 ms, 100× 43 MB in 178–274 ms. Used heap right after decoding, garbage included: 10, 53 and 332 MB. Phones are slower; not measured | ~100k flights | Stream the array with `decodeToSequence`, or page the API |
 | Cache (Room + bundled SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default`, sorted once per data change | O(n) filter per input change: 0.1 ms / 1 ms / 9.6 ms at 1k / 10k / 100k. O(n log n) sort per data change: 69 ms at 100k. Measured on a Mac in Java, excluding text search. | ~100k flights | Build a marker's flights only when its sheet opens (4.1 ms per change + 1.6 ms per sheet at 100k); then push predicates into indexed SQL that returns ids and page the results |
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. The pass over flights brings one keystroke to at most 0.006 ms at 1k, 0.047 ms at 10k and 0.56 ms at 100k (measured on a Mac in Java). | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |

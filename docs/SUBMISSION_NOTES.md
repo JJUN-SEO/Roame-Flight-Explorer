@@ -87,6 +87,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A13 | How much location vs popularity should count | Origin 0.6 / 0.4, destination 0 / 1, proximity halves every 250 km (D19). Borrowed from public sources, because none publishes a split for airports | P2, P5 |
 | A14 | How many suggestions to show, and what tapping one does | At most 5 rows, counting city rows. Tapping picks exactly what the row names, and the field shows "Tokyo (HND)" or "Tokyo (all airports)" until it is edited. | S14 |
 | A15 | How long before the Android map says it can't load | 10 seconds without its style. MapLibre's failure event isn't reliable offline, so the app uses its own timer | UI_SPEC §4 |
+| A16 | What a connection lost partway through a response counts as | `Offline`. The app can't reach the server, and the partial data is discarded | R9 |
 
 ## 4. Technical tradeoffs by stack choice
 
@@ -327,6 +328,7 @@ These are sensible defaults rather than proof. No source publishes a split for a
 - The passenger figures in `fixtures/airports.json` are approximate 2024 totals, recalled by an AI assistant and **not verified** against primary sources. They are good enough to rank airports, not to quote. Their order broadly agrees with public data, where 1.0 means an identical order: 0.82 with OpenTravelData's older passenger counts, 0.72 with route counts in Algolia's airport dataset, and 0.44 with OpenTravelData's flight-network rank. The fallback's flight counts barely track them (about 0.1), because the fixture's flights are fictional.
 - Map areas can't be downloaded ahead of time (the brief doesn't require it). The Android map works offline from what it has already loaded. If it has never loaded online, it shows a message with Retry (D24).
 - The Android map needs Vulkan 1.0 (D23).
+- On iOS, the 5 s connect limit has no effect, because Ktor's Darwin engine ignores it. A stalled connection gives up at the 15 s request limit, with the same error (R10).
 - Number formatting is en-US only (`25,000 pts`).
 - Android 8 (API 26) and up only (D22). The brief doesn't ask for older versions.
 - Local HTTP only: cleartext is allowed for `localhost` / `10.0.2.2`, and physical devices need extra config.
@@ -355,6 +357,7 @@ See [TEST_PLAN.md §5](TEST_PLAN.md#5-manual-qa-checklist) for the filled-in QA 
   - **Limits of this check:** pinch and double tap were two-finger events sent to the map view from inside the app, because `adb` can't send multi-touch. Pan and marker taps were real `adb` input. The emulator had no window and rendered in software, so this says nothing about speed, and its "isn't responding" dialogs came from that load.
   - **Didn't work:** if the map has never loaded online, it stays blank with no markers. A fallback style reported success but never drew, and MapLibre's failure event fired in one run and not the next.
   - **Cost, with the chosen Vulkan package:** the debug APK grew from 16.4 MB to 69.9 MB, because it holds all four CPU architectures. Each one's library is 9.2–13.0 MB.
+- Fetching and failures (Step 2.1, 2026‑11‑02): real failing sockets through OkHttp on the JVM and through Darwin in the iPhone 18 Pro simulator. The results are in ARCHITECTURE §6.3. **Not yet checked:** airplane mode, and OkHttp on an Android device (QA Q16 and Q18).
 
 ## 8. Third-party code: Double Metaphone
 
@@ -431,3 +434,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑11‑02 | Step 0.3 | Wrote a throwaway MapLibre map, compared its two graphics packages, tested gestures, offline use and rotation, and tried an offline fallback | Screenshots, the camera position read from the screen, and pixel colours. Those colours showed the fallback never drew, even though its status said it had loaded, so it's reported as failed |
 | 2026‑11‑02 | Local API | Wrote the `:server` module and measured it at 1×, 10× and 100× the fixture | `curl` and `diff` against the fixture, including from a clean copy of the repo. On copies of the fixture: a missing file stops startup, `PORT` works, and edits appear on the next request |
 | 2026‑11‑02 | Step 1.2, then removed | Built the `--mode` and `--fixture` switches the plan listed, without first asking whether the project needed them. The owner questioned them, and they were removed before being pushed (D25) | `curl` confirmed each mode while they existed. After removal, `Main.kt` matches the accepted Step 1.1 version exactly, and `curl` and `diff` confirm the response still matches the fixture |
+| 2026‑11‑02 | Step 2.1 | Wrote the fetch and decode code and its tests. Probed real failing sockets through OkHttp and Darwin before writing the failure mapping | The probe corrected the design: timeouts must be checked first, and JSON errors arrive as `ContentConvertException`. 16 deliberate bugs were put in one at a time: tests caught 15, and the 16th showed a branch that could never run, which was deleted. Airplane mode isn't tested yet (QA Q16 and Q18) |

@@ -39,7 +39,11 @@ kotlin {
             implementation(libs.ktor.client.mock)
             implementation(libs.turbine)
         }
-        jvmTest.dependencies { implementation(libs.commons.codec) }
+        jvmTest.dependencies {
+            implementation(libs.commons.codec)
+            // The engine Android ships, so real connection failures can be tested without a device.
+            implementation(libs.ktor.client.okhttp)
+        }
     }
 }
 

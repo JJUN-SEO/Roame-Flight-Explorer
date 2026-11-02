@@ -269,8 +269,8 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - Search, filters, map, save and remove all keep working.
 - **R7** On failure when no sync has ever succeeded, show a full-screen error that explains the cause, with Retry.
 - **R8** Whether data was "never synced" or "synced but empty" is decided by whether `lastSuccessAt` exists, **not** by the row count.
-- **R9** The error kinds are `Offline` (unreachable, refused, DNS failure, no network), `Timeout`, `Server(status)`, `InvalidData` and `Unknown`. Each has its own copy in UI_SPEC §4.
-- **R10** Timeouts are 5 s to connect and 15 s per request.
+- **R9** The error kinds are `Offline` (unreachable, refused, DNS failure, no network), `Timeout`, `Server(status)`, `InvalidData` and `Unknown`. Each has its own copy in UI_SPEC §4. A connection lost partway through a response is also `Offline`, because the app can't reach the server and any partial data is discarded. *(assumption)*
+- **R10** Timeouts are 5 s to connect and 15 s per request. On iOS the 5 s limit has no effect, because Ktor's Darwin engine ignores connect timeouts, so a stalled connection gives up at 15 s with the same `Timeout` error.
 - **R11** The stale indicator clears after the next successful refresh. A refresh while data is on screen shows an inline progress indicator, never a full-screen loader.
 - **R12** Coroutine cancellation is never reported as an error: always rethrow `CancellationException`, and never swallow it in `runCatching`.
 

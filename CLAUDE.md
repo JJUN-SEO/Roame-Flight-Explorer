@@ -58,10 +58,13 @@ shared/                KMP module → Android library + static Shared.framework 
   src/commonMain/kotlin/travel/roame/takehome/
     domain/search/       airport search engine: trie, fuzzy, ranking (DOMAIN_RULES §2, §2b)
     vendor/commonscodec/ DoubleMetaphone — THIRD-PARTY port (Apache-2.0), see THIRD_PARTY_NOTICES.md
-    {model,data,presentation,di} †   (data/local = Room database, ARCHITECTURE §5)
+    model/               Flight, Airport, FetchError
+    data/remote/         fetch, decode and classify failures (ARCHITECTURE §6.3)
+    {data/local,data,presentation,di} †   (data/local = Room database, ARCHITECTURE §5)
   shared/schemas/ †      Room's exported schema JSON
   src/commonTest/        rule tests (run on JVM and iOS)
-  src/jvmTest/           fixture contracts + DoubleMetaphoneOracleTest (port vs commons-codec jar)
+  src/jvmTest/           fixture contracts, DoubleMetaphoneOracleTest (port vs commons-codec jar), real OkHttp failures
+  src/iosTest/           real Darwin failures
   src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = Swift bridge †)
 androidApp/            Compose app, package travel.roame.takehome.android
 iosApp/                SwiftUI app: RoameStarter.xcodeproj, iOS 17, Swift 6
@@ -122,6 +125,11 @@ These were found in the starter and the fixture.
 - **Server working directory:** the Gradle `run` task's default working directory is the module dir. Set it to the repo root so `fixtures/` resolves.
 - **MapLibre (D8, D23, D24):** PLAN Step 4.5 lists what Step 0.3 found. MapLibre adds `ACCESS_FINE_LOCATION`, which has to be removed because D16 allows approximate location only, and `LatLngBounds.from` needs unwrapped longitudes across the antimeridian.
 - **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Only request it when the user taps "Use my location".
+- **Ktor failures (found in Step 2.1):**
+  - Check timeouts before connectivity. On the JVM and Android, every timeout is also an `IOException`.
+  - JSON errors arrive as `ContentConvertException`, not `SerializationException`.
+  - Ktor decodes on the caller's thread, so `KtorFlightsApi` moves the whole fetch to `Dispatchers.Default`.
+  - The iOS engine ignores connect timeouts (R10).
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"
