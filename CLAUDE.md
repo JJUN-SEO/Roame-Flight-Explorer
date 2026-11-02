@@ -75,7 +75,6 @@ docs/                  planning docs (see table above)
 | Task | Command |
 |---|---|
 | Run local API | `./gradlew :server:run` → `http://localhost:8080/flights` |
-| API in QA modes † | `./gradlew :server:run --args="--mode=empty"` (also `error`, `slow`) |
 | Shared tests, any OS | `./gradlew :shared:jvmTest` |
 | Shared tests on iOS sim (Mac) | `./gradlew :shared:iosSimulatorArm64Test` |
 | Build Android | `./gradlew :androidApp:assembleDebug` |

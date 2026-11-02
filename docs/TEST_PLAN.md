@@ -112,7 +112,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 |---|---|---|---|
 | P1 | The starter app builds and shows "Hello world!" | ✅ 2026‑11‑01, Claude: `Medium_Phone_API_37.0` emulator (Google Play image), screenshot checked | ✅ 2026‑11‑01, Claude: iPhone 18 Pro simulator (iOS 27.0), screenshot checked |
 | P2 | `./gradlew :server:run` → `curl` returns 200 and the body matches the fixture | ✅ 2026‑11‑02, Claude: 200, `application/json`, no differences from the fixture, also from a clean copy of the repo with no `local.properties` | — |
-| Q1 | Fresh install with the API running → loading state → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | | |
+| Q1 | Fresh install with the API running → loading state (it may only flash, because the local API is fast) → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | | |
 | Q2 | From `"  BoStOn "` → BOS only. To `tokyo` → HND and NRT. To `nrt` → NRT only. | | |
 | Q2b | Fuzzy search: To `sidnee` → SYD with the hint "Showing Sydney (SYD)"; `sydeny` → SYD; `berlin` → filtered-empty state; `São Paulo` → GRU with no hint | | |
 | Q2c | Location (D16): with no location, typing To `tokio` shows "Showing Tokyo (HND), Tokyo (NRT)" (HND is busier). Tap ⌖ and allow, with a simulated Seattle location: no error, ⌖ is filled, From `y` lists Vancouver (YVR) first, and To `tokio` doesn't change (P5). Deny: no error, volume-only ranking. Airplane mode + ⌖: still works (GPS needs no internet). The flight list order never changes with location (D17). | | |
@@ -134,7 +134,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q16 | Stop the API, pull to refresh → stale banner, data intact, Retry shown | | |
 | Q17 | API stopped: force-quit, relaunch → cached results + saved flights; search and filters work; remove a saved flight | | |
 | Q18 | Clear app data (or reinstall) with the API stopped → full-screen offline error; start the API → Try again → loads | | |
-| Q19 | `--mode=empty` → "No flights available" (not an error); `--mode=error` → stale banner or error | | |
+| Q19 | Temporarily change the fixture to `{"flights":[]}`, refresh → "No flights available" (not an error). Restore it, stop the API, refresh → stale banner, not the empty message | | |
 | Q20 | Simulated save failure (debug toggle or test build) → snackbar, heart unchanged | | |
 | Q21 | Rotation, or the app in the background for a minute → state preserved (Android) | | — |
 | Q22 | Largest font size + VoiceOver/TalkBack pass over a row, a marker and the card | | |
@@ -145,7 +145,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 
 To demo and QA failures without code changes:
 
-- Server: `--mode=empty|error|slow` (ARCHITECTURE §6.2).
+- Server: no switches (D25). Stop the API for a failed request (Q16–Q18). The server rereads the fixture on every request, so temporary edits show up on the next refresh (Q14, Q15, Q19). Afterwards, run `git restore fixtures/flights.json`.
 - App: a hidden debug toggle, "Fail next DB write", that makes `SavedFlightsRepository` throw once. This covers Q20 and OFF-8. Strip it from release builds or keep it behind `BuildConfig.DEBUG` / `#if DEBUG`.
 
 ## 7. Demo recording script (DEL-4)
@@ -153,11 +153,11 @@ To demo and QA failures without code changes:
 Aim for about 4 minutes per platform. Record Android first, then repeat on iOS.
 
 1. **Setup shot:** a terminal running `./gradlew :server:run`, with `curl -s localhost:8080/flights | head` showing the data.
-2. **Launch:** a fresh install shows the loading state, then 1,000 flights. Point out the count and the default date range.
+2. **Launch:** a fresh install shows the loading state, which may only flash, then 1,000 flights. Point out the count and the default date range.
 3. **Search:** type `" boston "` in From → BOS. Type `tokyo` in To → HND and NRT. Clear both.
 4. **Filters:** dates Feb 10 – 12 (call out the inclusive ends), cabin Business, points up to 60k, programs Avios + Aeroplan → show the chips and the count. Clear one chip, then Reset.
 5. **Map:** pan and zoom. Tap the Paris marker → sheet → pick a flight → route line + card. Switch to List → the same selection. Apply a filter that removes it → the selection clears.
 6. **Save:** save 2–3 flights (from the list and from the map card). Open the Saved tab, change the filters to show it's independent, and remove one.
 7. **Offline:** Ctrl‑C the API. Pull to refresh → stale banner, data intact.
 8. **Reopen with the API stopped:** force-quit and relaunch → cached results and saved flights are present. Search still works, and removing a saved flight works.
-9. *(Optional)* Start the API again → Retry → the banner clears. Briefly show `--mode=empty`.
+9. *(Optional)* Start the API again → Retry → the banner clears.

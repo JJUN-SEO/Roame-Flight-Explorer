@@ -260,18 +260,8 @@ Only the **file location** differs per platform:
 ### 6.2 Server (`:server`)
 
 - Ktor server on its CIO engine, listening on `0.0.0.0:8080`. It only needs plain HTTP, so Netty's HTTP/2 support would go unused. The port can be overridden with the `PORT` env var.
-- Each request reads `fixtures/flights.json` and returns **the raw bytes**, with no re-serialisation, so the response is byte-identical to the fixture (API-1). Reading on every request means you can edit the fixture while the server runs to test refresh, V4 and V5.
-- The fixture path defaults to `<repo>/fixtures/flights.json` and can be overridden with `--fixture=<path>`. Set `tasks.named<JavaExec>("run") { workingDir = rootDir }` so relative paths work. If the file is missing, fail fast at startup.
-- An optional QA switch, `--mode=normal|empty|error|slow`, selects one of these behaviours:
-  - `empty` returns `{"flights":[]}` with 200.
-  - `error` returns 503.
-  - `slow` adds a 3 s delay.
-
-  Use it like this:
-  ```
-  ./gradlew :server:run --args="--mode=empty"
-  ```
-  This is not part of the required contract. It exists to demo and QA R4, R5 and R7.
+- Each request reads `fixtures/flights.json` and returns **the raw bytes**, with no re-serialisation, so the response is byte-identical to the fixture (API-1). Reading on every request means you can temporarily edit the fixture while the server runs to test refresh, R4, V4 and V5.
+- The fixture path is `fixtures/flights.json`, relative to the repo root, so set `tasks.named<JavaExec>("run") { workingDir = rootDir }`. If the file is missing, fail fast at startup.
 - Request logging uses Ktor's `CallLogging` plugin, with `slf4j-simple` to print it, because the plugin has no output without a logging backend.
 
 ### 6.3 Client (`FlightsApi`)
@@ -430,6 +420,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D22 | Android 8 (API 26) is the minimum: `minSdk` 26, raised from the starter's 23 | **Owner** | The brief doesn't ask for older versions, and Android 6–7.1 date from 2015–2016. `LocalDate` needs API 26 or extra setup, and with the higher minimum those phones can't install the app, rather than installing it and crashing on the first date | Core library desugaring (one more build library, testable here only on API 37); leaving `minSdk` at 23 (those phones could crash) |
 | D23 | MapLibre's default package, which uses Vulkan | Owner's choice (over Claude's recommendation of OpenGL) | It's the package MapLibre's docs tell most apps to use, and they say Vulkan performs better on modern devices. Every Step 0.3 check passed on it. Accepted costs: it needs Vulkan 1.0, the docs call it "newer, some open issues remain", and the debug APK is larger (69.9 MB vs 62.4 MB). Switching is a one-line change | `android-sdk-opengl` (runs on "any device", smaller; Claude's recommendation); `android-sdk-vulkan-opengl` (both, about 10 MB more) |
 | D24 | On Android, a map that can't load shows a message with Retry | **Owner** (over drawing markers on a plain background) | The brief says offline applies to flight data and map tiles aren't required, and flights stay available in the list. MapLibre needs its style before it can draw anything, so a map that has never loaded online would otherwise be blank. Once it has loaded, it works offline from its cache. iOS is expected not to need this, because MapKit has no style to download; Step 5.5 checks | Markers on a plain built-in background: Claude's attempt reported success but never drew, so the effort is unknown |
+| D25 | No QA switches: the local API only serves `GET /flights` | **Owner** (over Claude's mild preference to keep them) | The brief doesn't ask for them, and no app code or test uses them, because automated tests fake responses with `MockEngine`. This is a take-home, so 46 more lines to explain weren't worth it. By hand, stop the API for a failed request and temporarily edit the fixture for an empty one | Keep `--mode` and `--fixture`: empty and loading screens are easier to see by hand |
 
 ## 12. Scalability
 

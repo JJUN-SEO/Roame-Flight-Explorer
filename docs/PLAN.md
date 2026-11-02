@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 1.2, in progress. Update this line at every review gate.
+> **Current step:** 2.1, not started. The owner is reviewing the removal of Step 1.2 (D25). Update this line at every review gate.
 
-This plan turns the decided design (D1–D24) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D24 doesn't work in practice.
+- finding that any of D1–D25 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -112,7 +112,7 @@ These are small gaps found while writing the plan. Nothing here is built yet. Up
 | Phase | Steps | Result at the end |
 |---|---|---|
 | 0 Pre-flight | 0.1–0.3 | This Mac builds both starter apps, and the two risky libraries are proven |
-| 1 Local API | 1.1–1.2 | One command serves the fixture |
+| 1 Local API | 1.1 | One command serves the fixture |
 | 2 Shared data | 2.1–2.3 | Fetching, caching and saved flights work and are tested |
 | 3 Shared logic and store | 3.1–3.6 | Every data rule is tested, and one store is reachable from Kotlin and Swift |
 | 4 Android app | 4.1–4.8 | A complete Android app, checked against the QA list |
@@ -169,13 +169,6 @@ Nothing else starts until this phase is done. The brief says both starter apps m
   - `GET /flights` returns the raw bytes of `fixtures/flights.json`, reading the file on every request. If the file is missing, fail at startup.
   - In the README and `CLAUDE.md`, remove the † marks and add the `JAVA_HOME` note from §4.
 - **Done when:** `curl -i localhost:8080/flights` returns 200 with `application/json`, and `curl -s localhost:8080/flights | diff - fixtures/flights.json` shows no differences.
-
-#### [ ] 1.2 Add QA switches
-
-- **Goal:** empty, error and slow responses can be shown on demand. This is the first thing to drop if time runs short (§10).
-- **Covers:** the server half of OFF-5 and TEST_PLAN §6.
-- **Build:** `--mode=normal|empty|error|slow` and `--fixture=<path>`.
-- **Done when:** each mode returns what ARCHITECTURE §6.2 says when checked with `curl`.
 
 ### Phase 2: Shared data
 
@@ -444,10 +437,9 @@ Only the owner cuts scope.
 
 **Should**, dropped in this order if needed:
 
-1. The `--mode` server switch (Step 1.2). Instead, demo empty and error states by editing the fixture or stopping the server.
-2. The "Fail next DB write" debug toggle (Step 4.4). The store tests already cover V7.
-3. Animating the camera to fit the route on selection.
-4. The live "Show N flights" count inside filter sheets.
+1. The "Fail next DB write" debug toggle (Step 4.4). The store tests already cover V7.
+2. Animating the camera to fit the route on selection.
+3. The live "Show N flights" count inside filter sheets.
 
 **Could:**
 

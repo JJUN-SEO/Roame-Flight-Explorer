@@ -64,6 +64,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D22 | Android 8 (API 26) is the minimum: `minSdk` 26, raised from the starter's 23. The owner's reasoning: the brief doesn't ask for Android 6–7.1, and they're about 10 years old. `LocalDate` needs API 26 or extra setup. | — | **Owner** | Built | 2026‑11‑02 |
 | D23 | MapLibre's **default package, which uses Vulkan**. Every Step 0.3 check passed on it. Claude recommended the OpenGL package, for its wider device support and smaller size. | MAP-1 | Owner's choice (over Claude's recommendation) | Proven on a scratch branch; not built yet | 2026‑11‑02 |
 | D24 | On Android, a map that can't load shows **a message with Retry**, and flights stay available in the list. This only affects a map that has never loaded online. | OFF-9 | **Owner** (over drawing markers on a plain background) | Decided; built in Step 4.5 | 2026‑11‑02 |
+| D25 | **No QA switches on the local API.** The planned `--mode` and `--fixture` options were built in Step 1.2, then removed before being pushed. The brief doesn't ask for them, and no app code or test depends on them. Automated tests fake empty and failed responses. By hand, stop the API or temporarily edit the fixture. | OFF-5 | **Owner** (over Claude's mild preference to keep them) | Removed | 2026‑11‑02 |
 
 ## 3. Assumptions
 
@@ -81,7 +82,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A8 | Whether a successful empty response replaces a non-empty cache | Yes. A 200 with `[]` is authoritative, and is shown as "No flights available", not as an error. | R4 |
 | A9 | How a partially invalid response is handled | The whole response is treated as failed, and the cache is kept | DM3 |
 | A10 | What reset clears | Search fields and all filters; saved flights are untouched | C4 |
-| A11 | Whether an extra API surface is allowed | The required contract is untouched; `--mode` is a QA-only switch | — |
+| A11 | Whether an extra API surface is allowed | Not needed: the server only has the required `GET /flights` (D25) | — |
 | A12 | What "fall back to the original data" means when an airport has no passenger figure | Volume = each airport's number of flights in `flights.json` | P4 |
 | A13 | How much location vs popularity should count | Origin 0.6 / 0.4, destination 0 / 1, proximity halves every 250 km (D19). Borrowed from public sources, because none publishes a split for airports | P2, P5 |
 | A14 | How many suggestions to show, and what tapping one does | At most 5 rows, counting city rows. Tapping picks exactly what the row names, and the field shows "Tokyo (HND)" or "Tokyo (all airports)" until it is edited. | S14 |
@@ -429,3 +430,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑11‑01 | Step 0.2 | Chose library versions from official docs and each library's published targets, wrote a throwaway Room database, and ran it on every available platform | Test results, the on-screen text in both real apps, and the database file pulled from the emulator and read with Python's `sqlite3`. A first pick of `sqlite-bundled` 2.7.1, taken from Google's Room 3 page, didn't resolve for `iosX64` and was corrected to 2.6.2 |
 | 2026‑11‑02 | Step 0.3 | Wrote a throwaway MapLibre map, compared its two graphics packages, tested gestures, offline use and rotation, and tried an offline fallback | Screenshots, the camera position read from the screen, and pixel colours. Those colours showed the fallback never drew, even though its status said it had loaded, so it's reported as failed |
 | 2026‑11‑02 | Local API | Wrote the `:server` module and measured it at 1×, 10× and 100× the fixture | `curl` and `diff` against the fixture, including from a clean copy of the repo. On copies of the fixture: a missing file stops startup, `PORT` works, and edits appear on the next request |
+| 2026‑11‑02 | Step 1.2, then removed | Built the `--mode` and `--fixture` switches the plan listed, without first asking whether the project needed them. The owner questioned them, and they were removed before being pushed (D25) | `curl` confirmed each mode while they existed. After removal, `Main.kt` matches the accepted Step 1.1 version exactly, and `curl` and `diff` confirm the response still matches the fixture |

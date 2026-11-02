@@ -91,7 +91,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | OFF-2 | Offline, the user can search cached results, view saved flights and remove saved flights | With the API stopped, search, filters, map, the Saved tab and Remove all work. | R6, V6 | ⬜ |
 | OFF-3 | A failed refresh keeps the existing data and shows an offline or stale-data indication | Stop the API and pull to refresh: the data is unchanged and a banner shows "Couldn't refresh · results from <time>" with Retry. | R5, R6, R11 | ⬜ |
 | OFF-4 | With no cached data, show an understandable error with a retry action | Fresh install with the API stopped: a full-screen error explains the cause. Retry works once the API is started. | R7, R9 | ⬜ |
-| OFF-5 | A successful empty response is distinguished from a failed request | With `--mode=empty`, the app shows "No flights available" (not an error). With `--mode=error`, the app shows the error or stale state. | R4, R8 | ⬜ |
+| OFF-5 | A successful empty response is distinguished from a failed request | A 200 response with `{"flights":[]}` shows "No flights available" (not an error). A failed request shows the error or stale state. | R4, R8 | ⬜ |
 | OFF-6 | Saving the same flight again updates its details without creating a duplicate | Re-saving an id after its details change leaves one row with the new details. | V2 | ⬜ |
 | OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | ⬜ |
 | OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | ⬜ |
