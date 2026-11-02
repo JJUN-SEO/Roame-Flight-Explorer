@@ -123,6 +123,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q6 | Active chips are shown; clearing one chip works; Reset restores everything | | |
 | Q7 | Filtered-empty state + Reset button | | |
 | Q8 | Map: one marker per destination; count and min points match the list; pan, zoom and double-tap all work | | |
+| Q8b | Airplane mode with the map never opened, then open Map → the "Can't load the map" message and Retry. Turn the internet back on → the map loads | | — |
 | Q9 | Tap a marker → sheet ordered by points → tap a flight → route line + card | | |
 | Q10 | Switch Map → List: the same flight is selected and highlighted; the reverse also works | | |
 | Q11 | Apply a filter that excludes the selected flight → the card disappears; undo the filter → it stays cleared | | |

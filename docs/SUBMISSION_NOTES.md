@@ -62,7 +62,8 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D20 | **A suggestions dropdown under each search field.** Matching airports from the data appear and change with every keystroke, ranked by P6. Tapping one picks that airport. When two or more matches share a city, one extra row picks them all, following Roame. The hint from D14 stays. | SRCH-9 | **Owner** (the idea, using only what's in the data, and the city row); Claude (5 rows and the tap behaviour, A14) | Decided; UI in Phases 4 and 5 | 2026‑11‑01 |
 | D21 | Room **2.8.5** with `sqlite-bundled` **2.6.2**, not Room 3. The starter builds an `iosX64` target. Room 3.0.3 and `sqlite-bundled` 2.7.0 and later don't publish one, and 2.6.2 is the version Room 2.8.5 is built against. The owner's reasoning: this is a take-home, so the newer line's benefits, which are mostly for later development, wouldn't be used. | DATA-2 | Owner's choice (Claude's recommendation over Room 3) | Build setup done; no database code yet | 2026‑11‑02 |
 | D22 | Android 8 (API 26) is the minimum: `minSdk` 26, raised from the starter's 23. The owner's reasoning: the brief doesn't ask for Android 6–7.1, and they're about 10 years old. `LocalDate` needs API 26 or extra setup. | — | **Owner** | Built | 2026‑11‑02 |
-| D23 | MapLibre's **OpenGL package**, not its default Vulkan one. D8 exists so that any reviewer sees a working map, MapLibre's docs say OpenGL runs on "any device", and its Vulkan package marks Vulkan as required. Both drew the same in Step 0.3, and OpenGL is smaller. | MAP-1 | Claude (within D8); owner to confirm at the Step 0.3 review | Proven on a scratch branch; not built yet | 2026‑11‑02 |
+| D23 | MapLibre's **default package, which uses Vulkan**. Every Step 0.3 check passed on it. Claude recommended the OpenGL package, for its wider device support and smaller size. | MAP-1 | Owner's choice (over Claude's recommendation) | Proven on a scratch branch; not built yet | 2026‑11‑02 |
+| D24 | On Android, a map that can't load shows **a message with Retry**, and flights stay available in the list. This only affects a map that has never loaded online. | OFF-9 | **Owner** (over drawing markers on a plain background) | Decided; built in Step 4.5 | 2026‑11‑02 |
 
 ## 3. Assumptions
 
@@ -84,6 +85,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A12 | What "fall back to the original data" means when an airport has no passenger figure | Volume = each airport's number of flights in `flights.json` | P4 |
 | A13 | How much location vs popularity should count | Origin 0.6 / 0.4, destination 0 / 1, proximity halves every 250 km (D19). Borrowed from public sources, because none publishes a split for airports | P2, P5 |
 | A14 | How many suggestions to show, and what tapping one does | At most 5 rows, counting city rows. Tapping picks exactly what the row names, and the field shows "Tokyo (HND)" or "Tokyo (all airports)" until it is edited. | S14 |
+| A15 | How long before the Android map says it can't load | 10 seconds without its style. MapLibre's failure event isn't reliable offline, so the app uses its own timer | UI_SPEC §4 |
 
 ## 4. Technical tradeoffs by stack choice
 
@@ -281,7 +283,7 @@ These are sensible defaults rather than proof. No source publishes a split for a
 
 | Option | Strengths here | Weaknesses here |
 |---|---|---|
-| ✅ MapLibre | Open source with no account, key or billing, so any reviewer sees a working map. The GPU draws **vector** tiles: smooth zoom and rotation, and crisp text and lines at any zoom and screen density. Actively maintained. | Needs an OpenGL ES 3.0 GPU (practically every phone of the last decade). Custom pill markers take more work. Map images come from OpenFreeMap's free server (no uptime guarantee). The map style differs from Apple Maps. Larger APK (native libraries). |
+| ✅ MapLibre | Open source with no account, key or billing, so any reviewer sees a working map. The GPU draws **vector** tiles: smooth zoom and rotation, and crisp text and lines at any zoom and screen density. Actively maintained. | Needs a Vulkan 1.0 GPU with its default package (D23). Pill markers are drawn through map layers rather than Compose, which Step 0.3 found straightforward. Map images come from OpenFreeMap's free server (no uptime guarantee). The map style differs from Apple Maps. Larger APK (native libraries). |
 | Google Maps SDK (maps-compose) | The most polished and familiar; any composable can be a marker | **Requires a Google Cloud project with billing enabled and an API key.** The key can't be committed, so a reviewer without one sees a blank grey map. (Native mobile map loads are, to our knowledge, currently free of charge; the barrier is the mandatory billing account and key.) Needs Play services. |
 | osmdroid | No key; lightweight | Draws **raster** (bitmap) tiles in a classic Android View: zooming between levels blurs or shows tile seams, gestures are less fluid, and it is dated, with known visual glitches. Compose only through an interop wrapper; slower-moving maintenance; OpenStreetMap's own tile servers discourage heavy app use. |
 
@@ -320,7 +322,8 @@ These are sensible defaults rather than proof. No source publishes a split for a
 - Search doesn't transliterate non-Latin scripts (`東京`) and knows no nicknames (`NYC`, `LA`).
 - Sound-alike places outside the data can match: `newark` → New York (JFK). The hint line makes this visible (DOMAIN_RULES S12).
 - The passenger figures in `fixtures/airports.json` are approximate 2024 totals, recalled by an AI assistant and **not verified** against primary sources. They are good enough to rank airports, not to quote. Their order broadly agrees with public data, where 1.0 means an identical order: 0.82 with OpenTravelData's older passenger counts, 0.72 with route counts in Algolia's airport dataset, and 0.44 with OpenTravelData's flight-network rank. The fallback's flight counts barely track them (about 0.1), because the fixture's flights are fictional.
-- Map tiles aren't cached offline; markers still render (allowed by the brief).
+- Map areas can't be downloaded ahead of time (the brief doesn't require it). The Android map works offline from what it has already loaded. If it has never loaded online, it shows a message with Retry (D24).
+- The Android map needs Vulkan 1.0 (D23).
 - Number formatting is en-US only (`25,000 pts`).
 - Android 8 (API 26) and up only (D22). The brief doesn't ask for older versions.
 - Local HTTP only: cleartext is allowed for `localhost` / `10.0.2.2`, and physical devices need extra config.
@@ -345,10 +348,10 @@ See [TEST_PLAN.md §5](TEST_PLAN.md#5-manual-qa-checklist) for the filled-in QA 
 - iOS: *simulator model, iOS version, date*.
 - Room and KSP on this toolchain (Step 0.2, 2026‑11‑01): a throwaway database passed 7 tests on the JVM and the iOS simulator, then ran inside the real apps on the `Medium_Phone_API_37.0` emulator and the iPhone 18 Pro simulator. All reported SQLite 3.50.1. It didn't run on Android below API 37, a physical iPhone or an Intel Mac, though `iosArm64` and `iosX64` compile and link.
 - MapLibre in Compose (Step 0.3, 2026‑11‑02, on the `Medium_Phone_API_37.0` emulator, code on the unmerged local branch `scratch/maplibre-probe`):
-  - **Worked:** pill markers with text, a San Francisco to Tokyo route across the antimeridian, tapping markers, panning, pinch and double-tap zoom, fitting the route, the selected pill on top of a nearby one, backgrounding, rotation, and a full map offline once it had loaded online. Tiles loaded over OkHttp 5.5.1, although MapLibre is built against 4.12.
+  - **Worked, on both MapLibre graphics packages:** pill markers with text, a San Francisco to Tokyo route across the antimeridian, tapping markers, panning, pinch and double-tap zoom, fitting the route, the selected pill on top of a nearby one, backgrounding, rotation, and a full map offline once it had loaded online. Tiles loaded over OkHttp 5.5.1, although MapLibre is built against 4.12.
   - **Limits of this check:** pinch and double tap were two-finger events sent to the map view from inside the app, because `adb` can't send multi-touch. Pan and marker taps were real `adb` input. The emulator had no window and rendered in software, so this says nothing about speed, and its "isn't responding" dialogs came from that load.
   - **Didn't work:** if the map has never loaded online, it stays blank with no markers. A fallback style reported success but never drew, and MapLibre's failure event fired in one run and not the next.
-  - **Cost:** the debug APK grew from 16.4 MB to 62.4 MB, because it holds all four CPU architectures. Each one's library is 7.7–10.9 MB.
+  - **Cost, with the chosen Vulkan package:** the debug APK grew from 16.4 MB to 69.9 MB, because it holds all four CPU architectures. Each one's library is 9.2–13.0 MB.
 
 ## 8. Third-party code: Double Metaphone
 

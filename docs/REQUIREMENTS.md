@@ -95,7 +95,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | OFF-6 | Saving the same flight again updates its details without creating a duplicate | Re-saving an id after its details change leaves one row with the new details. | V2 | ⬜ |
 | OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | ⬜ |
 | OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | ⬜ |
-| OFF-9 | Offline map tiles are **not** required | Noted as out of scope. The map shows markers over empty tiles when offline. | — | ⬜ |
+| OFF-9 | Offline map tiles are **not** required | Noted as out of scope. Once the map has loaded online, it works offline from its cache. If the Android map has never loaded online, it shows a message with Retry (D24), and flights stay available in the list. iOS is expected to show markers over empty tiles. | — | ⬜ |
 
 ## 8. UX quality
 

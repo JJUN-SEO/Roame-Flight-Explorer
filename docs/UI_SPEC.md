@@ -139,6 +139,7 @@ Use the same copy on both platforms.
 | Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
 | Search suggestions | A field has focus and its query has matches (S14) | A dropdown under the field with up to 5 rows, such as "Tokyo (all airports)" and "Tokyo (HND)". Hidden for a blank query or no match. |
 | Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |
+| Map can't load (Android only, D24) | The map's style hasn't loaded after 10 seconds (A15) | The map area shows "Can't load the map" + "It needs internet the first time. Your flights are still in the list." + **Retry**. It disappears as soon as the map loads. |
 | Saved empty | `saved` is empty | "No saved flights yet" + "Tap ♡ on any flight to keep it here — even offline." |
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
 | Save or remove failed | A `UserMessage` arrives (V7) | Snackbar: "Couldn't save flight." / "Couldn't remove flight." + **Retry**. The heart stays in its previous state. |

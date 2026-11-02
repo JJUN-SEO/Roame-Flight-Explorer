@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.3, committed and waiting for the owner's review, with one decision open: what the map shows if it has never loaded online. Update this line at every review gate.
+> **Current step:** 1.1, in progress. Update this line at every review gate.
 
-This plan turns the decided design (D1–D23) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D24) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D23 doesn't work in practice.
+- finding that any of D1–D24 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -148,7 +148,7 @@ Nothing else starts until this phase is done. The brief says both starter apps m
 - **Done when:** the round-trip test passes on the JVM and the iOS simulator, and both app builds still pass. Then delete the throwaway code and keep the build setup.
 - **If it fails:** stop and bring the options to the owner. SQLDelight is the fallback for D3.
 
-#### [ ] 0.3 Prove MapLibre works in Compose
+#### [x] 0.3 Prove MapLibre works in Compose
 
 - **Goal:** find out whether D8 works before any map code depends on it.
 - **Covers:** the D8 check.
@@ -316,15 +316,16 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 #### [ ] 4.5 Map
 
 - **Goal:** the same results as the list, as markers with a route line.
-- **Covers:** M1, M2, M3, M4, M5, M6, M7, M8, T2, MAP-1, MAP-2, MAP-3, MAP-4, VIEW-1, SEL-1, OFF-9, D8. QA: Q8, Q9, Q10.
+- **Covers:** M1, M2, M3, M4, M5, M6, M7, M8, T2, MAP-1, MAP-2, MAP-3, MAP-4, VIEW-1, SEL-1, OFF-9, D8, D23, D24. QA: Q8, Q8b, Q9, Q10.
 - **Read:** UI_SPEC §2.2 and §5.
 - **Build:** the List and Map switch, MapLibre markers, the marker sheet, the route line from `GreatCircle`, and the camera rules.
 - **Found in Step 0.3** (working code is on the local branch `scratch/maplibre-probe`):
-  - Use `org.maplibre.gl:android-sdk-opengl` (D23), wrapped in `AndroidView`. Forward the lifecycle to `MapView`.
+  - Use `org.maplibre.gl:android-sdk` (D23), wrapped in `AndroidView`. Forward the lifecycle to `MapView`.
   - Remove `ACCESS_FINE_LOCATION` and `ACCESS_WIFI_STATE` with `tools:node="remove"`. MapLibre adds both, and D16 allows approximate location only.
   - Pills are one `SymbolLayer`: text plus a stretched image with `iconTextFit`. `symbolSortKey` keeps the selected pill on top of a nearby one, such as HND and NRT (M4).
   - `LatLngBounds.from` rejects east less than west. To fit a route across the antimeridian, pass unwrapped longitudes, such as west -219.61 and east -122.38. Leave room for the pills: 80 px of padding clipped one.
   - Keep the camera in `rememberSaveable`, or rotating resets it and breaks M8.
+  - If the style hasn't loaded after 10 seconds, show the "Can't load the map" state (UI_SPEC §4, D24). Use your own timer, because MapLibre's failure event fired in one offline run and not the next. Retry calls `setStyle` again. MapLibre also retries by itself when the network returns.
   - Keep MapLibre's attribution button, and check that it shows OpenStreetMap's credit. The probe didn't open it.
 - **Done when:** those QA rows pass, and changing filters never moves the camera.
 
