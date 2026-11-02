@@ -14,8 +14,15 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.KtorFlightsApi
+import travel.roame.takehome.domain.MarkerSheetOrder
+import travel.roame.takehome.domain.ResultOrder
+import travel.roame.takehome.domain.matching
+import travel.roame.takehome.domain.toFilterOptions
+import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.Flight
+import travel.roame.takehome.model.FlightFilters
 import java.io.File
+import java.security.MessageDigest
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -141,6 +148,76 @@ class FixtureContractTest {
         assertEquals(55, perDestination["HND"])
         assertEquals(54, perDestination["MAD"])
         assertEquals(55, perDestination.values.max())
+    }
+
+    // Filters on the real data. The expected counts come from a separate Python script over the same file.
+
+    private fun count(filters: FlightFilters, origin: Set<String>? = null, destination: Set<String>? = null) =
+        decoded.matching(filters, origin, destination).size
+
+    @Test
+    fun f7_noFiltersShowEveryFixtureFlight() {
+        assertEquals(1000, count(FlightFilters()))
+    }
+
+    @Test
+    fun f1_fixtureDateBoundariesAreInclusive() {
+        assertEquals(48, count(FlightFilters(dateStart = "2027-02-10", dateEnd = "2027-02-12")))
+        assertEquals(16, count(FlightFilters(dateStart = "2027-02-10", dateEnd = "2027-02-10")))
+    }
+
+    @Test
+    fun f4_fixturePointsBoundariesAreInclusive() {
+        assertEquals(805, count(FlightFilters(maxPoints = 60_000)))
+        assertEquals(800, count(FlightFilters(maxPoints = 59_500)))
+        assertEquals(1, count(FlightFilters(maxPoints = 9_000)))
+        assertEquals(0, count(FlightFilters(maxPoints = 8_500)))
+    }
+
+    @Test
+    fun f6_fixtureProgramsStaySeparate() {
+        assertEquals(203, count(FlightFilters(programs = setOf("Mileage Plan"))))
+        assertEquals(199, count(FlightFilters(programs = setOf("MileagePlus"))))
+        assertEquals(386, count(FlightFilters(programs = setOf("Avios", "Aeroplan"))))
+    }
+
+    @Test
+    fun f7_fixtureFiltersAndSearchCombine() {
+        val demo = FlightFilters("2027-02-10", "2027-02-12", "Business", 60_000, setOf("Avios", "Aeroplan"))
+        assertEquals(2, count(demo))
+        assertEquals(16, count(FlightFilters(), setOf("BOS"), setOf("HND", "NRT")))
+        assertEquals(7, count(FlightFilters(cabin = "Economy", maxPoints = 60_000), setOf("BOS"), setOf("HND", "NRT")))
+    }
+
+    @Test
+    fun f8_fixtureOptionsComeFromTheData() {
+        assertEquals(
+            FilterOptions(
+                minDate = "2027-02-01",
+                maxDate = "2027-04-01",
+                minPoints = 9_000,
+                maxPoints = 133_000,
+                cabins = listOf("Economy", "Premium Economy", "Business"),
+                programs = listOf("Aeroplan", "Avios", "Flying Blue", "Mileage Plan", "MileagePlus"),
+            ),
+            decoded.toFilterOptions(),
+        )
+    }
+
+    /** SHA-256 of every id in order, one per line, so a single row out of place fails. */
+    private fun orderHash(order: Comparator<Flight>): String {
+        val ids = decoded.sortedWith(order).joinToString("\n") { it.id }
+        return MessageDigest.getInstance("SHA-256").digest(ids.toByteArray()).toHexString()
+    }
+
+    @Test
+    fun o1_fixtureSortsTheSameAsAnIndependentSort() {
+        assertEquals("41425f759f4d7caa2e1b2e5b76359c98f86a50e29947f08b672156bc32ee6d6f", orderHash(ResultOrder))
+    }
+
+    @Test
+    fun o2_fixtureSortsTheSameAsAnIndependentSort() {
+        assertEquals("8f3196e19d5a757e06c79e5bff8e15a4a0a6d2d26863861e04466238a4f6f359", orderHash(MarkerSheetOrder))
     }
 
     @Test

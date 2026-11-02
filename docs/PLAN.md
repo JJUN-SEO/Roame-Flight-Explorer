@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.1, in progress. Update this line at every review gate.
+> **Current step:** 3.1, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -214,7 +214,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Goal:** every filter rule exists as a pure function with its boundaries tested.
 - **Covers:** F1–F8, O1, O2, C1–C4, DM1, FILT-1–FILT-10, DATA-3, TEST-1, TEST-2.
 - **Read:** DOMAIN_RULES §3, §4 and §5.
-- **Build:** `FlightFilter`, `FilterOptions`, `Ordering` and `ActiveFilters`. Date bounds, cabins, programs and points come from the data.
+- **Build:** `FlightFilter`, `FilterOptions`, `FilterOptionsBuilder`, `Ordering` and `ActiveFilters`. Date bounds, cabins, programs and points come from the data.
 - **Tests:** `DateFilterTest`, `PointsFilterTest`, `CabinFilterTest`, `ProgramFilterTest`, `CombinedFilterTest`, `FilterOptionsTest`, `OrderingTest` and `ActiveFiltersTest`.
 - **Done when:** a flight on either date boundary and a flight at exactly the points limit are included, and "Mileage Plan" stays separate from "MileagePlus".
 
@@ -232,8 +232,8 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Goal:** one app-wide store turns data and inputs into `ExplorerState`, with the newest input always winning.
 - **Covers:** R1, R2, R4, R5, R6, R7, R11, R12, PERF-3, OFF-1, OFF-2, OFF-3, OFF-4, OFF-5, TEST-5, D2, D6, D10.
 - **Read:** ARCHITECTURE §4 and §7.
-- **Build:** `ExplorerStore`, `ExplorerState`, `DataStatus`, `reduce`, `index` (sorts once per data change) and `AppGraph`, with the filter intents and `refresh()`.
-- **Tests:** `ExplorerStoreOfflineTest` and `ExplorerStoreLatestWinsTest`, using `FakeFlightsApi` and `TestClock`.
+- **Build:** `ExplorerStore`, `ExplorerState`, `DataStatus`, `reduce`, `index` (sorts once per data change) and `AppGraph`, with the filter intents and `refresh()`. `setDateRange` receives ISO strings from the apps, so it must reject a malformed one, because `matching` assumes valid dates.
+- **Tests:** `ExplorerStoreOfflineTest`, `ExplorerStoreLatestWinsTest` and `ExplorerStoreFiltersTest`, using `FakeFlightsApi` and `TestClock`.
 - **Done when:** cached data appears before the network responds, a failed refresh keeps the data and reports it, and rapid input only ever ends on the latest query.
 
 #### [ ] 3.4 Selection and saved state in the store

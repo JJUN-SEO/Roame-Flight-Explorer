@@ -56,9 +56,10 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 server/                Ktor JVM app: GET /flights (raw fixture bytes)
 shared/                KMP module → Android library + static Shared.framework (+ test-only jvm target)
   src/commonMain/kotlin/travel/roame/takehome/
+    domain/              filters, ordering, active filters: pure functions (DOMAIN_RULES §3–§5)
     domain/search/       airport search engine: trie, fuzzy, ranking (DOMAIN_RULES §2, §2b)
     vendor/commonscodec/ DoubleMetaphone — THIRD-PARTY port (Apache-2.0), see THIRD_PARTY_NOTICES.md
-    model/               Flight, Airport, FetchError
+    model/               Flight, Airport, FlightFilters, FilterOptions, ActiveFilter, FetchError
     data/remote/         fetch, decode and classify failures (ARCHITECTURE §6.3)
     data/                FlightRepository (cache flow, sync status, refresh), SavedFlightsRepository
     data/local/          Room database (ARCHITECTURE §5)

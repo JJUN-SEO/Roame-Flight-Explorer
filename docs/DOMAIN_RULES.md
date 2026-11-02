@@ -188,7 +188,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 - **F5** Cabin is a **single** choice, and `null` means any cabin. The options come from the data and are ordered by rank (DM1). *(assumption: the brief says "Cabin." in the singular, but explicitly allows multiple selections for programs)*
 - **F6** Programs are a multi-select set, and an empty set means all programs. A flight matches when its program is in the set (exact string compare against the option values). The options come from the data and are sorted alphabetically.
 - **F7** All filters and both search fields combine with **AND**.
-- **F8** Filter options (date bounds, points bounds, cabins, programs) come from the **cached dataset**, not from the current results, so options don't disappear while the user filters. After a refresh, selected values that no longer exist in the dataset are dropped from the selection.
+- **F8** Filter options (date bounds, points bounds, cabins, programs) come from the **cached dataset**, not from the current results, so options don't disappear while the user filters. After a refresh, selected values that no longer exist in the dataset are dropped from the selection. A date or points limit at or past the dataset's own limit also returns to its default, because it filters nothing. *(assumption)*
 
 ## 4. Ordering (O)
 

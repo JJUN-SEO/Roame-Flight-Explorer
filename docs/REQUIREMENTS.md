@@ -26,7 +26,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 |---|---|---|---|---|
 | DATA-1 | Networking is implemented once in KMP | The HTTP client and DTO decoding live in `shared/commonMain`. Neither app makes HTTP calls. | R1–R12 | ✅ 2026‑11‑02 |
 | DATA-2 | Persistence is implemented once in KMP | The Room entities, DAOs, database and repositories live in `shared` (D3). Only the database file location is per platform. | V1–V8, R3 | ✅ 2026‑11‑02 |
-| DATA-3 | Search and filtering are implemented once in KMP and consumed by both apps | Neither app filters, sorts or groups flights itself. Both render `ExplorerState`. | S, F, O, M | ⬜ |
+| DATA-3 | Search and filtering are implemented once in KMP and consumed by both apps | Neither app filters, sorts or groups flights itself. Both render `ExplorerState`. | S, F, O, M | 🟨 |
 | DATA-4 | The last successful API results are persisted | After a successful fetch, killing the app and relaunching with the API stopped shows the same results. | R1, R3 | 🟨 |
 | DATA-5 | Saved flights are stored locally | Saved flights survive app restarts and do not depend on the cache. | V1 | 🟨 |
 | DATA-6 | Each platform keeps its own local data (no sync) | No sync code exists. This is noted in the submission notes. | — | ✅ 2026‑11‑02 |
@@ -44,16 +44,16 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | SRCH-7 | *(owner-requested)* Ranking by user location and annual airport volume, falling back to the original data | Matches are ordered by priority. An airport with no passenger figure uses its flight count from `flights.json`. Without a location, it uses volume only. The destination field never uses location. | P1–P7 | 🟨 engine done. Device location (D16) is wired in Phases 4 and 5. Ranking orders airports only, never the flight list (D17). |
 | SRCH-8 | *(owner-requested)* A "Showing … (CODE)" hint when fuzzy matching was used | Both apps show the hint under the field when the tier is `Fuzzy`. | S13 | ⬜ UI pending |
 | SRCH-9 | *(owner-requested)* Suggestions appear and change as the user types | In From, typing `new` shows New York (JFK). Deleting that and typing `sea` shows Seattle (SEA). In To, `tokyo` also offers Tokyo (all airports). Tapping a suggestion picks what it names. | S14 | ⬜ |
-| FILT-1 | Departure date range filter that includes both boundary dates | Flights on `start` and on `end` are included. Flights on the day before `start` and the day after `end` are excluded. | F1–F3 | ⬜ |
-| FILT-2 | Cabin filter | Choosing a cabin shows only that cabin. Choosing "Any" shows all cabins. | F5 | ⬜ |
-| FILT-3 | Maximum points filter that includes the selected limit | A flight whose points equal the limit is included. A flight 500 points above it is excluded. | F4 | ⬜ |
-| FILT-4 | Loyalty program filter with multiple selections | Selecting {Avios, Aeroplan} shows flights from either program. | F6 | ⬜ |
-| FILT-5 | Different filters combine with AND, and a flight may match any selected program | A cabin + points + programs combination returns only flights that satisfy every filter. | F7 | ⬜ |
-| FILT-6 | Empty filters include all values | With no filters set, all 1,000 fixture flights are shown. | F2, F4–F6 | ⬜ |
+| FILT-1 | Departure date range filter that includes both boundary dates | Flights on `start` and on `end` are included. Flights on the day before `start` and the day after `end` are excluded. | F1–F3 | 🟨 |
+| FILT-2 | Cabin filter | Choosing a cabin shows only that cabin. Choosing "Any" shows all cabins. | F5 | 🟨 |
+| FILT-3 | Maximum points filter that includes the selected limit | A flight whose points equal the limit is included. A flight 500 points above it is excluded. | F4 | 🟨 |
+| FILT-4 | Loyalty program filter with multiple selections | Selecting {Avios, Aeroplan} shows flights from either program. | F6 | 🟨 |
+| FILT-5 | Different filters combine with AND, and a flight may match any selected program | A cabin + points + programs combination returns only flights that satisfy every filter. | F7 | 🟨 |
+| FILT-6 | Empty filters include all values | With no filters set, all 1,000 fixture flights are shown. | F2, F4–F6 | 🟨 |
 | FILT-7 | Show the result count | The count always equals the number of rows in the list and the sum of all map marker counts. | C1 | ⬜ |
-| FILT-8 | Show the active filters | Every non-default filter is visible as a chip or label without opening a sheet. | C2 | ⬜ |
-| FILT-9 | Provide a clear way to reset | One tap on "Reset" restores all defaults. Each chip can also be cleared on its own. | C3, C4 | ⬜ |
-| FILT-10 | Start with the full fixture date range so results are visible immediately | On first launch, the date filter shows 2027‑02‑01 – 2027‑04‑01 and all flights. The bounds come from the data and are not hardcoded. | F2, F8 | ⬜ |
+| FILT-8 | Show the active filters | Every non-default filter is visible as a chip or label without opening a sheet. | C2 | 🟨 |
+| FILT-9 | Provide a clear way to reset | One tap on "Reset" restores all defaults. Each chip can also be cleared on its own. | C3, C4 | 🟨 |
+| FILT-10 | Start with the full fixture date range so results are visible immediately | On first launch, the date filter shows 2027‑02‑01 – 2027‑04‑01 and all flights. The bounds come from the data and are not hardcoded. | F2, F8 | 🟨 |
 
 ## 4. Flight list & map
 
@@ -110,8 +110,8 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| TEST-1 | Focused tests for the shared filtering rules | See [TEST_PLAN.md](TEST_PLAN.md) §2: search and filter test classes. | S, F | 🟨 search tests done; filter tests pending |
-| TEST-2 | Tests for date and points boundaries | Inclusive and exclusive edge cases for both. | F1, F4 | ⬜ |
+| TEST-1 | Focused tests for the shared filtering rules | See [TEST_PLAN.md](TEST_PLAN.md) §2: search and filter test classes. | S, F | ✅ 2026‑11‑02 |
+| TEST-2 | Tests for date and points boundaries | Inclusive and exclusive edge cases for both. | F1, F4 | ✅ 2026‑11‑02 |
 | TEST-3 | Tests for map aggregation | Grouping, counts, minimum points, empty input, and consistency with the filters. | M | ⬜ |
 | TEST-4 | Tests for persistence | Atomic cache replacement, survival across reopen, upsert without duplicates, and saved flights independent of the cache. | V, R3 | ✅ 2026‑11‑02 |
 | TEST-5 | Tests for failure handling | Offline, timeout, 5xx, malformed body, success-empty, and save/remove failures. | R, V7 | 🟨 |
