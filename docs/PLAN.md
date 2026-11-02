@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.2, committed and waiting for the owner's review, with one decision open: how to support `LocalDate` below Android API 26. Update this line at every review gate.
+> **Current step:** 0.2, committed and waiting for the owner's review. Update this line at every review gate.
 
-This plan turns the decided design (D1–D21) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D22) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D21 doesn't work in practice.
+- finding that any of D1–D22 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 

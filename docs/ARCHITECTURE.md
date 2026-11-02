@@ -155,7 +155,7 @@ flowchart LR
 
 ## 5. Persistence (Room, D3)
 
-The owner chose **Room** (Google's database library, multiplatform since 2.7), running on its **bundled SQLite** (`BundledSQLiteDriver`). Every Android version (6 and up) and iOS therefore runs the *same* modern SQLite build. Behaviour, and bugs, reproduce identically on every device, and modern SQL (`ON CONFLICT … DO UPDATE`, full-text search) is available everywhere.
+The owner chose **Room** (Google's database library, multiplatform since 2.7), running on its **bundled SQLite** (`BundledSQLiteDriver`). Every supported Android version (8 and up) and iOS therefore runs the *same* modern SQLite build. Behaviour, and bugs, reproduce identically on every device, and modern SQL (`ON CONFLICT … DO UPDATE`, full-text search) is available everywhere.
 
 The database file is `roame.db`, at schema version 1, with no migrations. Room writes a JSON description of the schema to `shared/schemas/` (for future auto-migrations).
 
@@ -427,6 +427,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D19 | Ranking weights: origin 0.6 / 0.4, destination 0 / 1, and proximity halves every 250 km | Owner's choice (Claude's recommendation); assumption A13; built | Your location says nothing about where you're flying to, so the destination uses popularity alone, as Amadeus's keyword search, Duffel, AirLabs and Roame's website do. The origin split is Photon's default, and 250 km is the widest range in Google's patent. Both are borrowed, not measured on real usage. | 0.7 / 0.3 and 0.2 / 0.8 with proximity halving every 693 km, chosen by judgement; popularity only in both fields, as on Roame's website |
 | D20 | **A suggestions dropdown under each search field**, built from that field's ranked matches in the data, with one extra row when two or more matches share a city | **Owner** (Claude: 5 rows and the tap behaviour, A14) | Search feels live as the user types, and ranking becomes visible. The city row follows Roame, and lets a tap give what typing `tokyo` already gives. The engine already ranks matches on every keystroke, over airports rather than flights, and the 5-row cap keeps the dropdown the same size at 10× and 100× the airports. | The hint alone (D14, which stays); the trie's `completions()`, which has no airport codes or ranking |
 | D21 | Room 2.8.5 with `sqlite-bundled` 2.6.2 | Claude (within D3); owner to confirm at the Step 0.2 review | The starter builds `iosX64`. Room 2.8.5 publishes it and is built against SQLite library 2.6.2, the last version that publishes it. Tested on all targets. Moving to Room 3 later is mostly renames, because our DAOs are already `suspend` or `Flow` only | Room 3.0.3, the line Google's KMP setup page now uses: no `iosX64`, so the starter's target list would have to change. `sqlite-bundled` 2.7.1: no `iosX64` either |
+| D22 | Android 8 (API 26) is the minimum: `minSdk` 26, raised from the starter's 23 | **Owner** | The brief doesn't ask for older versions, and Android 6–7.1 date from 2015–2016. `LocalDate` needs API 26 or extra setup, and with the higher minimum those phones can't install the app, rather than installing it and crashing on the first date | Core library desugaring (one more build library, testable here only on API 37); leaving `minSdk` at 23 (those phones could crash) |
 
 ## 12. Scalability
 

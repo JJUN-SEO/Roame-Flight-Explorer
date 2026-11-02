@@ -84,7 +84,7 @@ docs/                  planning docs (see table above)
 
 When a † command starts working, update this table and `README.md`.
 
-**Toolchain** (pinned by the starter): Kotlin 2.4.21 · Gradle 9.7.0 · AGP 9.3.1 · JDK 25 (auto-provisioned) · compileSdk 37 · minSdk 23 · iOS 17 · Swift 6 · Compose BOM 2026.09.00. Library versions go in `gradle/libs.versions.toml` and must be compatible with this toolchain.
+**Toolchain** (pinned by the starter): Kotlin 2.4.21 · Gradle 9.7.0 · AGP 9.3.1 · JDK 25 (auto-provisioned) · compileSdk 37 · minSdk 26 (raised from the starter's 23, D22) · iOS 17 · Swift 6 · Compose BOM 2026.09.00. Library versions go in `gradle/libs.versions.toml` and must be compatible with this toolchain.
 
 ## Conventions
 

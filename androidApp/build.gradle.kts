@@ -8,7 +8,7 @@ android {
     compileSdk { version = release(37) { minorApiLevel = 0 } }
     defaultConfig {
         applicationId = "travel.roame.takehome.android"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
