@@ -259,7 +259,7 @@ Only the **file location** differs per platform:
 
 ### 6.2 Server (`:server`)
 
-- Ktor server (Netty or CIO) listening on `0.0.0.0:8080`. The port can be overridden with the `PORT` env var.
+- Ktor server on its CIO engine, listening on `0.0.0.0:8080`. It only needs plain HTTP, so Netty's HTTP/2 support would go unused. The port can be overridden with the `PORT` env var.
 - Each request reads `fixtures/flights.json` and returns **the raw bytes**, with no re-serialisation, so the response is byte-identical to the fixture (API-1). Reading on every request means you can edit the fixture while the server runs to test refresh, V4 and V5.
 - The fixture path defaults to `<repo>/fixtures/flights.json` and can be overridden with `--fixture=<path>`. Set `tasks.named<JavaExec>("run") { workingDir = rootDir }` so relative paths work. If the file is missing, fail fast at startup.
 - An optional QA switch, `--mode=normal|empty|error|slow`, selects one of these behaviours:
@@ -272,7 +272,7 @@ Only the **file location** differs per platform:
   ./gradlew :server:run --args="--mode=empty"
   ```
   This is not part of the required contract. It exists to demo and QA R4, R5 and R7.
-- Request logging uses Ktor's `CallLogging` plugin.
+- Request logging uses Ktor's `CallLogging` plugin, with `slf4j-simple` to print it, because the plugin has no output without a logging backend.
 
 ### 6.3 Client (`FlightsApi`)
 
@@ -389,7 +389,7 @@ Versions are pinned in `gradle/libs.versions.toml`. These were proven together o
 | Dates | kotlinx-datetime `LocalDate` | Calendar dates with no timezone traps | ISO strings, which compare correctly as text |
 | HTTP client | Ktor client: core, content-negotiation, okhttp, darwin, mock | The standard KMP client; `MockEngine` for tests | — |
 | Database (D3) | **Room KMP** (`room-runtime`, KSP `room-compiler`) + **bundled SQLite** (`sqlite-bundled`) | The same modern SQLite on every Android version and iOS; `@Upsert`, `@Transaction`, `Flow` queries; the Android standard; in-memory JVM tests | SQLDelight (not needed: Room passed Step 0.2) |
-| Server | Ktor server (Netty/CIO) in `:server` | Same language and build, so `./gradlew :server:run` is the single command | A ~20-line Node or Python script |
+| Server | Ktor server (CIO) in `:server`, with `CallLogging` and `slf4j-simple` | Same language and build, so `./gradlew :server:run` is the single command | A ~20-line Node or Python script |
 | Flow testing | Turbine | Readable Flow assertions | Collect into lists manually |
 | iOS bridge | Hand-written `observe()` wrapper | No dependency on Kotlin-version-specific plugins | SKIE, if compatible |
 | iOS map | MapKit for SwiftUI (`Map`, `Annotation`, `MapPolyline(…, contourStyle: .geodesic)`) | Built in, iOS 17, no API key | — |
@@ -437,7 +437,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 
 | Layer | Current design | Cost per operation | Comfortable up to (est.) | Next step beyond that |
 |---|---|---|---|---|
-| Local API | Returns the whole fixture on every request | O(n) bytes (~430 KB today) | ~10k flights (~4 MB) | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
+| Local API | Returns the whole fixture on every request | O(n) bytes. Measured on a Mac over localhost, with server memory: 0.4 MB in 2.1 ms (88 MB), 10× 4.1 MB in 4.9 ms (130 MB), 100× 41.3 MB in 32.8 ms (474 MB) | ~10k flights (~4 MB); the server still copes at 100×, so the limit is the phone decoding that much JSON | gzip; `ETag` / `If-None-Match` → 304; pagination or delta sync (`?since=`) |
 | Cache (Room + bundled SQLite) | Full replace in one transaction | O(n) batched inserts | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default`, sorted once per data change | O(n) filter per input change: 0.1 ms / 1 ms / 9.6 ms at 1k / 10k / 100k. O(n log n) sort per data change: 69 ms at 100k. Measured on a Mac in Java, excluding text search. | ~100k flights | Build a marker's flights only when its sheet opens (4.1 ms per change + 1.6 ms per sheet at 100k); then push predicates into indexed SQL that returns ids and page the results |
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. The pass over flights brings one keystroke to at most 0.006 ms at 1k, 0.047 ms at 10k and 0.56 ms at 100k (measured on a Mac in Java). | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |

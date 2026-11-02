@@ -17,8 +17,8 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| API-1 | `GET /flights` returns HTTP 200 and the JSON envelope from `fixtures/flights.json` | `curl -i localhost:8080/flights` returns `200` with `Content-Type: application/json`. `curl -s localhost:8080/flights \| diff - fixtures/flights.json` shows no differences. | — | ⬜ |
-| API-2 | A single documented command runs the API | The README shows one command (`./gradlew :server:run`), and it works from a clean clone. | — | ⬜ |
+| API-1 | `GET /flights` returns HTTP 200 and the JSON envelope from `fixtures/flights.json` | `curl -i localhost:8080/flights` returns `200` with `Content-Type: application/json`. `curl -s localhost:8080/flights \| diff - fixtures/flights.json` shows no differences. | — | ✅ 2026‑11‑02 |
+| API-2 | A single documented command runs the API | The README shows one command (`./gradlew :server:run`), and it works from a clean clone. | — | ✅ 2026‑11‑02 |
 
 ## 2. Shared data & persistence (KMP)
 

@@ -53,7 +53,7 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 † = planned, does not exist yet.
 
 ```
-server/ †              Ktor JVM app: GET /flights (raw fixture bytes)
+server/                Ktor JVM app: GET /flights (raw fixture bytes)
 shared/                KMP module → Android library + static Shared.framework (+ test-only jvm target)
   src/commonMain/kotlin/travel/roame/takehome/
     domain/search/       airport search engine: trie, fuzzy, ranking (DOMAIN_RULES §2, §2b)
@@ -74,7 +74,7 @@ docs/                  planning docs (see table above)
 
 | Task | Command |
 |---|---|
-| Run local API † | `./gradlew :server:run` → `http://localhost:8080/flights` |
+| Run local API | `./gradlew :server:run` → `http://localhost:8080/flights` |
 | API in QA modes † | `./gradlew :server:run --args="--mode=empty"` (also `error`, `slow`) |
 | Shared tests, any OS | `./gradlew :shared:jvmTest` |
 | Shared tests on iOS sim (Mac) | `./gradlew :shared:iosSimulatorArm64Test` |
@@ -83,6 +83,8 @@ docs/                  planning docs (see table above)
 | Build iOS (Mac) | `xcodebuild -project iosApp/RoameStarter.xcodeproj -scheme RoameStarter -destination 'platform=iOS Simulator,name=<an installed iPhone>' build` |
 
 When a † command starts working, update this table and `README.md`.
+
+If `./gradlew` says "Unable to locate a Java Runtime", first run `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
 **Toolchain** (pinned by the starter): Kotlin 2.4.21 · Gradle 9.7.0 · AGP 9.3.1 · JDK 25 (auto-provisioned) · compileSdk 37 · minSdk 26 (raised from the starter's 23, D22) · iOS 17 · Swift 6 · Compose BOM 2026.09.00. Library versions go in `gradle/libs.versions.toml` and must be compatible with this toolchain.
 
@@ -119,6 +121,7 @@ These were found in the starter and the fixture.
   - 364 routes cross the antimeridian, so draw them as geodesics or unwrap longitudes.
 - **Date pickers:** Android's Material 3 date picker returns **UTC** midnight millis, so convert them with UTC.
 - **Server working directory:** the Gradle `run` task's default working directory is the module dir. Set it to the repo root so `fixtures/` resolves.
+- **MapLibre (D8, D23, D24):** PLAN Step 4.5 lists what Step 0.3 found. MapLibre adds `ACCESS_FINE_LOCATION`, which has to be removed because D16 allows approximate location only, and `LatLngBounds.from` needs unwrapped longitudes across the antimeridian.
 - **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Only request it when the user taps "Use my location".
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 

@@ -132,6 +132,8 @@ Every technology choice made so far: the options considered, what each one gives
 | ✅ Ktor module in the Gradle build (`./gradlew :server:run`) | One language and one build; reuses the JDK Gradle already downloads; serves the fixture byte for byte | Gradle startup is slow (tens of seconds on the first run); heavier than a script |
 | Node or Python script | ~10 lines; starts instantly | Reviewers need that runtime installed; a second language in the repo |
 
+The server uses Ktor's CIO engine (Claude), because it only needs plain HTTP.
+
 **HTTP client and JSON** (ARCHITECTURE §10, Claude)
 
 | Option | Strengths here | Weaknesses here |
@@ -426,3 +428,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑11‑01 | Build plan | Rewrote `docs/PLAN.md` into 37 reviewable steps, and found four small design gaps (PLAN §6) | A script confirmed that all 72 requirement IDs, all 78 rule IDs and every QA row appear in a step. Owner approved on 2026‑11‑01, after choosing to ship the passenger figures inside the app |
 | 2026‑11‑01 | Step 0.2 | Chose library versions from official docs and each library's published targets, wrote a throwaway Room database, and ran it on every available platform | Test results, the on-screen text in both real apps, and the database file pulled from the emulator and read with Python's `sqlite3`. A first pick of `sqlite-bundled` 2.7.1, taken from Google's Room 3 page, didn't resolve for `iosX64` and was corrected to 2.6.2 |
 | 2026‑11‑02 | Step 0.3 | Wrote a throwaway MapLibre map, compared its two graphics packages, tested gestures, offline use and rotation, and tried an offline fallback | Screenshots, the camera position read from the screen, and pixel colours. Those colours showed the fallback never drew, even though its status said it had loaded, so it's reported as failed |
+| 2026‑11‑02 | Local API | Wrote the `:server` module and measured it at 1×, 10× and 100× the fixture | `curl` and `diff` against the fixture, including from a clean copy of the repo. On copies of the fixture: a missing file stops startup, `PORT` works, and edits appear on the next request |
