@@ -90,6 +90,7 @@ Each one is mirrored as an *(assumption)* rule in DOMAIN_RULES.
 | A16 | What a connection lost partway through a response counts as | `Offline`. The app can't reach the server, and the partial data is discarded | R9 |
 | A17 | What a valid response that can't be saved counts as | A failed refresh, reported as `Unknown`. The old cache stays, because the write is one transaction | R5 |
 | A18 | What a date or points limit past the data means after a refresh | It returns to its default, because it filters nothing. The default then follows the data | F8 |
+| A19 | How compact points show a value that isn't a multiple of 500 | It rounds to one decimal, with halves rounding up. Every fixture value is a multiple of 500, so this never shows today | T2 |
 
 ## 4. Technical tradeoffs by stack choice
 
@@ -363,6 +364,7 @@ See [TEST_PLAN.md §5](TEST_PLAN.md#5-manual-qa-checklist) for the filled-in QA 
 - Flight cache (Step 2.2, 2026‑11‑02): a real Room database on the JVM and the iPhone 18 Pro simulator, in memory and on files, including the file the iOS app really uses. **Not yet checked:** the Android database file, which first runs in an app in Step 3.6.
 - Saved flights (Step 2.3, 2026‑11‑02): the same real database, including failed writes that SQLite itself rejects. A failure while updating saved flights rolls the cache back too.
 - Filter rules (Step 3.1, 2026‑11‑02): counts and full sort orders on the real fixture match a separate Python script. These are shared rules only; no screen uses them yet.
+- Map grouping and route lines (Step 3.2, 2026‑11‑02): marker counts and midpoints match a separate Python script, and all 192 fixture routes are continuous, take the short way and have the right length. No map draws them yet. MapLibre drew an unwrapped route correctly in Step 0.3.
 
 ## 8. Third-party code: Double Metaphone
 
@@ -443,3 +445,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑11‑02 | Step 2.2 | Wrote the Room database, the repository and their tests, and measured them at 1×, 10× and 100× | 16 deliberate bugs: tests caught 15. The miss, a read without its transaction, was then forced on a real file (36 of 373 observed results mixed two refreshes, 0 of 394 with the transaction) and became a test that failed in 3 of 3 runs without it |
 | 2026‑11‑02 | Step 2.3 | Wrote the saved-flights table, DAO, repository and tests. Replaced the plan's per-flight update loop with one SQL statement, and made both flight tables share one column definition | 14 deliberate bugs, all caught, including running V5 outside the transaction. The measured gain from the single statement is small at this size: at 1,000 flights either approach takes about a millisecond or less |
 | 2026‑11‑02 | Step 3.1 | Wrote the filter, ordering and active-filter rules and their tests, and measured them at 1×, 10× and 100× | Expected fixture counts and sort orders came from a separate Python script, not from the Kotlin code. 35 deliberate bugs: tests caught 34. The miss was a real gap (the O2 test's ids sorted the same way as its dates), so the test data was fixed and it now catches that bug |
+| 2026‑11‑02 | Step 3.2 | Wrote the marker grouping, route lines and points formatting and their tests, and measured them at 1×, 10× and 100× | Expected marker counts and route midpoints came from a separate Python script using a different formula. 23 deliberate bugs: tests caught 21. One miss was a gap in the test data, now fixed. The other showed that a line of the unwrapping code couldn't change any result, so that code was simplified |

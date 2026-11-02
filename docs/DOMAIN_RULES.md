@@ -217,7 +217,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 - **M6** If `results` is empty, there are no markers and an empty-state overlay is shown. The map stays interactive.
 - **M7** A selected flight draws a **great-circle** route connector from origin to destination. The origin is drawn as a small dot and the destination marker is highlighted.
   - A shared `GreatCircle.interpolate(from, to, segments = 64)` provides the points for map SDKs that can't draw geodesics.
-  - It unwraps longitudes (adding or subtracting 360° when consecutive points jump more than 180°), so trans-Pacific routes don't wrap the long way around the world.
+  - It unwraps longitudes (adding or subtracting 360° to keep every point within 180° of the origin), so trans-Pacific routes don't wrap the long way around the world. A shortest path never spans more than 180° of longitude, so this also rules out any jump between consecutive points.
 - **M8** Camera behaviour:
   - On first display, fit all markers.
   - **Never** move the camera automatically when filters change, so the user's pan and zoom are respected.
@@ -277,7 +277,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 ## 10. Formatting (T)
 
 - **T1** Full points use a shared formatter with en-US grouping: `25,000 pts`.
-- **T2** Compact points on markers come from the shared formatter: `9k`, `25k`, `101.5k`. Values below 1,000 are shown as they are.
+- **T2** Compact points on markers come from the shared formatter: `9k`, `25k`, `101.5k`. Values below 1,000 are shown as they are. Anything else rounds to one decimal, with halves rounding up: `25,250` is `25.3k`. *(assumption: every fixture value is a multiple of 500, so this never shows today)*
 - **T3** Departure dates are **calendar dates**. Format them from year/month/day components on each platform, never through an instant or timezone; otherwise `2027-02-01` can render as "Jan 31" in the Americas.
   - Rows show `Mon, Feb 1`.
   - The card shows `Mon, Feb 1, 2027`.

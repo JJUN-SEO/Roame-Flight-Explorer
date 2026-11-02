@@ -6,7 +6,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-internal data class GeoPoint(val latitude: Double, val longitude: Double) {
+data class GeoPoint(val latitude: Double, val longitude: Double) {
 
     /** Great-circle (haversine) distance in kilometres. */
     fun distanceKmTo(other: GeoPoint): Double {

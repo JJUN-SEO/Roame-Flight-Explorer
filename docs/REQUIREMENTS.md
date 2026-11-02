@@ -60,8 +60,8 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
 | VIEW-1 | List and map show the same filtered results and the same saved state | The list row count equals the sum of marker counts. Saving a flight on the map updates the list immediately, and the reverse. | M1, V3 | ⬜ |
-| MAP-1 | Group markers by destination airport | There is one marker per destination code in the current results. | M2 | ⬜ |
-| MAP-2 | Each marker shows the number of matching flights and the lowest points price | The marker label reads, for example, `CDG · 12 · 25k`, and the values match the filtered data. | M3, T2 | ⬜ |
+| MAP-1 | Group markers by destination airport | There is one marker per destination code in the current results. | M2 | 🟨 |
+| MAP-2 | Each marker shows the number of matching flights and the lowest points price | The marker label reads, for example, `CDG · 12 · 25k`, and the values match the filtered data. | M3, T2 | 🟨 |
 | MAP-3 | Tapping a marker lets the user browse those flights | Tapping a marker opens a sheet listing that destination's flights. Tapping a flight in the sheet selects it. | M5, O2 | ⬜ |
 | MAP-4 | Standard map gestures, including pan and zoom | Pan, pinch-zoom and double-tap zoom all work smoothly and are never fought by automatic camera moves. | M8 | ⬜ |
 
@@ -112,7 +112,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 |---|---|---|---|---|
 | TEST-1 | Focused tests for the shared filtering rules | See [TEST_PLAN.md](TEST_PLAN.md) §2: search and filter test classes. | S, F | ✅ 2026‑11‑02 |
 | TEST-2 | Tests for date and points boundaries | Inclusive and exclusive edge cases for both. | F1, F4 | ✅ 2026‑11‑02 |
-| TEST-3 | Tests for map aggregation | Grouping, counts, minimum points, empty input, and consistency with the filters. | M | ⬜ |
+| TEST-3 | Tests for map aggregation | Grouping, counts, minimum points, empty input, and consistency with the filters. | M | ✅ 2026‑11‑02 |
 | TEST-4 | Tests for persistence | Atomic cache replacement, survival across reopen, upsert without duplicates, and saved flights independent of the cache. | V, R3 | ✅ 2026‑11‑02 |
 | TEST-5 | Tests for failure handling | Offline, timeout, 5xx, malformed body, success-empty, and save/remove failures. | R, V7 | 🟨 |
 | TEST-6 | Document the checks actually performed on both platforms | The QA checklist in TEST_PLAN §5 is filled in with real results and dates. | — | ⬜ |

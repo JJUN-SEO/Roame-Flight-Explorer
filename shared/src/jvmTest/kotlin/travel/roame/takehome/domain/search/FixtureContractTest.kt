@@ -14,9 +14,11 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.KtorFlightsApi
+import travel.roame.takehome.domain.GreatCircle
 import travel.roame.takehome.domain.MarkerSheetOrder
 import travel.roame.takehome.domain.ResultOrder
 import travel.roame.takehome.domain.matching
+import travel.roame.takehome.domain.toDestinationGroups
 import travel.roame.takehome.domain.toFilterOptions
 import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.Flight
@@ -218,6 +220,47 @@ class FixtureContractTest {
     @Test
     fun o2_fixtureSortsTheSameAsAnIndependentSort() {
         assertEquals("8f3196e19d5a757e06c79e5bff8e15a4a0a6d2d26863861e04466238a4f6f359", orderHash(MarkerSheetOrder))
+    }
+
+    // The map on the real data.
+
+    @Test
+    fun m2_fixtureGivesOneMarkerPerDestination() {
+        val groups = decoded.toDestinationGroups()
+        assertEquals(24, groups.size)
+        assertEquals(1000, groups.sumOf { it.flightCount })
+        val expected = mapOf("CDG" to (45 to 13_500), "HKG" to (25 to 23_500), "NRT" to (55 to 19_500), "HND" to (55 to 16_500), "SYD" to (43 to 24_000))
+        for ((code, countAndMin) in expected) {
+            val group = groups.first { it.destination.code == code }
+            assertEquals(countAndMin, group.flightCount to group.minPoints, code)
+        }
+    }
+
+    @Test
+    fun m1_fixtureMarkersFollowTheFilters() {
+        val results = decoded.matching(FlightFilters(cabin = "Business", maxPoints = 60_000))
+        val groups = results.toDestinationGroups()
+        assertEquals(171, results.size)
+        assertEquals(22, groups.size)
+        assertEquals(171, groups.sumOf { it.flightCount })
+        val paris = groups.first { it.destination.code == "CDG" }
+        assertEquals(12 to 39_000, paris.flightCount to paris.minPoints)
+    }
+
+    @Test
+    fun m7_everyFixtureRouteIsContinuousShortAndTheRightLength() {
+        val routes = decoded.distinctBy { it.origin.code to it.destination.code }
+        assertEquals(192, routes.size)
+        assertEquals(68, routes.count { abs(it.destination.longitude - it.origin.longitude) > 180 })
+        for (route in routes) {
+            val from = GeoPoint(route.origin.latitude, route.origin.longitude)
+            val to = GeoPoint(route.destination.latitude, route.destination.longitude)
+            val points = GreatCircle.interpolate(from, to)
+            val label = "${route.origin.code} to ${route.destination.code}"
+            points.zipWithNext { a, b -> assertTrue(abs(b.longitude - a.longitude) < 180.0, label) }
+            assertTrue(abs(points.last().longitude - points.first().longitude) <= 180.0, label)
+            assertEquals(from.distanceKmTo(to), points.zipWithNext { a, b -> a.distanceKmTo(b) }.sum(), 1e-3, label)
+        }
     }
 
     @Test
