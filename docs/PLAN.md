@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.2, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 3.3, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -218,7 +218,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Tests:** `DateFilterTest`, `PointsFilterTest`, `CabinFilterTest`, `ProgramFilterTest`, `CombinedFilterTest`, `FilterOptionsTest`, `OrderingTest` and `ActiveFiltersTest`.
 - **Done when:** a flight on either date boundary and a flight at exactly the points limit are included, and "Mileage Plan" stays separate from "MileagePlus".
 
-#### [ ] 3.2 Map data and formatting
+#### [x] 3.2 Map data and formatting
 
 - **Goal:** marker grouping and route points exist before any map does.
 - **Covers:** M1, M2, M3, M4, M5, M6, M7, T1, T2, MAP-1, MAP-2, TEST-3.
