@@ -240,15 +240,16 @@ Only the **file location** differs per platform:
 
 - Android: `Room.databaseBuilder<AppDatabase>(context, context.getDatabasePath("roame.db").absolutePath)`
 - iOS: `Room.databaseBuilder<AppDatabase>(name = <Documents dir>/roame.db)`
-- Tests (JVM): `Room.inMemoryDatabaseBuilder<AppDatabase>()`, or a temp file for the "survives reopen" tests
+- Tests (JVM): `Room.inMemoryDatabaseBuilder<AppDatabase>()`, or a temp file for the "survives reopen" tests. These builders exist per platform and aren't visible from `commonTest`, so tests reach them through an `expect` function, with `actual`s in `jvmTest` and `iosTest`
 
-### 5.4 Build setup (one-time, checked in PLAN Step 0.2)
+### 5.4 Build setup (proven in PLAN Step 0.2)
 
 - Plugins: `com.google.devtools.ksp` (Room's code generator) and `androidx.room` (with `room { schemaDirectory("$projectDir/schemas") }`).
 - Dependencies: `androidx.room:room-runtime` and `androidx.sqlite:sqlite-bundled` in `commonMain`.
 - `room-compiler` is registered with KSP once **per target**: `kspAndroid`, `kspIosArm64`, `kspIosSimulatorArm64`, `kspIosX64` and `kspJvm`.
-- **Known risk:** KSP and Room must support Kotlin 2.4.21 and AGP 9.3.1. If the check in Step 0.2 fails, the options go back to the owner; SQLDelight is the fallback.
-- The bundled SQLite is compiled into the app: roughly +1 MB per CPU architecture (estimate). Play Store users download only their own architecture's copy. The iOS app needs **no** `-lsqlite3` linker flag.
+- **Versions (D21):** Room 2.8.5 with `sqlite-bundled` 2.6.2, the SQLite library version Room 2.8.5 is built against. Don't raise `sqlite-bundled` on its own: 2.7.0 and later publish no `iosX64` target, and neither does Room 3.0.3 (`androidx.room3`).
+- **Checked on 2026‑11‑01** with Kotlin 2.4.21, AGP 9.3.1 and Gradle 9.7. A throwaway database using every DAO shape in §5.2 passed its tests on the JVM and the iOS simulator. It then ran inside the real apps on the Android emulator (API 37) and the iOS simulator. All of them reported **SQLite 3.50.1**. The throwaway code was then deleted.
+- The bundled SQLite is compiled into the app: 1.16–1.31 MB per CPU architecture (measured, the `libsqliteJni.so` files in the debug APK). Play Store users download only their own architecture's copy. The cost is fixed, so it stays the same at 10× and 100× the flights. The iOS app needs **no** `-lsqlite3` linker flag: all three iOS frameworks link without it.
 
 ## 6. Networking & the local API
 
@@ -379,7 +380,7 @@ The app creates `AppGraph` once in `@main struct … : App`, and passes the mode
 
 The per-choice tradeoffs (options, strengths, weaknesses, who chose and why) are in [SUBMISSION_NOTES.md §4](SUBMISSION_NOTES.md#4-technical-tradeoffs-by-stack-choice).
 
-Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatible with **Kotlin 2.4.21, AGP 9.3.1 and Gradle 9.7** at implementation time.
+Versions are pinned in `gradle/libs.versions.toml`. These were proven together on **Kotlin 2.4.21, AGP 9.3.1 and Gradle 9.7** in Step 0.2: coroutines 1.11.0, serialization 1.12.0, datetime 0.8.0, Ktor 3.6.1, Room 2.8.5, `sqlite-bundled` 2.6.2, KSP 2.3.13 and Turbine 1.2.1.
 
 | Concern | Choice | Why | Fallback |
 |---|---|---|---|
@@ -387,7 +388,7 @@ Pin versions in a new `gradle/libs.versions.toml`, and choose versions compatibl
 | JSON | kotlinx-serialization-json (+ plugin) | KMP-native, compile-time | — |
 | Dates | kotlinx-datetime `LocalDate` | Calendar dates with no timezone traps | ISO strings, which compare correctly as text |
 | HTTP client | Ktor client: core, content-negotiation, okhttp, darwin, mock | The standard KMP client; `MockEngine` for tests | — |
-| Database (D3) | **Room KMP** (`room-runtime`, KSP `room-compiler`) + **bundled SQLite** (`sqlite-bundled`) | The same modern SQLite on every Android version and iOS; `@Upsert`, `@Transaction`, `Flow` queries; the Android standard; in-memory JVM tests | SQLDelight (the fallback if Room/KSP don't support Kotlin 2.4.21; owner to confirm) |
+| Database (D3) | **Room KMP** (`room-runtime`, KSP `room-compiler`) + **bundled SQLite** (`sqlite-bundled`) | The same modern SQLite on every Android version and iOS; `@Upsert`, `@Transaction`, `Flow` queries; the Android standard; in-memory JVM tests | SQLDelight (not needed: Room passed Step 0.2) |
 | Server | Ktor server (Netty/CIO) in `:server` | Same language and build, so `./gradlew :server:run` is the single command | A ~20-line Node or Python script |
 | Flow testing | Turbine | Readable Flow assertions | Collect into lists manually |
 | iOS bridge | Hand-written `observe()` wrapper | No dependency on Kotlin-version-specific plugins | SKIE, if compatible |
@@ -407,7 +408,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 |---|---|---|---|---|
 | D1 | The local API is a Ktor JVM module in the same Gradle build | Owner's choice (Claude's recommendation) | A natural fit for a Kotlin Multiplatform project: one language and one command. It reuses the Gradle and JDK setup that already exists. | Node or Python, which add a runtime dependency for reviewers |
 | D2 | Share **presentation state** (`ExplorerStore`), not just repositories | Owner's choice (Claude's recommendation) | Selection, map grouping, active filters and offline state then behave identically on both platforms and are unit-tested once. The bridging code should be smaller than writing the same state in both apps. | Separate per-platform view models over shared repositories, which duplicates rules |
-| D3 | **Room KMP on its bundled SQLite** | Owner's choice | One identical SQLite build on every phone and on iOS, so behaviour and bugs reproduce the same everywhere; transactions, `@Upsert` and `Flow` queries; familiar to Android reviewers. Accepted risk: KSP/Room support for Kotlin 2.4.21, checked first in Step 0.2 | SQLDelight (visible SQL and the longest multiplatform record, but it uses each phone's own SQLite, whose version varies by device); DataStore or JSON files (no transactions or queries) |
+| D3 | **Room KMP on its bundled SQLite** | Owner's choice | One identical SQLite build on every phone and on iOS, so behaviour and bugs reproduce the same everywhere; transactions, `@Upsert` and `Flow` queries; familiar to Android reviewers. Accepted risk: KSP/Room support for Kotlin 2.4.21, which Step 0.2 checked and found working (D21) | SQLDelight (visible SQL and the longest multiplatform record, but it uses each phone's own SQLite, whose version varies by device); DataStore or JSON files (no transactions or queries) |
 | D4 | Saved flights are snapshots in their own table | Owner's choice (Claude's recommendation) | They survive being missing from the API response (V4) and cache wipes, and refresh never deletes them. The extra storage is minimal (about 98 bytes per saved flight, measured). | A saved-ids table joined to the cache, which loses flights that vanish from the API; one flight table plus saved ids that keeps saved rows on refresh, which is more bug-prone for a minimal storage saving |
 | D5 | Replace the whole cache on every successful refresh | Owner's choice (Claude's recommendation) | The API returns the full dataset with no paging or diff, so a full replace is simplest and correct. A diff showed no real speed gain (136 ms vs 130 ms at 100,000 rows, measured on a Mac with Python and SQLite, not Room on a phone). | Merge or diff, which is unnecessary complexity |
 | D6 | Filter in memory on `Dispatchers.Default`, not in SQL, sorting once per data change | Owner's choice (Claude's recommendation) | Only 1,000 rows today. Pure functions are easier to test, and there is one code path. Sorting once keeps each input change at 9.6 ms at 100,000 flights, compared with 35 ms when sorting every time (measured on a Mac in Java, excluding text search). | SQL `WHERE` clauses, which are harder to compose and to test for boundaries |
@@ -425,6 +426,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D18 | Search runs on **airports, not flights**, behind indexes | Owner's choice (follow Roame); built | The brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names", and the prefix tree, hint, ranking and suggestions all work on airports. Scale is a side benefit: at most 0.56 ms per keystroke at 100,000 flights (measured on a Mac in Java). | Matching each flight's strings: the same results, up to 49 ms at 100,000 flights, and those features would still need an airport list |
 | D19 | Ranking weights: origin 0.6 / 0.4, destination 0 / 1, and proximity halves every 250 km | Owner's choice (Claude's recommendation); assumption A13; built | Your location says nothing about where you're flying to, so the destination uses popularity alone, as Amadeus's keyword search, Duffel, AirLabs and Roame's website do. The origin split is Photon's default, and 250 km is the widest range in Google's patent. Both are borrowed, not measured on real usage. | 0.7 / 0.3 and 0.2 / 0.8 with proximity halving every 693 km, chosen by judgement; popularity only in both fields, as on Roame's website |
 | D20 | **A suggestions dropdown under each search field**, built from that field's ranked matches in the data, with one extra row when two or more matches share a city | **Owner** (Claude: 5 rows and the tap behaviour, A14) | Search feels live as the user types, and ranking becomes visible. The city row follows Roame, and lets a tap give what typing `tokyo` already gives. The engine already ranks matches on every keystroke, over airports rather than flights, and the 5-row cap keeps the dropdown the same size at 10× and 100× the airports. | The hint alone (D14, which stays); the trie's `completions()`, which has no airport codes or ranking |
+| D21 | Room 2.8.5 with `sqlite-bundled` 2.6.2 | Claude (within D3); owner to confirm at the Step 0.2 review | The starter builds `iosX64`. Room 2.8.5 publishes it and is built against SQLite library 2.6.2, the last version that publishes it. Tested on all targets. Moving to Room 3 later is mostly renames, because our DAOs are already `suspend` or `Flow` only | Room 3.0.3, the line Google's KMP setup page now uses: no `iosX64`, so the starter's target list would have to change. `sqlite-bundled` 2.7.1: no `iosX64` either |
 
 ## 12. Scalability
 

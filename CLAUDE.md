@@ -111,6 +111,7 @@ These were found in the starter and the fixture.
 - **Database (D3):** use Room with the **bundled** SQLite driver (`BundledSQLiteDriver`), never the platform driver. That keeps one modern SQLite on every Android version and iOS, and the iOS app needs no `-lsqlite3`.
   - In multiplatform Room, DAO functions must be `suspend` or return `Flow`.
   - Register `room-compiler` with KSP for every target.
+  - Keep `sqlite-bundled` on the version Room is built against (2.6.2 for Room 2.8.5). Later versions, and Room 3, publish no `iosX64` target, which the starter builds (D21).
   - Re-saving a flight must keep its original `savedAt` (V2), so use the `@Transaction` save in ARCHITECTURE §5.2 rather than a bare `@Upsert`.
 - **Fixture traps:**
   - "Mileage Plan" and "MileagePlus" are different programs.

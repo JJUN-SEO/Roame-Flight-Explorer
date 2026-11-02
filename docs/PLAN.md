@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 0.2, in progress. Update this line at every review gate.
+> **Current step:** 0.2, committed and waiting for the owner's review, with one decision open: how to support `LocalDate` below Android API 26. Update this line at every review gate.
 
-This plan turns the decided design (D1–D20) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D21) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D20 doesn't work in practice.
+- finding that any of D1–D21 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -420,7 +420,8 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 
 | Risk | Likelihood | Impact | What to do |
 |---|---|---|---|
-| Room or KSP don't support Kotlin 2.4.21 or AGP 9's new KMP plugin | Medium | High | Step 0.2, before anything depends on them. If it fails, the owner chooses between waiting and SQLDelight |
+| Room or KSP don't support Kotlin 2.4.21 or AGP 9's new KMP plugin | Checked | High | Step 0.2 found they work (D21) |
+| The development Mac has 8 GB of RAM, so the emulator can freeze or restart while other heavy tools run | High | Low | Before emulator checks, shut down the simulator and run `./gradlew --stop`. Treat "isn't responding" dialogs and `DeadSystemException` as emulator trouble until the app's own log says otherwise |
 | MapLibre in Compose takes too long, because of custom pill markers | Medium | Medium | Step 0.3 is time-limited. If it fails, ask before using Google Maps |
 | Swift 6 strict concurrency conflicts with Kotlin callbacks | Medium | Low | Step 3.6 tests this early. Deliver on the main thread and keep the bridge small |
 | An emulator or simulator can't reach the API | High if forgotten | Medium | The setup in Steps 4.1 and 5.1, and ARCHITECTURE §6.4 |

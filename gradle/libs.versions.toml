@@ -1,6 +1,34 @@
 [versions]
 commons-codec = "1.23.0"
+coroutines = "1.11.0"
+datetime = "0.8.0"
+ksp = "2.3.13"
+ktor = "3.6.1"
+# Room 3 (androidx.room3) is the newer line, but 3.0.3 publishes no iosX64 target, which the starter builds.
+room = "2.8.5"
+serialization = "1.12.0"
+# The version Room 2.8.5 is built against. 2.7.0 and later publish no iosX64 target.
+sqlite = "2.6.2"
+turbine = "1.2.1"
 
 [libraries]
 # Test-only: the original Java Double Metaphone, used as the oracle for our Kotlin port (jvmTest).
 commons-codec = { module = "commons-codec:commons-codec", version.ref = "commons-codec" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+
+[plugins]
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }
