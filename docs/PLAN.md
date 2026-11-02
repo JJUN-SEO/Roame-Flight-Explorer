@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.1, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 3.2, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -209,7 +209,7 @@ Tests use `MockEngine` and an in-memory or temp-file database. Package layout: A
 
 The apps stay untouched until Step 3.6. Pure rules come first, because they need no coroutines to test.
 
-#### [ ] 3.1 Filters, ordering and active filters
+#### [x] 3.1 Filters, ordering and active filters
 
 - **Goal:** every filter rule exists as a pure function with its boundaries tested.
 - **Covers:** F1–F8, O1, O2, C1–C4, DM1, FILT-1–FILT-10, DATA-3, TEST-1, TEST-2.
