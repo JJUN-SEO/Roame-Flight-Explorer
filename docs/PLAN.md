@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.6, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.1, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -257,7 +257,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Tests:** `SearchSuggestionsTest`, plus store tests for both fields combined with filters.
 - **Done when:** `tokyo` offers Tokyo (all airports), Tokyo (HND) and Tokyo (NRT); picking one Tokyo airport excludes the other; `nrt` shows no city row; and location never changes the destination field or the flight list.
 
-#### [ ] 3.6 The Swift bridge
+#### [x] 3.6 The Swift bridge
 
 - **Goal:** prove SwiftUI can read the real store before building any screens.
 - **Covers:** D7, DATA-3.
