@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import travel.roame.takehome.model.FetchError
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,11 +25,14 @@ class FlightsApiRealEngineTest {
 
     /** Runs [respond] for each connection until [test] finishes. */
     private fun withServer(respond: (Socket) -> Unit, test: suspend (baseUrl: String) -> Unit) {
+        // Keeps every connection reachable, because the garbage collector closes a socket nothing refers to.
+        val connections = CopyOnWriteArrayList<Socket>()
         ServerSocket(0).use { server ->
             thread(isDaemon = true) {
                 runCatching {
                     while (true) {
                         val socket = server.accept()
+                        connections += socket
                         socket.getInputStream().read(ByteArray(4096))
                         respond(socket)
                     }
@@ -36,6 +40,7 @@ class FlightsApiRealEngineTest {
             }
             runBlocking { test("http://127.0.0.1:${server.localPort}") }
         }
+        connections.forEach(Socket::close)
     }
 
     @Test
