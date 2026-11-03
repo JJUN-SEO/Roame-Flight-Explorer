@@ -398,6 +398,7 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 - `RoameApp : Application` builds `createAppGraph(this, BuildConfig.API_BASE_URL)` lazily, on first use. Register it in the manifest.
 - Screens read `app.graph.store.state.collectAsStateWithLifecycle()`.
+- Each search field keeps the text being typed in Compose and sends every change to the store. It doesn't read the store's copy back while typing, because state arrives a moment later and a fast typist would lose letters. It only follows the store when the store empties it (Reset). Matching, suggestions and picks still come from the store.
 - The app targets API 36 (D26). Debug builds turn on StrictMode, and a fresh launch logs no main-thread disk or network access (Step 4.1). That needed two fixes: the database builder gets a file name rather than a path, and `KtorFlightsApi` creates its HTTP client on first use, on a background thread, because setting up JSON reads from disk. There is no Android `ViewModel` layer, because the shared store already outlives configuration changes.
 - Navigation uses `rememberSaveable` tab state. Two tabs don't need a navigation library.
 - Lists use `LazyColumn(items(results, key = { it.id }))`, with stable and immutable models (`@Immutable` where helpful).

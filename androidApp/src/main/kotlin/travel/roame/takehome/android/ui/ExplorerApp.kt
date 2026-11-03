@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -20,12 +21,14 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -52,7 +55,7 @@ fun ExplorerApp(store: ExplorerStore) {
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                0 -> ExploreScreen(state, onRetry = store::refresh)
+                0 -> ExploreScreen(state, store)
                 else -> SavedScreen(state)
             }
         }
@@ -60,21 +63,29 @@ fun ExplorerApp(store: ExplorerStore) {
 }
 
 @Composable
-private fun ExploreScreen(state: ExplorerState, onRetry: () -> Unit) {
+private fun ExploreScreen(state: ExplorerState, store: ExplorerStore) {
     when (val data = state.data) {
         DataStatus.Loading -> LoadingList()
-        is DataStatus.Unavailable -> UnavailableMessage(data.error, onRetry)
+        is DataStatus.Unavailable -> UnavailableMessage(data.error, store::refresh)
         is DataStatus.Ready -> when {
             // UI_SPEC §4: a successful empty response is not an error (R4).
             state.options.isEmpty -> Message(stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
-            else -> ResultsList(state)
+            else -> Column {
+                SearchHeader(state, store)
+                if (state.results.isEmpty()) FilteredEmpty(onReset = store::resetAll) else ResultsList(state)
+            }
         }
     }
 }
 
 @Composable
 private fun ResultsList(state: ExplorerState) {
+    val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
+    // UI_SPEC §5: scrolling the list dismisses the keyboard.
+    LaunchedEffect(listState.isScrollInProgress) { if (listState.isScrollInProgress) focusManager.clearFocus() }
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
