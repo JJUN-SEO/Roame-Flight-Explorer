@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.1, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.2, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D26) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -271,7 +271,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 
 The apps only render `ExplorerState` and send intents. If a step needs an `if` about flight data in `androidApp/`, that logic belongs in `shared/`. Copy comes from UI_SPEC §4.
 
-#### [ ] 4.1 App shell and live list
+#### [x] 4.1 App shell and live list
 
 - **Goal:** the app shows all 1,000 flights from the API, and explains itself when it can't.
 - **Covers:** R7, R9, T3, OFF-4, OFF-5, PERF-2, PERF-4, SCALE-6, UX-3. QA: Q1, Q18.
