@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.4, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 3.5, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -236,7 +236,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Tests:** `ExplorerStoreOfflineTest`, `ExplorerStoreLatestWinsTest` and `ExplorerStoreFiltersTest`, using `FakeFlightsApi` and `TestClock`.
 - **Done when:** cached data appears before the network responds, a failed refresh keeps the data and reports it, and rapid input only ever ends on the latest query.
 
-#### [ ] 3.4 Selection and saved state in the store
+#### [x] 3.4 Selection and saved state in the store
 
 - **Goal:** list and map can't disagree about what's selected or saved.
 - **Covers:** L1, L2, L3, L4, L5, L7, V3, V4, V7, V8, VIEW-1, SEL-2, SEL-3, SAVE-1, OFF-8.
