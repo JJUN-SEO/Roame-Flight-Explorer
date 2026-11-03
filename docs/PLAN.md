@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.2, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.3, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D26) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -282,7 +282,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
   - First load, the unavailable errors with Retry, and synced empty.
 - **Done when:** QA rows Q1 and Q18 pass, and StrictMode reports nothing on the main thread.
 
-#### [ ] 4.2 Search
+#### [x] 4.2 Search
 
 - **Goal:** the owner's "new, then delete, then sea" search works on screen.
 - **Covers:** SRCH-1, SRCH-2, SRCH-3, SRCH-8, SRCH-9, S13, S14. QA: Q2, Q2b, Q2d.
