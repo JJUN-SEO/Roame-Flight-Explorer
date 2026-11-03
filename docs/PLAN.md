@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.5, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.6, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D27) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -306,7 +306,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Build:** `FlightCard`, the pending and error states, snackbars, haptics, the Saved tab with its badge, and the debug-only "Fail next DB write" toggle.
 - **Done when:** those QA rows pass.
 
-#### [ ] 4.5 Map
+#### [x] 4.5 Map
 
 - **Goal:** the same results as the list, as markers with a route line.
 - **Covers:** M1, M2, M3, M4, M5, M6, M7, M8, T2, MAP-1, MAP-2, MAP-3, MAP-4, VIEW-1, SEL-1, OFF-9, D8, D23, D24. QA: Q8, Q8b, Q9, Q10.
