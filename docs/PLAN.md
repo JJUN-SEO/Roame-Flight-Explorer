@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.3, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.4, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D26) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -290,7 +290,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Build:** `SearchField`, `SuggestionList` and the fuzzy hint.
 - **Done when:** QA rows Q2, Q2b and Q2d pass.
 
-#### [ ] 4.3 Filters
+#### [x] 4.3 Filters
 
 - **Goal:** all four filters work, with a visible count, chips and Reset.
 - **Covers:** FILT-1–FILT-10, F2, F3, F4, C1, C2, C3, C4. QA: Q3, Q4, Q5, Q6, Q7.
@@ -383,6 +383,10 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Covers:** UX-2, UX-3, UX-4. QA: Q22, Q23.
 - **Read:** UI_SPEC §6 and §8.
 - **Build:** fixes from comparing the two apps side by side for spacing, typography and copy, including the largest font size, VoiceOver and TalkBack, and dark mode.
+- **Owner's feedback at Step 4.3 (2026‑11‑03):**
+  - The UI works, but it looks plain and generic: Android's stock Material theme with no identity of its own. Give it a look of its own here, on both apps.
+  - Add a separate Filters button where people choose their filter options. Settle with the owner whether it replaces the four chips or sits beside them.
+  - The owner chose to restyle here rather than before Step 4.4, knowing the card, the Saved tab, the map and the iOS app are built in the current look until then.
 - **Done when:** those QA rows pass and the owner has seen the apps side by side.
 
 #### [ ] 6.4 Requirements audit
