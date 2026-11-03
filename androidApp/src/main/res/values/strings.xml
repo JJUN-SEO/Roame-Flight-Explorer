@@ -36,5 +36,29 @@
     <string name="reset_filters">Reset filters</string>
 
     <string name="route_cities">%1$s → %2$s</string>
+    <plurals name="filter_count">
+        <item quantity="one">%d filter</item>
+        <item quantity="other">%d filters</item>
+    </plurals>
+    <string name="reset">Reset</string>
+    <string name="filter_dates">Dates</string>
+    <string name="filter_cabin">Cabin</string>
+    <string name="filter_points">Points</string>
+    <string name="filter_programs">Programs</string>
+    <string name="date_range">%1$s – %2$s</string>
+    <string name="points_chip">≤ %s</string>
+    <string name="programs_more">%1$s +%2$d</string>
+    <string name="any_dates">Any dates</string>
+    <string name="any_cabin">Any</string>
+    <string name="points_up_to">Up to %s</string>
+    <string name="points_any">Any</string>
+    <string name="clear">Clear</string>
+    <plurals name="show_flights">
+        <item quantity="one">Show %s flight</item>
+        <item quantity="other">Show %s flights</item>
+    </plurals>
+    <string name="clear_filter">Clear %s</string>
+    <string name="chip_active">%1$s: %2$s, active</string>
+
     <string name="row_description">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s</string>
 </resources>

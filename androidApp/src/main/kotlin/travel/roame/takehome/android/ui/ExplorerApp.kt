@@ -24,18 +24,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import travel.roame.takehome.android.R
 import travel.roame.takehome.model.FetchError
+import travel.roame.takehome.model.FilterKind
 import travel.roame.takehome.presentation.DataStatus
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
@@ -71,8 +72,12 @@ private fun ExploreScreen(state: ExplorerState, store: ExplorerStore) {
             // UI_SPEC §4: a successful empty response is not an error (R4).
             state.options.isEmpty -> Message(stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
             else -> Column {
+                var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
                 SearchHeader(state, store)
-                if (state.results.isEmpty()) FilteredEmpty(onReset = store::resetAll) else ResultsList(state)
+                FilterBar(state, store, onOpen = { openSheet = it })
+                ResultSummary(state, onReset = store::resetAll)
+                if (state.results.isEmpty()) FilteredEmpty(state, onReset = store::resetAll) else ResultsList(state)
+                openSheet?.let { kind -> FilterSheet(kind, state, store, onDismiss = { openSheet = null }) }
             }
         }
     }
@@ -89,13 +94,6 @@ private fun ResultsList(state: ExplorerState) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item(key = "summary") {
-            Text(
-                pluralStringResource(R.plurals.result_count, state.resultCount, groupedCount(state.resultCount)),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
         items(state.results, key = { it.id }) { flight -> FlightRow(flight) }
     }
 }

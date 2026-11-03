@@ -100,7 +100,7 @@ In the Saved view, add "No longer listed" when the flight isn't in the latest re
 | Points | Slider from min to max in steps of 500, with a live label "Up to 60,000 pts" or "Any" | The top end means no limit (F4) |
 | Programs | Checklist of every program, with "Clear" | Multi-select. Empty means all (F6). |
 
-Each sheet shows a live **"Show N flights"** button. N is the count if the user applied the current choice.
+Each sheet shows a live **"Show N flights"** button. Choices apply as they're made, so N is the real count and the button just closes the sheet. Sheets open fully, so the button is always on screen.
 
 ## 3. Components
 

@@ -1,14 +1,25 @@
 package travel.roame.takehome.android.ui
 
 import java.text.NumberFormat
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val rowDate = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US)
+private val chipDate = DateTimeFormatter.ofPattern("MMM d", Locale.US)
 
 /** T3: parsed as a calendar date, never through an instant or timezone, so Feb 1 stays Feb 1. */
 fun rowDate(isoDate: String): String = LocalDate.parse(isoDate).format(rowDate)
+
+/** "Feb 10", for the dates chip. */
+fun chipDate(isoDate: String): String = LocalDate.parse(isoDate).format(chipDate)
+
+/** Material's date pickers use UTC midnight, so convert with UTC; the device's zone would shift the day. */
+fun utcMillisToIso(millis: Long): String = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+
+fun isoToUtcMillis(isoDate: String): Long = LocalDate.parse(isoDate).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
 /** Counts use the same US grouping as the shared points formatter. */
 fun groupedCount(count: Int): String = NumberFormat.getIntegerInstance(Locale.US).format(count)

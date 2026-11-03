@@ -31,4 +31,6 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation(libs.androidx.lifecycle.runtime.compose)
     debugImplementation(libs.leakcanary.android)
+    // Android unit tests run on JUnit 4, so use kotlin.test's JUnit binding.
+    testImplementation(kotlin("test-junit"))
 }

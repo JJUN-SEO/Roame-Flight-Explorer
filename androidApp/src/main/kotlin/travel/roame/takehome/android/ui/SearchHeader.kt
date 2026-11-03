@@ -155,11 +155,12 @@ private fun hintText(hint: List<AirportSuggestion>): String {
     return if (more > 0) stringResource(R.string.hint_more, shown, more) else stringResource(R.string.hint, shown)
 }
 
-/** UI_SPEC §4: an empty result that isn't an error, with a way back. The active filter list comes with Step 4.3's chips. */
+/** UI_SPEC §4: an empty result that isn't an error, with the active filters and a way back. */
 @Composable
-fun FilteredEmpty(onReset: () -> Unit, modifier: Modifier = Modifier) {
+fun FilteredEmpty(state: ExplorerState, onReset: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(stringResource(R.string.filtered_empty_title), style = MaterialTheme.typography.titleLarge)
+        ActiveFilterList(state)
         TextButton(onClick = onReset) { Text(stringResource(R.string.reset_filters)) }
     }
 }
