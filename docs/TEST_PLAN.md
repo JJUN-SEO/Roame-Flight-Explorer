@@ -59,6 +59,8 @@ The brief asks for *focused* shared tests plus a written record of the checks pe
 | ✅ `ExplorerStoreSelectionTest` | L1–L5, L7, C4 | select → `selected` set, the same item in the list and on the map; selecting it again or null deselects; a filter that excludes it → cleared; undoing the filter → still cleared; a refresh that drops it → cleared; reset → a selection still in the results is kept; the saved-view selection ignores filters and is independent; removing a saved flight clears the saved selection for good |
 | ✅ `ExplorerStoreSavedTest` | V3, V4, V6–V8 | save → `isSaved` true in the results, markers, card and Saved list; **save failure → `isSaved` unchanged + `UserMessage`**; remove failure, likewise; `pendingWriteIds` is set during the write and stays until the saved state has changed; a second tap is ignored; messages have their own ids and go once shown; retry can succeed; "No longer listed" only after a successful refresh; the Saved list ignores filters and search |
 | ✅ `ExplorerStoreLatestWinsTest` | PERF-2, PERF-3 | type "b", "bo", "bos" rapidly with a slow reducer → the only final results are for "bos", and no intermediate state from an older query arrives after a newer one; a slower old result can't overwrite a newer one; reducing runs on the given dispatcher |
+| ✅ `SearchExamplesTest` | S11 | every row of the examples table in DOMAIN_RULES |
+| ✅ `ExplorerStoreIosTest` (iosTest) | D7 | the Swift bridge delivers the current state and every change until cancelled, and passes every intent through |
 | ✅ `SearchSuggestionsTest` | S5, S13, S14 | rows follow the ranked matches for that side only; an exact code ranks first; at most 5 rows, counting city rows; blank and `NoMatch` → none; fuzzy query → a row; a city row sits above its airports when 2+ matches share a city; `nrt` → no city row; the hint only for fuzzy matches, listing all of them in ranked order |
 | ✅ `ExplorerStoreSearchTest` | S1–S3, S13, S14, F7, M1, L3, P2, P5, P7, D16 | each field matches only its own side, and both must match; search combines with the filters and the markers; picking DUB excludes DXB; picking one Tokyo airport excludes the other; picking the city row keeps both; a pick closes the suggestions and hides the hint; editing the text clears the pick; Reset clears the pick; a pick a refresh removed stays cleared; location reorders only the origin suggestions, never the destination field or the flight list |
 | `FixtureContractTest` (jvmTest) | §0 facts | 1,000 flights; 32 airports; 60 dates; three cabins; five programs; ids unique; six ids not in the `fx-` format |
@@ -129,16 +131,16 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q5 | Programs {Avios, Aeroplan} → only those two programs; plus Business → AND | | |
 | Q6 | Active chips are shown; clearing one chip works; Reset restores everything | | |
 | Q7 | Filtered-empty state + Reset button | | |
-| Q8 | Map: one marker per destination; count and min points match the list; pan, zoom and double-tap all work | | |
+| Q8 | (M8) Map: one marker per destination; count and min points match the list; pan, zoom and double-tap all work | | |
 | Q8b | Airplane mode with the map never opened, then open Map → the "Can't load the map" message and Retry. Turn the internet back on → the map loads | | — |
-| Q9 | Tap a marker → sheet ordered by points → tap a flight → route line + card | | |
-| Q10 | Switch Map → List: the same flight is selected and highlighted; the reverse also works | | |
+| Q9 | (L6) Tap a marker → sheet ordered by points → tap a flight → route line + card | | |
+| Q10 | (L4) Switch Map → List: the same flight is selected and highlighted; the reverse also works | | |
 | Q11 | Apply a filter that excludes the selected flight → the card disappears; undo the filter → it stays cleared | | |
 | Q12 | Save from the list → the heart fills on the map card and in the Saved tab; the badge count updates | | |
 | Q13 | Saved tab with filters that exclude the saved flights → the saved flights are still listed | | |
 | Q14 | Edit the fixture (change the points of a saved flight), refresh → the saved details are updated, with no duplicate | | |
 | Q15 | Remove a saved flight's record from the fixture, refresh → it is still in Saved with "No longer listed" | | |
-| Q16 | Stop the API, pull to refresh → stale banner, data intact, Retry shown | | |
+| Q16 | (T4) Stop the API, pull to refresh → stale banner, data intact, Retry shown | | |
 | Q17 | API stopped: force-quit, relaunch → cached results + saved flights; search and filters work; remove a saved flight | | |
 | Q18 | Clear app data (or reinstall) with the API stopped → full-screen offline error; start the API → Try again → loads | | |
 | Q19 | Temporarily change the fixture to `{"flights":[]}`, refresh → "No flights available" (not an error). Restore it, stop the API, refresh → stale banner, not the empty message | | |
@@ -147,6 +149,8 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q22 | Largest font size + VoiceOver/TalkBack pass over a row, a marker and the card | | |
 | Q23 | Dark mode pass | | |
 | Q24 | §4 performance and leak checks done | | |
+
+Four rules only exist on screen, so no shared test covers them: L4, L6, M8 and T4. The rows marked with them above check each one by hand. Every other rule in DOMAIN_RULES has a shared test named after it (checked in Step 3.6).
 
 ## 6. Failure-injection hooks (debug builds only)
 

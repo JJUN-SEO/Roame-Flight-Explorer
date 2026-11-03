@@ -266,7 +266,7 @@ class ExplorerStoreSearchTest {
     }
 
     @Test
-    fun d16_noLocationIsSharedUntilTheAppSendsOne() = runTest {
+    fun p2_noLocationIsSharedUntilTheAppSendsOne() = runTest {
         assertFalse(newStore().state.value.isLocationShared)
     }
 }

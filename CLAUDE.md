@@ -115,7 +115,7 @@ These were found in the starter and the fixture.
   - The starter manifest has **no INTERNET permission**.
   - The API is cleartext HTTP, so add a network security config that allows `10.0.2.2` and `localhost`.
   - The emulator reaches the host at `http://10.0.2.2:8080`.
-- **iOS networking:** the simulator uses `http://localhost:8080`. Add `NSAppTransportSecurity › NSAllowsLocalNetworking = YES` to `iosApp/Info.plist`.
+- **iOS networking:** the simulator uses `http://localhost:8080`. The plan adds `NSAppTransportSecurity › NSAllowsLocalNetworking = YES` to `iosApp/Info.plist`, but in Step 3.6 the simulator fetched it without that key.
 - **Database (D3):** use Room with the **bundled** SQLite driver (`BundledSQLiteDriver`), never the platform driver. That keeps one modern SQLite on every Android version and iOS, and the iOS app needs no `-lsqlite3`.
   - In multiplatform Room, DAO functions must be `suspend` or return `Flow`.
   - Register `room-compiler` with KSP for every target.

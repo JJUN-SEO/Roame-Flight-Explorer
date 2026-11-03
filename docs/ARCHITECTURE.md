@@ -322,7 +322,7 @@ Only the **file location** differs per platform:
 | Platform | Default base URL | Configured in | Platform setup required |
 |---|---|---|---|
 | Android emulator | `http://10.0.2.2:8080` | `BuildConfig.API_BASE_URL` (`buildFeatures { buildConfig = true }`) | Add `<uses-permission android:name="android.permission.INTERNET"/>`, which the starter manifest **lacks**. Add `res/xml/network_security_config.xml` that allows cleartext traffic to `10.0.2.2` and `localhost` only. |
-| iOS simulator | `http://localhost:8080` | Info.plist key `API_BASE_URL` | Add `NSAppTransportSecurity › NSAllowsLocalNetworking = YES`. |
+| iOS simulator | `http://localhost:8080` | Info.plist key `API_BASE_URL` | Add `NSAppTransportSecurity › NSAllowsLocalNetworking = YES`. In Step 3.6 the simulator fetched `http://localhost:8080` without it, so Step 5.1 should check whether it's still needed. |
 | Physical devices | The Mac's LAN IP | Same keys | Android: add the IP to the network security config. iOS: add `NSLocalNetworkUsageDescription`. |
 
 The platform passes the base URL into `AppGraph`. Shared code never hardcodes a host.
@@ -352,14 +352,17 @@ Kotlin `Flow` and `suspend` functions do not map cleanly to Swift 6. Swift only 
 class ExplorerStoreIos internal constructor(private val store: ExplorerStore) {
     val state: ExplorerState get() = store.state.value
     fun observe(onChange: (ExplorerState) -> Unit): Cancellable {
-        val job = MainScope().launch { store.state.collect { onChange(it) } }   // delivered on main
-        return Cancellable { job.cancel() }
+        val scope = MainScope()
+        scope.launch { store.state.collect { onChange(it) } }   // delivered on main
+        return Cancellable { scope.cancel() }
     }
     fun setOriginQuery(text: String) = store.setOriginQuery(text)
     fun setDateRange(startIso: String?, endIso: String?) = store.setDateRange(startIso, endIso)
+    fun setMaxPoints(points: Int) = store.setMaxPoints(points)   // not nullable, so Swift passes a plain Int
     // … one plain method per intent
 }
 fun interface Cancellable { fun cancel() }
+fun createExplorerStore(baseUrl: String): ExplorerStoreIos   // Swift: ExplorerStoreIosKt.createExplorerStore(baseUrl:)
 ```
 
 ```swift
@@ -387,7 +390,7 @@ Rules for the Swift-facing API:
 - `Shared` is a **static** framework. Room's bundled SQLite is compiled into it, so the app needs no `-lsqlite3` linker flag.
 - Optional: use **SKIE** (Touchlab), which gives Swift enums and `AsyncSequence`, but only if a release supports Kotlin 2.4.21. Check that first; otherwise keep the bridge above.
 
-The app creates `AppGraph` once in `@main struct … : App`, and passes the model down through `.environment(model)`.
+The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, and passes the model down through `.environment(model)`. Built and checked in Step 3.6: the iOS app showed the live flight count from the running API, and again after relaunching with the API stopped.
 
 **Location (D16).** Core Location with `requestWhenInUseAuthorization()`, triggered only by "Use my location". Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
 
