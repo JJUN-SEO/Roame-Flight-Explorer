@@ -3,28 +3,21 @@ import Shared
 
 @main
 struct RoameStarterApp: App {
-    // Step 3.6 only: proves SwiftUI can read the real store. Step 5.1 replaces this with the screens.
-    @State private var model = ExplorerModel(store: ExplorerStoreIosKt.createExplorerStore(baseUrl: "http://localhost:8080"))
+    /** The one shared store (D10), pointed at the API in Info.plist: the simulator reaches the Mac at localhost (ARCHITECTURE §6.4). */
+    @State private var model = ExplorerModel(store: ExplorerStoreIosKt.createExplorerStore(baseUrl: apiBaseUrl()))
 
     var body: some Scene {
         WindowGroup {
-            Text(model.state.data is DataStatus.Ready ? "\(model.state.resultCount) flights" : "Loading flights…")
+            ExplorerApp()
+                .environment(model)
+                .tint(.accent)
         }
     }
 }
 
-/** Holds the latest state for SwiftUI (ARCHITECTURE §8). */
-@MainActor @Observable
-final class ExplorerModel {
-    private(set) var state: ExplorerState
-    let store: ExplorerStoreIos
-    @ObservationIgnored private var subscription: Cancellable?
-
-    init(store: ExplorerStoreIos) {
-        self.store = store
-        self.state = store.state
-        subscription = store.observe { [weak self] newState in
-            MainActor.assumeIsolated { self?.state = newState }   // Kotlin delivers on the main thread
-        }
+private func apiBaseUrl() -> String {
+    guard let url = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String else {
+        fatalError("API_BASE_URL is missing from Info.plist")
     }
+    return url
 }
