@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.5, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 3.6, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -245,7 +245,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Tests:** `ExplorerStoreSelectionTest` and `ExplorerStoreSavedTest`, using `FakeSavedFlightsRepository`.
 - **Done when:** filtering out a selected flight clears it for good, and a failed save leaves `isSaved` unchanged and reports an error.
 
-#### [ ] 3.5 Connect search to the store
+#### [x] 3.5 Connect search to the store
 
 - **Goal:** typing in either field filters flights and fills the suggestions, using the engine already built.
 - **Covers:** S2, S3, S13, S14, P1, P2, P3, P4, P5, P6, P7, SRCH-1, SRCH-2, SRCH-3, SRCH-7, SRCH-8, SRCH-9, SCALE-1, D14, D15, D17, D18, D19, D20.
