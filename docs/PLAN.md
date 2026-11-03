@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.6, committed and waiting for the owner's review. The portrait lock (D28) is committed separately and waits too. Update this line at every review gate.
+> **Current step:** 4.7, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D28) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -322,7 +322,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
   - Keep MapLibre's attribution button, and check that it shows OpenStreetMap's credit. The probe didn't open it.
 - **Done when:** those QA rows pass, and changing filters never moves the camera.
 
-#### [ ] 4.6 Refresh and offline
+#### [x] 4.6 Refresh and offline
 
 - **Goal:** the app stays useful with the API stopped.
 - **Covers:** R1, R2, R5, R6, R11, T4, OFF-1, OFF-2, OFF-3, OFF-5. QA: Q14, Q15, Q16, Q17, Q19.
