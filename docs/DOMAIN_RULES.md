@@ -145,7 +145,7 @@ The owner's hypothesis is that people mistype a place in four ways. Here is what
   - When a field's tier is `Fuzzy`, both apps show a hint under that field: "Showing Sydney (SYD)". It lists the matches in ranked order: the first two, then "+N more".
   - No hint is shown for the `Prefix` or `Blank` tier.
   - `NoMatch` shows the filtered-empty state.
-  - *Engine implemented; the UI comes with the store and screens.*
+  - *Engine and store done; the UI comes with the screens.*
 - **S14 Suggestions** (owner decision D20). While a field has focus and text, both apps show a dropdown of matching airports under it, updated on every keystroke.
   - The rows are that field's ranked matches from the search engine, in P6 order. They include fuzzy matches and never the other side's airports (S3). Each row shows the city and code, for example "Tokyo (HND)", and each airport gets its own row.
   - **City row** (owner decision, following Roame). When two or more matches share a city, one row for all of them, for example "Tokyo (all airports)", comes directly above that city's first airport row. It comes from the data, so no city is hardcoded, and `nrt` shows no city row because it matches one airport.
@@ -153,6 +153,7 @@ The owner's hypothesis is that people mistype a place in four ways. Here is what
   - Tapping a row picks exactly what it names and closes the dropdown. The field shows "Tokyo (HND)" and flights are filtered by that code alone, or it shows "Tokyo (all airports)" and flights are filtered by that city's matched codes. Editing the text clears the pick and returns to normal search. A pick is needed because the text alone isn't enough: `dub` also matches Dubai (DXB). *(assumption)*
   - A blank query or `NoMatch` shows no dropdown.
   - A pick counts as search text for Reset (C2, C4), and Reset clears it.
+  - The store holds a pick as its city and codes, and each app writes the text ("Tokyo (HND)", "Tokyo (all airports)"), because copy lives in the apps. A pick of codes that aren't on that side is ignored. If a refresh removes a picked airport, the field goes back to searching its text, for good. *(assumption)*
   - The S13 hint stays, because it still explains fuzzy results after the dropdown closes. A pick shows no hint.
 
 ## 2b. Prioritisation (P)

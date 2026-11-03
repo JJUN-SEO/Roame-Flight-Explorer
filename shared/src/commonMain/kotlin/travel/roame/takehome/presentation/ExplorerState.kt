@@ -1,6 +1,7 @@
 package travel.roame.takehome.presentation
 
 import travel.roame.takehome.model.ActiveFilter
+import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.model.FetchError
 import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.FlightFilters
@@ -29,6 +30,17 @@ data class ExplorerState(
     val pendingWriteIds: Set<String>,
     /** One-shot errors. The app shows each once, then calls `messageShown(id)`. */
     val messages: List<UserMessage>,
+    /** S14: at most 5 rows. Empty for a blank field, no match, or while a pick is active. */
+    val originSuggestions: List<AirportSuggestion>,
+    val destinationSuggestions: List<AirportSuggestion>,
+    /** S13: every fuzzy match, in ranked order. Empty unless the field's tier is `Fuzzy`. */
+    val originHint: List<AirportSuggestion>,
+    val destinationHint: List<AirportSuggestion>,
+    /** S14: the tapped suggestion. While set, the field shows it instead of its text. */
+    val originPick: AirportSuggestion?,
+    val destinationPick: AirportSuggestion?,
+    /** D16: the user shared a location, so the ⌖ button is filled. */
+    val isLocationShared: Boolean,
 ) {
     /** C1. */
     val resultCount: Int get() = results.size
@@ -49,6 +61,13 @@ data class ExplorerState(
             savedSelected = null,
             pendingWriteIds = emptySet(),
             messages = emptyList(),
+            originSuggestions = emptyList(),
+            destinationSuggestions = emptyList(),
+            originHint = emptyList(),
+            destinationHint = emptyList(),
+            originPick = null,
+            destinationPick = null,
+            isLocationShared = false,
         )
     }
 }

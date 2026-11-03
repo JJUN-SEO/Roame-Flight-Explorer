@@ -38,10 +38,10 @@ internal data class RankingWeights(val proximity: Double, val volume: Double) {
 
 /** Where the volume signal came from (DOMAIN_RULES P3, P4). */
 internal enum class VolumeSource {
-    /** Every ranked airport has a passenger figure from `fixtures/airports.json`. */
+    /** Every ranked airport has a passenger figure from [AIRPORT_PASSENGERS]. */
     PassengerStats,
 
-    /** `airports.json` was missing: volume is each airport's flight count in `flights.json`. */
+    /** No ranked airport has a passenger figure: volume is each airport's flight count in `flights.json`. */
     FlightCountFallback,
 
     /** Some airports had passenger figures and the rest fell back to flight counts. */
@@ -72,8 +72,8 @@ internal class AirportRanking private constructor(
         const val PROXIMITY_HALF_DISTANCE_KM = 250.0
 
         /**
-         * @param annualPassengers passenger figures by airport code from `fixtures/airports.json`;
-         *   empty when that file is missing or failed to load.
+         * @param annualPassengers passenger figures by airport code, normally [AIRPORT_PASSENGERS]. An airport
+         *   missing from it, for example one the API adds later, uses its flight count instead.
          * @param flightCounts flights per airport code in `flights.json` — the fallback volume
          *   signal, so ranking still works with only the original data (P4).
          * @param userLocation the device's location, or null when unknown or not permitted (P2).

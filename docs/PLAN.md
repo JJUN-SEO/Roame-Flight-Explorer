@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.5, in progress. Update this line at every review gate.
+> **Current step:** 3.5, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -98,7 +98,7 @@ Every step also meets the "Before you say done" list in `CLAUDE.md`.
 
 ## 6. Additions approved with this plan
 
-These are small gaps found while writing the plan. Nothing here is built yet. Update ARCHITECTURE in the step that builds each one.
+These are small gaps found while writing the plan. Step 3.5 built all four. Update ARCHITECTURE in the step that builds each one.
 
 | Addition | Why it's needed | Step |
 |---|---|---|

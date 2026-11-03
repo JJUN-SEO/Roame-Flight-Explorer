@@ -21,6 +21,7 @@ import travel.roame.takehome.data.FlightRepository
 import travel.roame.takehome.data.SavedFlightsRepository
 import travel.roame.takehome.domain.cleared
 import travel.roame.takehome.domain.normalizedTo
+import travel.roame.takehome.domain.search.GeoPoint
 import travel.roame.takehome.model.FilterKind
 import travel.roame.takehome.model.FlightFilters
 
@@ -55,9 +56,19 @@ class ExplorerStore internal constructor(
         scope.launch { flights.refresh() }
     }
 
-    fun setOriginQuery(text: String) = inputs.update { it.copy(originQuery = text) }
+    /** S14: editing the text clears a pick and goes back to searching. */
+    fun setOriginQuery(text: String) = inputs.update { it.copy(originQuery = text, originPick = null) }
 
-    fun setDestinationQuery(text: String) = inputs.update { it.copy(destinationQuery = text) }
+    fun setDestinationQuery(text: String) = inputs.update { it.copy(destinationQuery = text, destinationPick = null) }
+
+    /** S14: filters by exactly these codes until the text is edited. Pass a suggestion's `codes`. */
+    fun pickOrigin(codes: List<String>) = inputs.update { it.copy(originPick = codes.takeIf(List<String>::isNotEmpty)) }
+
+    fun pickDestination(codes: List<String>) = inputs.update { it.copy(destinationPick = codes.takeIf(List<String>::isNotEmpty)) }
+
+    /** D16: only call this after the user taps "Use my location". It ranks the origin field only (P5). */
+    fun setUserLocation(latitude: Double, longitude: Double) =
+        inputs.update { it.copy(userLocation = GeoPoint(latitude, longitude)) }
 
     /** Takes ISO `yyyy-MM-dd` dates. Ignores anything else, because filtering relies on them being valid. */
     fun setDateRange(startIso: String?, endIso: String?) {
@@ -78,7 +89,9 @@ class ExplorerStore internal constructor(
     fun clearFilter(kind: FilterKind) = inputs.update { it.copy(filters = it.filters.cleared(kind)) }
 
     /** C4. The selections, writes and messages stay; after a reset the results include every flight anyway. */
-    fun resetAll() = inputs.update { it.copy(originQuery = "", destinationQuery = "", filters = FlightFilters()) }
+    fun resetAll() = inputs.update {
+        it.copy(originQuery = "", destinationQuery = "", originPick = null, destinationPick = null, filters = FlightFilters())
+    }
 
     /** L1, L2: selecting the selected flight again, or passing null, deselects it. */
     fun select(flightId: String?) =
@@ -129,7 +142,7 @@ class ExplorerStore internal constructor(
 
     /**
      * F8: filter values the data no longer offers stay dropped, even if a later refresh offers them again.
-     * L3, L7: so does a selection the state no longer shows, unless the user has picked another since.
+     * L3, L7, S14: so does a selection or pick the state no longer shows, unless the user has chosen another since.
      */
     private fun keepDropped(state: ExplorerState, used: ExplorerInputs) = inputs.update { input ->
         input.copy(
@@ -140,6 +153,9 @@ class ExplorerStore internal constructor(
             savedSelectedId = input.savedSelectedId.takeUnless {
                 it == used.savedSelectedId && state.savedSelected == null
             },
+            // S14: a pick whose airports a refresh removed goes back to searching the text.
+            originPick = input.originPick.takeUnless { it == used.originPick && state.originPick == null },
+            destinationPick = input.destinationPick.takeUnless { it == used.destinationPick && state.destinationPick == null },
         )
     }
 

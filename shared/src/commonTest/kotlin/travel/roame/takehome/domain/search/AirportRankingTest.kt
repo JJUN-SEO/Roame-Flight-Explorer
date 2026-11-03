@@ -87,7 +87,7 @@ class AirportRankingTest {
     }
 
     @Test
-    fun p4_missingAirportsFileFallsBackToFlightCountsFromFlightsJson() {
+    fun p4_noPassengerFiguresFallsBackToFlightCountsFromFlightsJson() {
         val r = ranking(TestAirports.destinations, emptyMap(), TestAirports.destinationFlightCounts)
         assertEquals(VolumeSource.FlightCountFallback, r.volumeSource)
         assertEquals(1.0, r.priorityOf("NRT")) // 55 flights, the most

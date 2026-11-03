@@ -26,10 +26,12 @@ import travel.roame.takehome.domain.ResultOrder
 import travel.roame.takehome.domain.matching
 import travel.roame.takehome.domain.toDestinationGroups
 import travel.roame.takehome.domain.toFilterOptions
+import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.Flight
 import travel.roame.takehome.model.FlightFilters
 import travel.roame.takehome.presentation.DataStatus
+import travel.roame.takehome.presentation.ExplorerStore
 import travel.roame.takehome.testing.awaitState
 import travel.roame.takehome.testing.testDb
 import java.io.File
@@ -274,8 +276,7 @@ class FixtureContractTest {
 
     // The whole app graph on the real data. Only the network is fake.
 
-    @Test
-    fun r3_theRealFixtureReachesTheStateBothAppsRead() = runBlocking {
+    private fun withRealStore(test: suspend (ExplorerStore) -> Unit) = runBlocking {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val db = testDb()
         try {
@@ -283,27 +284,75 @@ class FixtureContractTest {
                 respond(fixtureText, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
             }
             val store = AppGraph(db, engine, "http://api.test", scope = scope).store
-
-            val all = store.awaitState { it.data is DataStatus.Ready && it.resultCount > 0 }
-            assertEquals(1000, all.resultCount)
-            assertEquals(24, all.markers.size)
-            assertEquals(1000, all.markers.sumOf { it.flightCount })
-            assertEquals("fx-YYZ-BCN-20270201", all.results.first().id)
-            assertEquals(decoded.toFilterOptions(), all.options)
-
-            store.setCabin("Business")
-            store.setMaxPoints(60_000)
-            val filtered = store.awaitState { it.filters.cabin == "Business" && it.filters.maxPoints == 60_000 }
-            assertEquals(171, filtered.resultCount)
-            assertEquals(22, filtered.markers.size)
-            assertEquals(171, filtered.markers.sumOf { it.flightCount })
-            val paris = filtered.markers.first { it.code == "CDG" }
-            assertEquals(12 to 39_000, paris.flightCount to paris.minPoints)
+            store.awaitState { it.data is DataStatus.Ready && it.resultCount > 0 }
+            test(store)
         } finally {
             // Stop the store first, so no read is still running when the database closes.
             scope.coroutineContext.job.cancelAndJoin()
             db.close()
         }
+    }
+
+    @Test
+    fun r3_theRealFixtureReachesTheStateBothAppsRead() = withRealStore { store ->
+        val all = store.state.value
+        assertEquals(1000, all.resultCount)
+        assertEquals(24, all.markers.size)
+        assertEquals(1000, all.markers.sumOf { it.flightCount })
+        assertEquals("fx-YYZ-BCN-20270201", all.results.first().id)
+        assertEquals(decoded.toFilterOptions(), all.options)
+
+        store.setCabin("Business")
+        store.setMaxPoints(60_000)
+        val filtered = store.awaitState { it.filters.cabin == "Business" && it.filters.maxPoints == 60_000 }
+        assertEquals(171, filtered.resultCount)
+        assertEquals(22, filtered.markers.size)
+        assertEquals(171, filtered.markers.sumOf { it.flightCount })
+        val paris = filtered.markers.first { it.code == "CDG" }
+        assertEquals(12 to 39_000, paris.flightCount to paris.minPoints)
+    }
+
+    @Test
+    fun s14_theRealFixtureSearchesAndPicksLikeThePythonScriptCounts() = withRealStore { store ->
+        store.setDestinationQuery("tokyo")
+        val tokyo = store.awaitState { it.destinationQuery == "tokyo" }
+        assertEquals(110, tokyo.resultCount)
+        assertEquals(
+            listOf(
+                AirportSuggestion("Tokyo", listOf("HND", "NRT"), isCityRow = true),
+                AirportSuggestion("Tokyo", listOf("HND"), isCityRow = false),
+                AirportSuggestion("Tokyo", listOf("NRT"), isCityRow = false),
+            ),
+            tokyo.destinationSuggestions,
+        )
+
+        store.setOriginQuery("bos")
+        assertEquals(16, store.awaitState { it.originQuery == "bos" }.resultCount)
+        store.pickDestination(listOf("HND"))
+        assertEquals(9, store.awaitState { it.destinationPick != null }.resultCount)
+        store.pickDestination(listOf("HND", "NRT"))
+        assertEquals(16, store.awaitState { it.destinationPick?.isCityRow == true }.resultCount)
+
+        store.setDestinationQuery("nrt")
+        val nrt = store.awaitState { it.destinationQuery == "nrt" }
+        assertEquals(listOf(AirportSuggestion("Tokyo", listOf("NRT"), isCityRow = false)), nrt.destinationSuggestions)
+        assertEquals(7, nrt.resultCount)
+
+        store.resetAll()
+        store.setOriginQuery("new york")
+        assertEquals(113, store.awaitState { it.originQuery == "new york" }.resultCount)
+        store.setOriginQuery("")
+        store.setDestinationQuery("sydeny")
+        val sydney = store.awaitState { it.destinationQuery == "sydeny" }
+        assertEquals(43, sydney.resultCount)
+        assertEquals(listOf(AirportSuggestion("Sydney", listOf("SYD"), isCityRow = false)), sydney.destinationHint)
+    }
+
+    @Test
+    fun p3_theShippedPassengerFiguresMatchAirportsJson() {
+        val inFile = objects(File(fixtures, "airports.json")).filter { "code" in it }
+            .associate { it.getValue("code") to it.getValue("annualPassengers").toLong() }
+        assertEquals(inFile, AIRPORT_PASSENGERS)
     }
 
     @Test

@@ -63,7 +63,7 @@ shared/schemas/     Room's exported schema JSON (version 1)
 
 ### 4.1 State
 
-Steps 3.3 and 3.4 built everything here except the suggestions, which Step 3.5 adds. `resultCount` is `results.size`, so the two can't disagree (C1).
+Steps 3.3 to 3.5 built all of this. `resultCount` is `results.size`, so the two can't disagree (C1).
 
 ```kotlin
 data class ExplorerState(
@@ -83,6 +83,11 @@ data class ExplorerState(
     val savedSelected: SavedFlightItem?,  // L7
     val pendingWriteIds: Set<String>,     // save/remove in flight → disable button (V7)
     val messages: List<UserMessage>,      // one-shot errors; the UI calls messageShown(id)
+    val originHint: List<AirportSuggestion>,      // S13: every fuzzy match, in ranked order; empty for any other tier
+    val destinationHint: List<AirportSuggestion>,
+    val originPick: AirportSuggestion?,           // S14: the tapped row; the app shows "Tokyo (HND)" while it's set
+    val destinationPick: AirportSuggestion?,
+    val isLocationShared: Boolean,                // D16: fills the ⌖ button
 )
 ```
 
@@ -96,7 +101,7 @@ data class ExplorerState(
 
 | Group | Methods |
 |---|---|
-| Search | `setOriginQuery(text)`, `setDestinationQuery(text)`, `pickOrigin(codes)`, `pickDestination(codes)` |
+| Search | `setOriginQuery(text)` and `setDestinationQuery(text)`, which also clear that field's pick; `pickOrigin(codes)` and `pickDestination(codes)`, passing a suggestion's codes; `setUserLocation(latitude, longitude)`, only after the user taps ⌖ (D16) |
 | Filters | `setDateRange(startIso?, endIso?)`, `setCabin(cabin?)`, `setMaxPoints(points?)`, `toggleProgram(name)`, `clearFilter(kind)`, `resetAll()` |
 | Selection | `select(flightId?)`, `selectSaved(flightId?)`. Selecting the selected flight again deselects it (L2) |
 | Saved | `toggleSave(flightId)` for a flight in the results, `removeSaved(flightId)` for the Saved view. Each flight has at most one write at a time (V7) |
@@ -127,7 +132,7 @@ val state: StateFlow<ExplorerState> = combine(
 
 ### 4.4 Search engine
 
-**Status:** implemented and tested in `shared`. It isn't wired into a store or screens yet. The rules are in DOMAIN_RULES §2 and §2b. The design is the owner's (D11–D19); Claude proposed the numbers in D19.
+**Status:** implemented and tested in `shared`, and connected to the store in Step 3.5. Each side's engine is built when the cache changes. The screens come in Phases 4 and 5. The rules are in DOMAIN_RULES §2 and §2b. The design is the owner's (D11–D19); Claude proposed the numbers in D19.
 
 ```mermaid
 flowchart LR
@@ -464,7 +469,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Fetch and decode | Reads the whole response, then decodes it on `Dispatchers.Default` | O(n). Measured on a Mac JVM with a fake network, after warm-up: 0.4 MB in 6–13 ms, 10× 4.3 MB in 36–109 ms, 100× 43 MB in 178–274 ms. Used heap right after decoding, garbage included: 10, 53 and 332 MB. Phones are slower; not measured | ~100k flights | Stream the array with `decodeToSequence`, or page the API |
 | Cache (Room + bundled SQLite) | Full replace in one transaction | O(n). Replace / read on a file, measured on a Mac JVM: 3–9 / 1–10 ms at 1k, 31–72 / 12–34 ms at 10k, 270–549 / 112–279 ms at 100k. On the iOS simulator's debug build: 17–23 / 27–50 ms, 169–181 / 289–371 ms, 1.8–2.1 / 2.9–3.2 s. Both run off the main thread. File size: 147 KB, 1.3 MB, 13 MB, about 130 bytes per flight. Android not measured yet | ~100k rows | Diff: upsert changed rows and delete missing ones; indexes on `departureDate`, `origin`, `destination`, `points`. The bundled modern SQLite also offers full-text search (FTS5) if search ever moves into the database. |
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default`, sorted once per data change | Measured in Step 3.1, on a Mac JVM after warm-up / the iOS simulator's debug build, excluding text search, at 1k, 10k and 100k. Filter per input change, O(n): 0.14–0.16, 0.35–2 and 0.46–0.58 ms / 0.12–0.15, 1.2–1.3 and 12–18 ms. Sort per data change, O(n log n): 0.23–0.28, 2–5 and 22–23 ms / 1.8–2.2, 33–36 and 482–520 ms. Filter options per data change, O(n): 0.38–0.43, 1–2.3 and 4.6–4.7 ms / 0.8–0.9, 8.4–9.3 and 91–104 ms. Android not measured yet. | ~100k flights | Build a marker's flights only when its sheet opens (4.1 ms per change + 1.6 ms per sheet at 100k); then push predicates into indexed SQL that returns ids and page the results |
-| Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. The pass over flights brings one keystroke to at most 0.006 ms at 1k, 0.047 ms at 10k and 0.56 ms at 100k (measured on a Mac in Java). | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
+| Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. A whole keystroke through the store, from search to results and markers, measured in Step 3.5 at 1k, 10k and 100k flights on a Mac JVM / the iOS simulator's debug build: 0.38–0.64, 0.38–1.7 and 0.8–36 ms / 0.42–1.1, 3–10 and 34–105 ms. Most of that is the pass over flights, not the airport lookup. Android not measured yet. | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n). Measured at 1k, 10k and 100k flights on a Mac JVM: 0.22, 0.5–0.59 and 2.5–9.3 ms. On the iOS simulator's debug build: 0.58–0.65, 5–5.9 and 53–63 ms. One 64-segment route line takes about 0.04 ms on both. Android not measured yet | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
 | State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission. Measured at 1k, 10k and 100k flights, on a Mac JVM / the iOS simulator's debug build. `reduce` with no filters: 1.1–1.7, 4.4–5.4 and 17–34 ms / 10–11, 106–108 and 1,149–1,264 ms. With narrow filters: 0.6–0.8, 1.9–2.7 and 4.7–5.7 ms / 0.7–1, 7–7.7 and 74–79 ms. `index`, per data change: 0.7–1.4, 9.7–12 and 68–79 ms / 5–6, 87–90 and 1,300–1,353 ms. Android not measured yet | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
 | Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved). V5 is one statement, so a refresh's cost grows with saved flights, not with the response. A whole refresh of 100k flights on a Mac JVM took 240–284 ms with none saved, 248–268 ms with 1k saved and 264–269 ms with 10k saved. Not measured on iOS or Android | 10k+ | Paging in the Saved tab |
