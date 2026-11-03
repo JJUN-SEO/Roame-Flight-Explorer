@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 5.2, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 5.3, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -359,7 +359,7 @@ Each step has the same goal, coverage, QA rows and "done when" as its Android st
 | Step | Mirrors | iOS specifics |
 |---|---|---|
 | [x] 5.1 App shell and live list | 4.1 | `NSAllowsLocalNetworking` and `API_BASE_URL` in `Info.plist`, `ExplorerModel`, and `TabView`. Remove the temporary count from Step 3.6 and the starter's `Greeting.kt`. Use Xcode's Thread Performance Checker instead of StrictMode. Portrait only in `Info.plist` (D28); ask the owner first, because their local signing changes are in that file |
-| [ ] 5.2 Search | 4.2 | Native text fields, with the dropdown under the focused field |
+| [x] 5.2 Search | 4.2 | Native text fields, with the dropdown under the focused field |
 | [ ] 5.3 Filters | 4.3 | `.sheet` with detents and `DatePicker`. Convert dates from year, month and day components |
 | [ ] 5.4 Selection, card and saved flights | 4.4 | `.sensoryFeedback` for haptics and an overlay toast with Retry |
 | [ ] 5.5 Map | 4.5 | MapKit: `Map`, `Annotation`, and `MapPolyline` with `contourStyle: .geodesic`. With airplane mode on and the map never opened, MapKit should still draw markers over empty tiles (D24). If it doesn't, stop and ask the owner |
