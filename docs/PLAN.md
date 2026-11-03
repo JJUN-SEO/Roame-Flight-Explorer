@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.4, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.5, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D26) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -298,7 +298,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Build:** `FilterChip`, the four sheets, `ResultSummary` and the filtered-empty state.
 - **Done when:** those QA rows pass, and the date picker's UTC millis never shift a date.
 
-#### [ ] 4.4 Selection, card and saved flights
+#### [x] 4.4 Selection, card and saved flights
 
 - **Goal:** select, save and remove work, and failures never look like success.
 - **Covers:** L2, L4, L6, L7, V3, V4, V7, V8, SEL-1, SEL-2, SEL-3, SAVE-1, OFF-6, OFF-7, OFF-8, UX-2. QA: Q11, Q12, Q13, Q20.
