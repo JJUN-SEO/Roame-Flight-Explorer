@@ -79,9 +79,9 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
 | PERF-1 | Scrolling, searching, filtering and map interaction stay responsive with the full dataset | No visible jank while scrolling 1,000 rows or typing quickly. The map stays smooth while results change. | — | ⬜ |
-| PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | ⬜ |
+| PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | 🟨 Android launch clean; full session in Step 4.8 |
 | PERF-3 | Results always reflect the user's latest search and filter choices | A test sends rapid query changes and sees only the final query's results. A slow, stale computation can never overwrite a newer one (`mapLatest`). | — | ✅ 2026‑11‑02 |
-| PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | ⬜ |
+| PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | 🟨 LeakCanary installed; scripted session in Step 4.8 |
 
 ## 7. Offline & error handling
 
@@ -103,7 +103,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 |---|---|---|---|---|
 | UX-1 | Smooth, understandable experience: responsive scrolling and map gestures | See PERF-1 and MAP-4. | — | ⬜ |
 | UX-2 | Consistent selection | See SEL-1 to SEL-3. The selected row and the selected marker are visually highlighted. | L1–L7 | 🟨 |
-| UX-3 | Clear loading, empty and error states | Every state in [UI_SPEC.md §4](UI_SPEC.md#4-state-catalogue) is implemented on both platforms. | R, C | ⬜ |
+| UX-3 | Clear loading, empty and error states | Every state in [UI_SPEC.md §4](UI_SPEC.md#4-state-catalogue) is implemented on both platforms. | R, C | 🟨 |
 | UX-4 | Cohesive, visually appealing UI with attention to spacing, typography, hierarchy and interaction feedback | The design tokens in UI_SPEC are used. There is pressed, selected and loading feedback, plus haptics on save. Roame is a functional reference, not a pixel spec. | — | ⬜ |
 
 ## 9. Testing & ownership
@@ -139,5 +139,5 @@ The brief only requires the app to stay smooth with the 1,000-flight fixture (PE
 | SCALE-3 | The cache refresh scales | One transaction with batched inserts. Beyond ~100k rows, switch to incremental sync (ETag / `If-None-Match`, deltas) instead of a full replace. | Documented |
 | SCALE-4 | The API contract can grow without breaking clients | Pagination, compression and conditional requests can be added alongside `GET /flights` without changing its current response. | Documented |
 | SCALE-5 | The map stays smooth with many destinations | Up to ~200 markers render individually. Beyond that, markers are clustered by zoom level. The fixture has 24. | Documented |
-| SCALE-6 | Lists are virtualised | `LazyColumn` / SwiftUI `List` with stable ids, so memory is proportional to the visible rows. Marker sheets and the Saved list use the same approach. | ⬜ |
+| SCALE-6 | Lists are virtualised | `LazyColumn` / SwiftUI `List` with stable ids, so memory is proportional to the visible rows. Marker sheets and the Saved list use the same approach. | 🟨 |
 | SCALE-7 | In-memory indexes have a known memory budget | The size of the search indexes and the in-memory dataset is measured at 10k and 100k flights and written down. If a budget is exceeded, filtering moves into indexed SQL queries (ARCHITECTURE §12). | ⬜ |

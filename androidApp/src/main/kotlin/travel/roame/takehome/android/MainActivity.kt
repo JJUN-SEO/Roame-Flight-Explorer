@@ -3,17 +3,17 @@ package travel.roame.takehome.android
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.text.BasicText
-import androidx.compose.ui.Modifier
-import travel.roame.takehome.Greeting
+import androidx.activity.enableEdgeToEdge
+import travel.roame.takehome.android.ui.ExplorerApp
+import travel.roame.takehome.android.ui.RoameTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        val store = (application as RoameApp).graph.store
         setContent {
-            BasicText(Greeting().message(), Modifier.fillMaxSize().wrapContentSize())
+            RoameTheme { ExplorerApp(store) }
         }
     }
 }

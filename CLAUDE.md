@@ -92,7 +92,7 @@ When a † command starts working, update this table and `README.md`.
 
 If `./gradlew` says "Unable to locate a Java Runtime", first run `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
-**Toolchain** (pinned by the starter): Kotlin 2.4.21 · Gradle 9.7.0 · AGP 9.3.1 · JDK 25 (auto-provisioned) · compileSdk 37 · minSdk 26 (raised from the starter's 23, D22) · iOS 17 · Swift 6 · Compose BOM 2026.09.00. Library versions go in `gradle/libs.versions.toml` and must be compatible with this toolchain.
+**Toolchain** (pinned by the starter): Kotlin 2.4.21 · Gradle 9.7.0 · AGP 9.3.1 · JDK 25 (auto-provisioned) · compileSdk 37 · targetSdk 36 (lowered from 37, D26) · minSdk 26 (raised from the starter's 23, D22) · iOS 17 · Swift 6 · Compose BOM 2026.09.00. Library versions go in `gradle/libs.versions.toml` and must be compatible with this toolchain.
 
 ## Conventions
 
@@ -112,6 +112,7 @@ If `./gradlew` says "Unable to locate a Java Runtime", first run `export JAVA_HO
 These were found in the starter and the fixture.
 
 - **Android networking:**
+  - Android 17 blocks apps that target API 37 from local network addresses such as `10.0.2.2`, and the request just times out. So the app targets 36 (D26).
   - The starter manifest has **no INTERNET permission**.
   - The API is cleartext HTTP, so add a network security config that allows `10.0.2.2` and `localhost`.
   - The emulator reaches the host at `http://10.0.2.2:8080`.

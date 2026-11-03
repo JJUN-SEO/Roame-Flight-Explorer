@@ -121,7 +121,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 |---|---|---|---|
 | P1 | The starter app builds and shows "Hello world!" | ✅ 2026‑11‑01, Claude: `Medium_Phone_API_37.0` emulator (Google Play image), screenshot checked | ✅ 2026‑11‑01, Claude: iPhone 18 Pro simulator (iOS 27.0), screenshot checked |
 | P2 | `./gradlew :server:run` → `curl` returns 200 and the body matches the fixture | ✅ 2026‑11‑02, Claude: 200, `application/json`, no differences from the fixture, also from a clean copy of the repo with no `local.properties` | — |
-| Q1 | Fresh install with the API running → loading state (it may only flash, because the local API is fast) → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | | |
+| Q1 | Fresh install with the API running → loading state (it may only flash, because the local API is fast) → 1,000 flights, count shown, date chip shows Feb 1 – Apr 1 | 🟨 2026‑11‑02, emulator (Claude): loading, then 1,000 flights and the count. The date chip comes in Step 4.3 | |
 | Q2 | From `"  BoStOn "` → BOS only. To `tokyo` → HND and NRT. To `nrt` → NRT only. | | |
 | Q2b | Fuzzy search: To `sidnee` → SYD with the hint "Showing Sydney (SYD)"; `sydeny` → SYD; `berlin` → filtered-empty state; `São Paulo` → GRU with no hint | | |
 | Q2c | Location (D16): with no location, typing To `tokio` shows "Showing Tokyo (HND), Tokyo (NRT)" (HND is busier). Tap ⌖ and allow, with a simulated Seattle location: no error, ⌖ is filled, From `y` lists Vancouver (YVR) first, and To `tokio` doesn't change (P5). Deny: no error, volume-only ranking. Airplane mode + ⌖: still works (GPS needs no internet). The flight list order never changes with location (D17). | | |
@@ -142,7 +142,7 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q15 | Remove a saved flight's record from the fixture, refresh → it is still in Saved with "No longer listed" | | |
 | Q16 | (T4) Stop the API, pull to refresh → stale banner, data intact, Retry shown | | |
 | Q17 | API stopped: force-quit, relaunch → cached results + saved flights; search and filters work; remove a saved flight | | |
-| Q18 | Clear app data (or reinstall) with the API stopped → full-screen offline error; start the API → Try again → loads | | |
+| Q18 | Clear app data (or reinstall) with the API stopped → full-screen offline error; start the API → Try again → loads | ✅ 2026‑11‑02, emulator (Claude) | |
 | Q19 | Temporarily change the fixture to `{"flights":[]}`, refresh → "No flights available" (not an error). Restore it, stop the API, refresh → stale banner, not the empty message | | |
 | Q20 | Simulated save failure (debug toggle or test build) → snackbar, heart unchanged | | |
 | Q21 | Rotation, or the app in the background for a minute → state preserved (Android) | | — |

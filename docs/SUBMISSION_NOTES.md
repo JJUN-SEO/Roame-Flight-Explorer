@@ -65,6 +65,7 @@ The full rationale and the rejected alternatives are in [ARCHITECTURE.md §11](A
 | D23 | MapLibre's **default package, which uses Vulkan**. Every Step 0.3 check passed on it. Claude recommended the OpenGL package, for its wider device support and smaller size. | MAP-1 | Owner's choice (over Claude's recommendation) | Proven on a scratch branch; not built yet | 2026‑11‑02 |
 | D24 | On Android, a map that can't load shows **a message with Retry**, and flights stay available in the list. This only affects a map that has never loaded online. | OFF-9 | **Owner** (over drawing markers on a plain background) | Decided; built in Step 4.5 | 2026‑11‑02 |
 | D25 | **No QA switches on the local API.** The planned `--mode` and `--fixture` options were built in Step 1.2, then removed before being pushed. The brief doesn't ask for them, and no app code or test depends on them. Automated tests fake empty and failed responses. By hand, stop the API or temporarily edit the fixture. | OFF-5 | **Owner** (over Claude's mild preference to keep them) | Removed | 2026‑11‑02 |
+| D26 | The Android app **targets API 36** (Android 16), lowered from the starter's 37. Android 17 blocks apps that target 37 from local network addresses, including the emulator's `10.0.2.2`, unless the user grants a "Nearby devices" permission. The app still runs on Android 17. | DATA-1, OFF-4 | **Owner** (Claude's recommendation over `adb reverse` with `localhost`, and over asking for the permission) | Built | 2026‑11‑02 |
 
 ## 3. Assumptions
 
@@ -336,6 +337,7 @@ These are sensible defaults rather than proof. No source publishes a split for a
 - On iOS, the 5 s connect limit has no effect, because Ktor's Darwin engine ignores it. A stalled connection gives up at the 15 s request limit, with the same error (R10).
 - Number formatting is en-US only (`25,000 pts`).
 - Android 8 (API 26) and up only (D22). The brief doesn't ask for older versions.
+- The Android app targets API 36, not Android 17's 37, so it doesn't opt into Android 17's local network permission (D26).
 - Local HTTP only: cleartext is allowed for `localhost` / `10.0.2.2`, and physical devices need extra config.
 - No cross-device sync (out of scope per the brief).
 - *…*
@@ -371,6 +373,7 @@ See [TEST_PLAN.md §5](TEST_PLAN.md#5-manual-qa-checklist) for the filled-in QA 
 - Selection and saved state (Step 3.4, 2026‑11‑02): store tests with fakes, plus saving and removing through a real database after a failed refresh. No screen shows them yet.
 - Search in the store (Step 3.5, 2026‑11‑02): on the real fixture through the whole app graph, `tokyo`, picks, `nrt`, `new york` and `sydeny` give the counts a separate Python script gives. The shipped passenger figures equal `fixtures/airports.json`. No screen shows search yet, and no device location is read yet.
 - The Swift bridge (Step 3.6, 2026‑11‑02, iPhone 18 Pro simulator): the iOS app showed "1,000 flights" from the running API. With the API stopped, the relaunched app showed "1,000 flights" again, from its database in Documents. No App Transport Security setting was needed for `http://localhost:8080`. **Not yet checked:** the store in the Android app (Step 4.1).
+- Android app shell and list (Step 4.1, 2026‑11‑02, `Medium_Phone_API_37.0` emulator, Android 17): with the app targeting API 37, every request to `10.0.2.2` timed out while the emulator's shell reached the API, which led to D26. With target 36, a fresh install showed "Finding flights…", then 1,000 flights (QA Q1). With the API stopped, it showed "Can't reach Flight Explorer", and Try again loaded the flights once the API was up (Q18). StrictMode logged nothing on the main thread after two fixes, and LeakCanary reported that it was running. **Not checked yet:** the synced-empty, server and bad-data screens on a device (the store tests cover the states), dark mode, and rotation.
 
 ## 8. Third-party code: Double Metaphone
 
@@ -456,3 +459,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑11‑02 | Step 3.4 | Added selection, saved state, pending writes and messages to the store, and their tests | 25 deliberate bugs: tests caught 23, and the 2 misses were gaps that were then closed. One needed a selection made at the exact moment an update finishes, which the test recreates by selecting from inside the reducer. Removed a branch nothing used |
 | 2026‑11‑02 | Step 3.5 | Connected search to the store: the shipped passenger figures (generated from `fixtures/airports.json`, not typed), suggestions, picks, the hint and location ranking, with tests | Expected counts on the real fixture came from a separate Python script. 24 deliberate bugs: tests caught 20. Three misses were gaps that were then closed; the fourth showed a special case that couldn't change any result, so it was removed. One test expectation of Claude's was wrong (an exact code ranks first, S5), and was corrected rather than the code |
 | 2026‑11‑02 | Step 3.6 | Wrote the Swift bridge and its tests, and a temporary count in the iOS app; added a test for the search examples table (S11) | Screenshots from the simulator: the live count from the API, then the same count after relaunching with the API stopped |
+| 2026‑11‑02 | Step 4.1 | Wrote the Android shell, list and states; traced why requests to `10.0.2.2` timed out; fixed two main-thread disk reads | Screenshots and screen text from the emulator. The cause was found by testing, not assumed: the shell reached the API but the app didn't, on both networks; the app's own log showed a connect timeout; Android's docs then confirmed Android 17's local network permission. All three fixes were tested before the owner chose one (D26) |

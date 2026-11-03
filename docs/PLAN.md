@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.1, in progress. Update this line at every review gate.
+> **Current step:** 4.1, committed and waiting for the owner's review. Update this line at every review gate.
 
-This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D26) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D25 doesn't work in practice.
+- finding that any of D1–D26 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -277,7 +277,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Covers:** R7, R9, T3, OFF-4, OFF-5, PERF-2, PERF-4, SCALE-6, UX-3. QA: Q1, Q18.
 - **Read:** ARCHITECTURE §6.4 and §9; UI_SPEC §1, §2.1, §4 and §6.
 - **Build:**
-  - The INTERNET permission, the network security config, `BuildConfig.API_BASE_URL`, `RoameApp`, StrictMode and LeakCanary. Correct ARCHITECTURE §9, which still mentions `DriverFactory`.
+  - The INTERNET permission, the network security config, `BuildConfig.API_BASE_URL`, `RoameApp`, StrictMode and LeakCanary, and target API 36 (D26). Correct ARCHITECTURE §9, which still mentions `DriverFactory`.
   - The theme and tabs, `FlightRow` and `RouteConnector`, and a `LazyColumn` with stable ids.
   - First load, the unavailable errors with Retry, and synced empty.
 - **Done when:** QA rows Q1 and Q18 pass, and StrictMode reports nothing on the main thread.

@@ -39,12 +39,15 @@ internal class KtorFlightsApi(
     requestTimeoutMillis: Long = REQUEST_TIMEOUT_MS,
 ) : FlightsApi {
 
-    private val client = HttpClient(engine) {
-        expectSuccess = false
-        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-        install(HttpTimeout) {
-            connectTimeoutMillis = CONNECT_TIMEOUT_MS
-            this.requestTimeoutMillis = requestTimeoutMillis
+    // Created on first use, inside the background context below: setting up JSON reads from disk (PERF-2).
+    private val client by lazy {
+        HttpClient(engine) {
+            expectSuccess = false
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+            install(HttpTimeout) {
+                connectTimeoutMillis = CONNECT_TIMEOUT_MS
+                this.requestTimeoutMillis = requestTimeoutMillis
+            }
         }
     }
 

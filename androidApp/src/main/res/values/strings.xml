@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copy from UI_SPEC §4. -->
+<resources>
+    <string name="app_name">Roame Starter</string>
+    <string name="tab_explore">Explore</string>
+    <string name="tab_saved">Saved</string>
+
+    <string name="loading">Finding flights…</string>
+    <plurals name="result_count">
+        <item quantity="one">%s flight</item>
+        <item quantity="other">%s flights</item>
+    </plurals>
+
+    <string name="error_offline_title">Can\'t reach Flight Explorer</string>
+    <string name="error_offline_body">Make sure the local API is running and you\'re connected, then try again.</string>
+    <string name="error_timeout">The server took too long to respond.</string>
+    <string name="error_server">The server had a problem (%d).</string>
+    <string name="error_invalid_data">We received flight data we couldn\'t read.</string>
+    <string name="error_unknown">Something went wrong while loading flights.</string>
+    <string name="try_again">Try again</string>
+
+    <string name="synced_empty_title">No flights available right now</string>
+    <string name="synced_empty_body">The server returned no flights. Pull to refresh later.</string>
+
+    <string name="saved_empty_title">No saved flights yet</string>
+    <string name="saved_empty_body">Tap ♡ on any flight to keep it here — even offline.</string>
+
+    <string name="row_description">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s</string>
+</resources>

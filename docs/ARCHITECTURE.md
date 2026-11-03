@@ -261,7 +261,7 @@ fun RoomDatabase.Builder<AppDatabase>.configure(): AppDatabase =
 
 Only the **file location** differs per platform:
 
-- Android: `Room.databaseBuilder<AppDatabase>(context, context.getDatabasePath("roame.db").absolutePath)`
+- Android: `Room.databaseBuilder<AppDatabase>(context.applicationContext, "roame.db")`. Pass the name, not `getDatabasePath(…)`: resolving the path touches the disk, and this runs on the main thread (StrictMode, Step 4.1)
 - iOS: `Room.databaseBuilder<AppDatabase>(name = <Documents dir>/roame.db)`
 - Tests (JVM): `Room.inMemoryDatabaseBuilder<AppDatabase>()`, or a temp file for the "survives reopen" tests. These builders exist per platform and aren't visible from `commonTest`, so tests reach them through an `expect` function, with `actual`s in `jvmTest` and `iosTest`
 
@@ -321,7 +321,7 @@ Only the **file location** differs per platform:
 
 | Platform | Default base URL | Configured in | Platform setup required |
 |---|---|---|---|
-| Android emulator | `http://10.0.2.2:8080` | `BuildConfig.API_BASE_URL` (`buildFeatures { buildConfig = true }`) | Add `<uses-permission android:name="android.permission.INTERNET"/>`, which the starter manifest **lacks**. Add `res/xml/network_security_config.xml` that allows cleartext traffic to `10.0.2.2` and `localhost` only. |
+| Android emulator | `http://10.0.2.2:8080`, which needs target API 36 or lower (D26) | `BuildConfig.API_BASE_URL` (`buildFeatures { buildConfig = true }`) | Add `<uses-permission android:name="android.permission.INTERNET"/>`, which the starter manifest **lacks**. Add `res/xml/network_security_config.xml` that allows cleartext traffic to `10.0.2.2` and `localhost` only. |
 | iOS simulator | `http://localhost:8080` | Info.plist key `API_BASE_URL` | Add `NSAppTransportSecurity › NSAllowsLocalNetworking = YES`. In Step 3.6 the simulator fetched `http://localhost:8080` without it, so Step 5.1 should check whether it's still needed. |
 | Physical devices | The Mac's LAN IP | Same keys | Android: add the IP to the network security config. iOS: add `NSLocalNetworkUsageDescription`. |
 
@@ -396,8 +396,9 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 ## 9. Android integration
 
-- `RoameApp : Application` builds `AppGraph(DriverFactory(this), BuildConfig.API_BASE_URL)`. Register it in the manifest.
-- Screens read `app.graph.explorerStore.state.collectAsStateWithLifecycle()`. There is no Android `ViewModel` layer, because the shared store already outlives configuration changes.
+- `RoameApp : Application` builds `createAppGraph(this, BuildConfig.API_BASE_URL)` lazily, on first use. Register it in the manifest.
+- Screens read `app.graph.store.state.collectAsStateWithLifecycle()`.
+- The app targets API 36 (D26). Debug builds turn on StrictMode, and a fresh launch logs no main-thread disk or network access (Step 4.1). That needed two fixes: the database builder gets a file name rather than a path, and `KtorFlightsApi` creates its HTTP client on first use, on a background thread, because setting up JSON reads from disk. There is no Android `ViewModel` layer, because the shared store already outlives configuration changes.
 - Navigation uses `rememberSaveable` tab state. Two tabs don't need a navigation library.
 - Lists use `LazyColumn(items(results, key = { it.id }))`, with stable and immutable models (`@Immutable` where helpful).
 - Add these dependencies: `material3`, `lifecycle-runtime-compose`, MapLibre (D8), and `leakcanary-android` (debug only).
@@ -461,6 +462,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D23 | MapLibre's default package, which uses Vulkan | Owner's choice (over Claude's recommendation of OpenGL) | It's the package MapLibre's docs tell most apps to use, and they say Vulkan performs better on modern devices. Every Step 0.3 check passed on it. Accepted costs: it needs Vulkan 1.0, the docs call it "newer, some open issues remain", and the debug APK is larger (69.9 MB vs 62.4 MB). Switching is a one-line change | `android-sdk-opengl` (runs on "any device", smaller; Claude's recommendation); `android-sdk-vulkan-opengl` (both, about 10 MB more) |
 | D24 | On Android, a map that can't load shows a message with Retry | **Owner** (over drawing markers on a plain background) | The brief says offline applies to flight data and map tiles aren't required, and flights stay available in the list. MapLibre needs its style before it can draw anything, so a map that has never loaded online would otherwise be blank. Once it has loaded, it works offline from its cache. iOS is expected not to need this, because MapKit has no style to download; Step 5.5 checks | Markers on a plain built-in background: Claude's attempt reported success but never drew, so the effort is unknown |
 | D25 | No QA switches: the local API only serves `GET /flights` | **Owner** (over Claude's mild preference to keep them) | The brief doesn't ask for them, and no app code or test uses them, because automated tests fake responses with `MockEngine`. This is a take-home, so 46 more lines to explain weren't worth it. By hand, stop the API for a failed request and temporarily edit the fixture for an empty one | Keep `--mode` and `--fixture`: empty and loading screens are easier to see by hand |
+| D26 | The Android app targets API 36 (Android 16), not 37 | **Owner** (Claude's recommendation) | Android 17 blocks apps that target API 37 from local network addresses, including the emulator's `10.0.2.2`, unless they hold the runtime `ACCESS_LOCAL_NETWORK` permission. TCP connections just time out. Apps that target 36 or lower keep access automatically and still run on Android 17. Tested in Step 4.1: target 37 timed out, target 36 loaded 1,000 flights | `adb reverse tcp:8080 tcp:8080` with `localhost` (tested; an extra step after every emulator start); asking for the permission (a "Nearby devices" prompt before any flight loads, and nothing loads if it's denied) |
 
 ## 12. Scalability
 
