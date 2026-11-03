@@ -4,7 +4,7 @@
 >
 > **Current step:** 4.6, in progress. Update this line at every review gate.
 
-This plan turns the decided design (D1–D27) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D28) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D27 doesn't work in practice.
+- finding that any of D1–D28 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -342,7 +342,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 
 - **Goal:** a full pass over the whole app before starting iOS.
 - **Covers:** TEST-6, PERF-1. QA: all Android rows Q1–Q24, including rotation (Q21).
-- **Found in Step 4.5, for the owner to decide:** in landscape, the search fields, chips, summary and List/Map switch fill the whole height, so neither the list nor the map has room. Rotation itself keeps the state and the map's camera.
+- **Found in Step 4.5:** in landscape the header left no room for the list or the map. The owner chose portrait only (D28), built on Android right after Step 4.5. Rotation itself keeps the state and the map's camera.
 - **Done when:** every Android row is filled in honestly. Problems found are fixed, or listed for the owner.
 
 ### Phase 5: iOS app
@@ -351,7 +351,7 @@ Each step has the same goal, coverage, QA rows and "done when" as its Android st
 
 | Step | Mirrors | iOS specifics |
 |---|---|---|
-| [ ] 5.1 App shell and live list | 4.1 | `NSAllowsLocalNetworking` and `API_BASE_URL` in `Info.plist`, `ExplorerModel`, and `TabView`. Remove the temporary count from Step 3.6 and the starter's `Greeting.kt`. Use Xcode's Thread Performance Checker instead of StrictMode |
+| [ ] 5.1 App shell and live list | 4.1 | `NSAllowsLocalNetworking` and `API_BASE_URL` in `Info.plist`, `ExplorerModel`, and `TabView`. Remove the temporary count from Step 3.6 and the starter's `Greeting.kt`. Use Xcode's Thread Performance Checker instead of StrictMode. Portrait only in `Info.plist` (D28); ask the owner first, because their local signing changes are in that file |
 | [ ] 5.2 Search | 4.2 | Native text fields, with the dropdown under the focused field |
 | [ ] 5.3 Filters | 4.3 | `.sheet` with detents and `DatePicker`. Convert dates from year, month and day components |
 | [ ] 5.4 Selection, card and saved flights | 4.4 | `.sensoryFeedback` for haptics and an overlay toast with Retry |

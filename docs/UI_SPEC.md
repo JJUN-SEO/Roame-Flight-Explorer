@@ -216,7 +216,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 
 | | iOS (SwiftUI, iOS 17) | Android (Compose, M3) |
 |---|---|---|
-| Shell | `TabView` + `NavigationStack` | `Scaffold` + `NavigationBar` |
+| Shell | `TabView` + `NavigationStack`. Portrait only (D28) | `Scaffold` + `NavigationBar`. Portrait only (D28) |
 | Sheets | `.sheet` + `.presentationDetents([.medium, .large])` | `ModalBottomSheet` |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
 | Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)` | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
