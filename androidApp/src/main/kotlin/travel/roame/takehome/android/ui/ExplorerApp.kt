@@ -7,30 +7,21 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -45,8 +36,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -66,9 +55,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -208,18 +194,11 @@ private fun ExploreScreen(
         DataStatus.Loading -> LoadingList()
         is DataStatus.Unavailable -> UnavailableMessage(data.error, store::refresh)
         is DataStatus.Ready -> when {
-            // UI_SPEC §4: a successful empty response is not an error (R4). Its copy says to pull to refresh.
+            // UI_SPEC §4: a successful empty response is not an error (R4).
             state.options.isEmpty -> Column {
-                StaleBanner(data, onRetry = store::refresh)
-                PullToRefresh(data.isRefreshing, store::refresh) {
-                    BoxWithConstraints {
-                        Message(
-                            stringResource(R.string.synced_empty_title),
-                            stringResource(R.string.synced_empty_body),
-                            modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
-                        )
-                    }
-                }
+                StaleBanner(data)
+                RefreshProgress(data)
+                Message(stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
             }
             else -> Column {
                 var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
@@ -227,13 +206,11 @@ private fun ExploreScreen(
                 var showMap by view.showMap
                 SearchHeader(state, store)
                 FilterBar(state, store, onOpen = { openSheet = it })
-                // UI_SPEC §5: a map can't be pulled, so Map mode refreshes with ⟳.
-                ResultSummary(state, onReset = store::resetAll, trailing = { if (showMap) RefreshButton(data.isRefreshing, store::refresh) })
+                ResultSummary(state, onReset = store::resetAll)
                 // L4: switching changes only the view; the selection and filters stay in the store.
                 ViewSwitch(showMap, onChange = { showMap = it })
-                StaleBanner(data, onRetry = store::refresh)
-                // R11: an inline indicator, never a full-screen loader. The list shows the pull indicator instead.
-                if (showMap && data.isRefreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                StaleBanner(data)
+                RefreshProgress(data)
                 val selected = state.selected
                 WithSelectionCard(
                     card = selected?.let { flight ->
@@ -261,9 +238,7 @@ private fun ExploreScreen(
                                 modifier = Modifier.fillMaxSize(),
                             )
                             state.results.isEmpty() -> FilteredEmpty(state, onReset = store::resetAll)
-                            else -> PullToRefresh(data.isRefreshing, store::refresh) {
-                                ResultsList(state, store, view.listState, bottomInset)
-                            }
+                            else -> ResultsList(state, store, view.listState, bottomInset)
                         }
                     }
                 }
@@ -280,39 +255,26 @@ private fun ExploreScreen(
     }
 }
 
-/** R2: pull to refresh (UI_SPEC §5). The store ignores a pull while a refresh is running. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** R11: the refresh on launch shows a thin bar over the data, never a full-screen loader. */
 @Composable
-private fun PullToRefresh(isRefreshing: Boolean, onRefresh: () -> Unit, content: @Composable () -> Unit) {
-    PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) { content() }
+private fun RefreshProgress(data: DataStatus.Ready) {
+    if (data.isRefreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
 }
 
+/**
+ * R6, T4: the last refresh failed, so say how old the data is. There's no Retry (D29): the app refreshes
+ * when it opens, and the next success clears the banner (R11).
+ */
 @Composable
-private fun RefreshButton(isRefreshing: Boolean, onRefresh: () -> Unit) {
-    val label = stringResource(R.string.refresh)
-    IconButton(onClick = onRefresh, enabled = !isRefreshing, modifier = Modifier.semantics { contentDescription = label }) {
-        if (isRefreshing) {
-            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-        } else {
-            Text("⟳", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.titleLarge)
-        }
-    }
-}
-
-/** R6, T4: the last refresh failed, so say how old the data is, with Retry. Cleared by the next success (R11). */
-@Composable
-private fun StaleBanner(data: DataStatus.Ready, onRetry: () -> Unit) {
+private fun StaleBanner(data: DataStatus.Ready) {
     if (data.refreshError == null) return
     Surface(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
-        Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.stale_banner, syncTime(data.lastSuccessAt, System.currentTimeMillis())),
-                Modifier.weight(1f),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
-            )
-            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
-        }
+        Text(
+            stringResource(R.string.stale_banner, syncTime(data.lastSuccessAt, System.currentTimeMillis())),
+            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+        )
     }
 }
 
@@ -445,9 +407,9 @@ private fun UnavailableMessage(error: FetchError, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun Message(title: String, body: String?, icon: String? = null, modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
+private fun Message(title: String, body: String?, icon: String? = null, action: @Composable () -> Unit = {}) {
     Column(
-        modifier.fillMaxSize().padding(32.dp),
+        Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

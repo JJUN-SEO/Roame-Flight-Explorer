@@ -61,9 +61,9 @@ fun FilterBar(state: ExplorerState, store: ExplorerStore, onOpen: (FilterKind) -
     }
 }
 
-/** "238 flights · 2 filters" and Reset, which is hidden when there's nothing to reset (C1, C2, C4). [trailing] goes at the end. */
+/** "238 flights · 2 filters" and Reset, which is hidden when there's nothing to reset (C1, C2, C4). */
 @Composable
-fun ResultSummary(state: ExplorerState, onReset: () -> Unit, trailing: @Composable () -> Unit = {}) {
+fun ResultSummary(state: ExplorerState, onReset: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         val flights = pluralStringResource(R.plurals.result_count, state.resultCount, groupedCount(state.resultCount))
         val filters = state.activeFilters.size
@@ -73,7 +73,6 @@ fun ResultSummary(state: ExplorerState, onReset: () -> Unit, trailing: @Composab
             style = MaterialTheme.typography.titleMedium,
         )
         if (state.hasAnythingToReset) TextButton(onClick = onReset) { Text(stringResource(R.string.reset)) }
-        trailing()
     }
 }
 

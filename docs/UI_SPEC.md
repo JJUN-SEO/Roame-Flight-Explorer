@@ -34,7 +34,7 @@ Tab bar
 
 ```
 ┌────────────────────────────────────────┐
-│ Explore                          ⟳     │
+│ Explore                                │
 │ ┌────────────────────────────────────┐ │
 │ │ ✈︎ From   city or airport        ⓧ │ │
 │ ├────────────────────────────────────┤ │
@@ -43,7 +43,7 @@ Tab bar
 │ (Feb 1 – Apr 1)(Business ✓)(≤ 60k ✓)(Programs ▾)  Reset │
 │ 238 flights · 2 filters                │
 │ ┌──────── List ────────┬──── Map ────┐ │
-│ ⚠ Couldn't refresh · results from 3:42 PM   Retry │
+│ ⚠ Couldn't refresh · results from 3:42 PM │
 │ ┌────────────────────────────────────┐ │
 │ │ BOS ───────✈─────── CDG  25,000 pts│ │
 │ │ Boston → Paris          Prem. Econ.│ │
@@ -114,7 +114,7 @@ Each sheet shows a live **"Show N flights"** button. Choices apply as they're ma
 | `RouteConnector` | `ORIGIN ●──✈──● DEST` graphic | Used in the row (compact) and in the card |
 | `DestinationMarker` | Map pill showing `CODE count·minPts` | default · selected (accent, on top) · pressed |
 | `FlightCard` | Selection details + Save / Remove | idle · pending · error message shown |
-| `StatusBanner` | Stale, offline or refreshing info + Retry | stale · refreshing (inline progress) |
+| `StatusBanner` | Stale or offline info, with no Retry (D29) | stale · refreshing (inline progress) |
 | `EmptyState` / `ErrorState` | Full-area explanations | See §4 |
 | `Snackbar` / toast | One-shot `UserMessage` | "Couldn't save flight" + Retry |
 
@@ -126,14 +126,14 @@ Use the same copy on both platforms.
 |---|---|---|
 | First load | `DataStatus.Loading` | 6–8 skeleton rows (List) or a centred spinner (Map), with the label "Finding flights…" |
 | Ready | `Ready`, has results | Results. No banner when the last refresh succeeded. |
-| Refreshing | `Ready.isRefreshing` | Pull-to-refresh indicator or a thin progress bar. Content stays interactive. |
-| Stale / offline | `Ready.refreshError != null` (R6) | Banner: "Couldn't refresh · showing results from 3:42 PM" + **Retry**. Results stay usable. |
+| Refreshing | `Ready.isRefreshing` | A thin progress bar. Content stays interactive. |
+| Stale / offline | `Ready.refreshError != null` (R6) | Banner: "Couldn't refresh · showing results from 3:42 PM". Results stay usable. No Retry (D29): the next launch refreshes. |
 | Unavailable: offline | `Unavailable(Offline)` (R7) | Icon + "Can't reach Flight Explorer" + "Make sure the local API is running and you're connected, then try again." + **Try again** |
 | Unavailable: timeout | `Unavailable(Timeout)` | "The server took too long to respond." + **Try again** |
 | Unavailable: server | `Unavailable(Server(503))` | "The server had a problem (503)." + **Try again** |
 | Unavailable: bad data | `Unavailable(InvalidData)` | "We received flight data we couldn't read." + **Try again** |
 | Unavailable: other | `Unavailable(Unknown)` | "Something went wrong while loading flights." + **Try again** |
-| Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights. Pull to refresh later." No error styling. |
+| Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights." No error styling. |
 | Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
 | Location not shared | The user never tapped ⌖, or denied the permission (D16) | Nothing extra is shown and there is no error. Ranking uses airport volume only. ⌖ stays outlined. |
 | Location shared | Permission granted and a location received | ⌖ is filled with the accent colour. In the From field, matched airports near the user rank higher in the hint and suggestions. The To field doesn't use location. |
@@ -154,7 +154,7 @@ Use the same copy on both platforms.
 - **Tapping a row** selects it, highlights it and shows the card. Tapping the selected row again, or ✕, deselects it.
 - **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the snackbar with no haptic. A write succeeded when its id leaves `pendingWriteIds` with no `UserMessage` for it, because the store has no success event.
 - **Hearts:** each row has a ♡ that saves or removes the flight, the same as the card's button. While its write runs, it shows a spinner and ignores taps (V7).
-- **Pull to refresh** on the List (`.refreshable` on iOS, `PullToRefreshBox` on Android), and on the "No flights available" screen, whose copy asks for it. Map mode has a ⟳ button at the end of the summary row, and a thin progress bar while refreshing. The stale banner sits under the List | Map switch; on the "No flights available" screen it sits above the message.
+- **No manual refresh** (D29, owner): no pull to refresh and no ⟳ button. The app refreshes when it opens, showing a thin progress bar over the data, and the first-load error has Try again (R7). The stale banner sits under the List | Map switch; on the "No flights available" screen it sits above the message.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
 - **Map:**
   - Marker tap → sheet.
@@ -220,7 +220,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Sheets | `.sheet` + `.presentationDetents([.medium, .large])` | `ModalBottomSheet` |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
 | Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)` | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
-| Refresh | `.refreshable` | `PullToRefreshBox` |
+| Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |

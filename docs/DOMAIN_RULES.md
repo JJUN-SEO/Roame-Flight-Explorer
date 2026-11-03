@@ -260,14 +260,14 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 ## 9. Refresh, cache & offline (R)
 
 - **R1** On launch, show the cached data from the database immediately, without waiting for the network. Then start a refresh in the background.
-- **R2** A refresh is triggered by app launch, by pull-to-refresh, and by Retry. Only one refresh runs at a time; requests made while one is running are ignored.
+- **R2** A refresh is triggered by app launch, and by Retry on the first-load error (R7). There is no manual refresh, such as pull to refresh (D29). Only one refresh runs at a time; requests made while one is running are ignored.
 - **R3** **Success** means an HTTP 2xx status and a valid envelope. On success:
   - Replace the cache **atomically** in one transaction: delete all rows, insert all flights, set `lastSuccessAt`.
   - Then apply V5.
 - **R4** A successful response with `"flights": []` **is a success**. The cache becomes empty, `lastSuccessAt` is set, and the UI shows "No flights available". It is never shown as an error. *(assumption: a 200 response is authoritative)*
 - **R5** **Failure** means any of: no connection or connection refused (for example, the API is stopped), a timeout, a non-2xx status, or an invalid body. A valid response that can't be written to the database also counts as a failure, reported as `Unknown`. *(assumption)* On failure, the cache and saved flights are left untouched.
 - **R6** On failure after at least one successful sync:
-  - Keep showing the cached data, with a stale indicator: "Couldn't refresh · showing results from \<lastSuccessAt\>", plus Retry.
+  - Keep showing the cached data, with a stale indicator: "Couldn't refresh · showing results from \<lastSuccessAt\>". It has no Retry (D29): the next launch refreshes again.
   - Search, filters, map, save and remove all keep working.
 - **R7** On failure when no sync has ever succeeded, show a full-screen error that explains the cause, with Retry.
 - **R8** Whether data was "never synced" or "synced but empty" is decided by whether `lastSuccessAt` exists, **not** by the row count.
