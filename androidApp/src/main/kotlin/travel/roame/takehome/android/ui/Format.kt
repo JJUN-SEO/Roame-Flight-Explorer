@@ -3,6 +3,7 @@ package travel.roame.takehome.android.ui
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -24,6 +25,19 @@ fun chipDate(isoDate: String): String = LocalDate.parse(isoDate).format(chipDate
 fun utcMillisToIso(millis: Long): String = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
 
 fun isoToUtcMillis(isoDate: String): Long = LocalDate.parse(isoDate).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private val syncTime = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
+private val syncDayAndTime = DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.US)
+
+/**
+ * T4: `lastSuccessAt` is an instant, so unlike flight dates it's shown in the device's zone.
+ * "3:42 PM" if it was today there, otherwise "Nov 2, 3:42 PM".
+ */
+fun syncTime(epochMillis: Long, nowMillis: Long, zone: ZoneId = ZoneId.systemDefault()): String {
+    val at = Instant.ofEpochMilli(epochMillis).atZone(zone)
+    val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
+    return at.format(if (at.toLocalDate() == today) syncTime else syncDayAndTime)
+}
 
 /** Counts use the same US grouping as the shared points formatter. */
 fun groupedCount(count: Int): String = NumberFormat.getIntegerInstance(Locale.US).format(count)

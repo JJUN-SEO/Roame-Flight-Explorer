@@ -82,6 +82,8 @@
     <string name="map_unavailable_title">Can\'t load the map</string>
     <string name="map_unavailable_body">It needs internet the first time. Your flights are still in the list.</string>
     <string name="map_empty">No flights match</string>
+    <string name="refresh">Refresh</string>
+    <string name="stale_banner">Couldn\'t refresh · showing results from %s</string>
 
     <!-- Debug builds only (TEST_PLAN §6). -->
     <string name="debug_fail_next">Debug: the next save or remove will fail.</string>

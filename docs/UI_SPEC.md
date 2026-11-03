@@ -154,7 +154,7 @@ Use the same copy on both platforms.
 - **Tapping a row** selects it, highlights it and shows the card. Tapping the selected row again, or ✕, deselects it.
 - **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the snackbar with no haptic. A write succeeded when its id leaves `pendingWriteIds` with no `UserMessage` for it, because the store has no success event.
 - **Hearts:** each row has a ♡ that saves or removes the flight, the same as the card's button. While its write runs, it shows a spinner and ignores taps (V7).
-- **Pull to refresh** on the List (`.refreshable` on iOS, `PullToRefreshBox` on Android). Map mode has a ⟳ button in the toolbar.
+- **Pull to refresh** on the List (`.refreshable` on iOS, `PullToRefreshBox` on Android), and on the "No flights available" screen, whose copy asks for it. Map mode has a ⟳ button at the end of the summary row, and a thin progress bar while refreshing. The stale banner sits under the List | Map switch; on the "No flights available" screen it sits above the message.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
 - **Map:**
   - Marker tap → sheet.
