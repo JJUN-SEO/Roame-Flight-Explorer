@@ -12,7 +12,10 @@ import travel.roame.takehome.presentation.ExplorerStore
  * The only store API Swift uses (ARCHITECTURE §8): one plain method per intent, and state delivered
  * on the main thread. Swift can't use `StateFlow` or `suspend` well, so this hides them.
  */
-class ExplorerStoreIos internal constructor(private val store: ExplorerStore) {
+class ExplorerStoreIos internal constructor(
+    private val store: ExplorerStore,
+    private val failNextWrite: () -> Unit = {},
+) {
 
     val state: ExplorerState get() = store.state.value
 
@@ -57,6 +60,9 @@ class ExplorerStoreIos internal constructor(private val store: ExplorerStore) {
     fun removeSaved(flightId: String) = store.removeSaved(flightId)
 
     fun messageShown(id: Long) = store.messageShown(id)
+
+    /** Debug builds only (TEST_PLAN §6): the next save or remove fails once. The app calls it under `#if DEBUG`. */
+    fun failNextSavedWrite() = failNextWrite()
 }
 
 fun interface Cancellable {
@@ -64,4 +70,7 @@ fun interface Cancellable {
 }
 
 /** Creates the app's one store (D10). Call it once, when the app starts. */
-fun createExplorerStore(baseUrl: String): ExplorerStoreIos = ExplorerStoreIos(createAppGraph(baseUrl).store)
+fun createExplorerStore(baseUrl: String): ExplorerStoreIos {
+    val graph = createAppGraph(baseUrl)
+    return ExplorerStoreIos(graph.store, graph::failNextSavedWrite)
+}

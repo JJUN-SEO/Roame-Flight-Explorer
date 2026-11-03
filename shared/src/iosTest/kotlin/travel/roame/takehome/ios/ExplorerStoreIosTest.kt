@@ -40,6 +40,14 @@ class ExplorerStoreIosTest {
     }
 
     @Test
+    fun v7_hook_theBridgePassesFailNextWriteThrough() = runTest {
+        var armed = 0
+        val bridge = ExplorerStoreIos(ExplorerStore(FakeFlightRepository(flights), FakeSavedFlightsRepository(), backgroundScope), failNextWrite = { armed++ })
+        bridge.failNextSavedWrite()
+        assertEquals(1, armed)
+    }
+
+    @Test
     fun d7_observeDeliversTheCurrentStateAndEveryChangeUntilCancelled() = runTest {
         val bridge = bridge()
         val seen = mutableListOf<ExplorerState>()

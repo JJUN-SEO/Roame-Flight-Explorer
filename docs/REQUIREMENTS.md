@@ -71,8 +71,8 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 |---|---|---|---|---|
 | SEL-1 | Selecting a flight shows its route connector and a card with: origin and destination, departure date, cabin, points price, loyalty program, and a Save or Remove action | The card shows all six items. On the map, a geodesic line connects the origin and the destination. | L6, M7 | 🟨 |
 | SEL-2 | The selection is preserved when switching between list and map | Select in the list, switch to the map: the same flight is selected and its route is drawn. The reverse also works. | L1, L4 | 🟨 |
-| SEL-3 | The selection is cleared when the flight leaves the filtered results | Select a flight, then filter it out: the card disappears, and it does not come back when the filter is undone. | L3 | 🟨 |
-| SAVE-1 | A separate saved-flights view that is always reachable, whatever the discovery filters | The Saved tab lists every saved flight, even when the current filters match none of them. | V8, L7 | 🟨 |
+| SEL-3 | The selection is cleared when the flight leaves the filtered results | Select a flight, then filter it out: the card disappears, and it does not come back when the filter is undone. | L3 | ✅ 2026‑11‑03 |
+| SAVE-1 | A separate saved-flights view that is always reachable, whatever the discovery filters | The Saved tab lists every saved flight, even when the current filters match none of them. | V8, L7 | ✅ 2026‑11‑03 |
 
 ## 6. Performance
 
@@ -94,7 +94,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | OFF-5 | A successful empty response is distinguished from a failed request | A 200 response with `{"flights":[]}` shows "No flights available" (not an error). A failed request shows the error or stale state. | R4, R8 | 🟨 |
 | OFF-6 | Saving the same flight again updates its details without creating a duplicate | Re-saving an id after its details change leaves one row with the new details. | V2 | ✅ 2026‑11‑02 |
 | OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | 🟨 |
-| OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | 🟨 |
+| OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | ✅ 2026‑11‑03 |
 | OFF-9 | Offline map tiles are **not** required | Noted as out of scope. Once the map has loaded online, it works offline from its cache. If the Android map has never loaded online, it shows a message with Retry (D24), and flights stay available in the list. iOS is expected to show markers over empty tiles. | — | ⬜ |
 
 ## 8. UX quality

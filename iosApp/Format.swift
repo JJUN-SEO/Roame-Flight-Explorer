@@ -23,6 +23,13 @@ enum Format {
 
     private static let row = formatter("EEE, MMM d")
     private static let chip = formatter("MMM d")
+    private static let card = formatter("EEE, MMM d, yyyy")
+
+    /** "Mon, Feb 1, 2027", for the selection card. */
+    static func cardDate(_ iso: String) -> String {
+        guard let date = calendarDate(iso, in: calendar) else { return iso }
+        return card.string(from: date)
+    }
 
     /** "Mon, Feb 1". */
     static func rowDate(_ iso: String) -> String {
