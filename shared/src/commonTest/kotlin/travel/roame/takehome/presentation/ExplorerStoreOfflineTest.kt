@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import travel.roame.takehome.data.FlightRepository
 import travel.roame.takehome.data.RoomFlightRepository
+import travel.roame.takehome.data.RoomSavedFlightsRepository
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.model.FetchError
 import travel.roame.takehome.model.FlightFilters
@@ -33,6 +34,7 @@ class ExplorerStoreOfflineTest {
     private val api = FakeFlightsApi()
     private val clock = TestClock(Instant.fromEpochMilliseconds(1_000))
     private val repository = RoomFlightRepository(api, db.flightCacheDao(), clock)
+    private val savedFlights = RoomSavedFlightsRepository(db.savedFlightDao(), clock)
     private val storeJob = SupervisorJob()
 
     @AfterTest
@@ -42,7 +44,7 @@ class ExplorerStoreOfflineTest {
     private val synced = DataStatus.Ready(lastSuccessAt = 1_000, isRefreshing = false, refreshError = null)
 
     private fun TestScope.newStore(flights: FlightRepository = repository) =
-        ExplorerStore(flights, CoroutineScope(storeJob + StandardTestDispatcher(testScheduler)))
+        ExplorerStore(flights, savedFlights, CoroutineScope(storeJob + StandardTestDispatcher(testScheduler)))
 
     /** Stops every store before the database closes. Otherwise a read still running on a real thread hits a closed database. */
     private fun runStoreTest(test: suspend TestScope.() -> Unit) = runTest {
@@ -150,6 +152,20 @@ class ExplorerStoreOfflineTest {
         val state = store.awaitState { it.filters == FlightFilters(maxPoints = 20_000) }
         assertEquals(listOf("cheap"), ids(state))
         assertEquals(FetchError.Offline, (state.data as DataStatus.Ready).refreshError)
+    }
+
+    @Test
+    fun v6_savingAndRemovingWorkAfterAFailedRefresh() = runStoreTest {
+        cacheFromAnEarlierRun("a")
+        api.enqueue(FetchResult.Failure(FetchError.Offline))
+        val store = newStore()
+        store.awaitState { (it.data as? DataStatus.Ready)?.refreshError == FetchError.Offline }
+
+        store.toggleSave("a")
+        store.awaitState { state -> state.saved.map { it.flight.id } == listOf("a") && state.results.single().isSaved && state.pendingWriteIds.isEmpty() }
+
+        store.removeSaved("a")
+        store.awaitState { state -> state.saved.isEmpty() && !state.results.single().isSaved && state.pendingWriteIds.isEmpty() }
     }
 
     @Test

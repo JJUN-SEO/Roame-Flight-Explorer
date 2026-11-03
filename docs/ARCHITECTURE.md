@@ -63,7 +63,7 @@ shared/schemas/     Room's exported schema JSON (version 1)
 
 ### 4.1 State
 
-Step 3.3 builds `data`, the queries, `filters`, `options`, `activeFilters`, `hasAnythingToReset`, `results` and `markers`. Steps 3.4 and 3.5 add the rest. `resultCount` is `results.size`, so the two can't disagree (C1).
+Steps 3.3 and 3.4 built everything here except the suggestions, which Step 3.5 adds. `resultCount` is `results.size`, so the two can't disagree (C1).
 
 ```kotlin
 data class ExplorerState(
@@ -98,8 +98,8 @@ data class ExplorerState(
 |---|---|
 | Search | `setOriginQuery(text)`, `setDestinationQuery(text)`, `pickOrigin(codes)`, `pickDestination(codes)` |
 | Filters | `setDateRange(startIso?, endIso?)`, `setCabin(cabin?)`, `setMaxPoints(points?)`, `toggleProgram(name)`, `clearFilter(kind)`, `resetAll()` |
-| Selection | `select(flightId?)`, `selectSaved(flightId?)` |
-| Saved | `toggleSave(flightId)`, `removeSaved(flightId)` |
+| Selection | `select(flightId?)`, `selectSaved(flightId?)`. Selecting the selected flight again deselects it (L2) |
+| Saved | `toggleSave(flightId)` for a flight in the results, `removeSaved(flightId)` for the Saved view. Each flight has at most one write at a time (V7) |
 | Data and messages | `refresh()`, `messageShown(id)` |
 
 Every intent is a plain, non-suspending function, so it is easy to call from Swift. Intents that need IO launch work in the store's scope.
@@ -116,8 +116,7 @@ val state: StateFlow<ExplorerState> = combine(
     inputs,
 ) { cache, sync, saved, input -> Snapshot(cache, sync, saved, input) }
     .mapLatest(::reduce)                  // pure; cancelled if newer input arrives → latest wins (PERF-3)
-    .onEach(::normaliseFilters)           // F8: write dropped filter values back to inputs, so they stay dropped
-    .onEach(::clearStaleSelection)        // L3: write selectedFlightId = null back to inputs, added in Step 3.4
+    .onEach(::keepDropped)                // F8, L3, L7: write dropped filter values and stale selections back to inputs, so they stay dropped
     .flowOn(Dispatchers.Default)
     .stateIn(scope, SharingStarted.Eagerly, ExplorerState.Initial)
 ```

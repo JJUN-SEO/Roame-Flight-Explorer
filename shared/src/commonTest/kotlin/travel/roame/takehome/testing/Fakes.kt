@@ -10,11 +10,13 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.LocalDate
 import travel.roame.takehome.data.CacheSnapshot
 import travel.roame.takehome.data.FlightRepository
+import travel.roame.takehome.data.SavedFlightsRepository
 import travel.roame.takehome.data.SyncStatus
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.FlightsApi
 import travel.roame.takehome.model.Airport
 import travel.roame.takehome.model.Flight
+import travel.roame.takehome.model.SavedFlight
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
 import kotlin.time.Clock
@@ -88,6 +90,47 @@ internal class FakeFlightRepository(
 
     override suspend fun refresh() {
         refreshes++
+    }
+}
+
+/** Saved flights in memory, in O3 order like the database. It can hold a write in flight or make one fail. */
+internal class FakeSavedFlightsRepository(vararg initial: SavedFlight) : SavedFlightsRepository {
+    enum class Op { Save, Remove }
+
+    override val saved = MutableStateFlow(initial.toList())
+
+    /** Writes of these kinds fail, as a full disk would. */
+    val failing = mutableSetOf<Op>()
+
+    /** While set, writes wait for it. */
+    var gate: CompletableDeferred<Unit>? = null
+
+    /** While true, a finished write's change waits for [publish], as a database emits a moment after a write returns. */
+    var holdChanges = false
+    private val heldChanges = mutableListOf<(List<SavedFlight>) -> List<SavedFlight>>()
+
+    var writes = 0
+        private set
+
+    fun publish() {
+        heldChanges.forEach { saved.update(it) }
+        heldChanges.clear()
+    }
+
+    override suspend fun save(flight: Flight): Result<Unit> = write(Op.Save) {
+        val savedAt = it.firstOrNull { saved -> saved.flight.id == flight.id }?.savedAt ?: Instant.fromEpochMilliseconds(1_000)
+        (it.filterNot { saved -> saved.flight.id == flight.id } + SavedFlight(flight, savedAt))
+            .sortedWith(compareBy<SavedFlight> { saved -> saved.flight.departureDate }.thenBy { saved -> saved.flight.id })
+    }
+
+    override suspend fun remove(id: String): Result<Unit> = write(Op.Remove) { it.filterNot { saved -> saved.flight.id == id } }
+
+    private suspend fun write(op: Op, change: (List<SavedFlight>) -> List<SavedFlight>): Result<Unit> {
+        writes++
+        gate?.await()
+        if (op in failing) return Result.failure(IllegalStateException("disk full"))
+        if (holdChanges) heldChanges += change else saved.update(change)
+        return Result.success(Unit)
     }
 }
 

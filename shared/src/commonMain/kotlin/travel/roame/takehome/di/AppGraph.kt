@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import travel.roame.takehome.data.RoomFlightRepository
+import travel.roame.takehome.data.RoomSavedFlightsRepository
 import travel.roame.takehome.data.local.AppDatabase
 import travel.roame.takehome.data.remote.KtorFlightsApi
 import travel.roame.takehome.presentation.ExplorerStore
@@ -20,6 +21,7 @@ class AppGraph internal constructor(
 ) {
     val store: ExplorerStore = ExplorerStore(
         flights = RoomFlightRepository(KtorFlightsApi(engine, baseUrl), database.flightCacheDao(), clock),
+        savedFlights = RoomSavedFlightsRepository(database.savedFlightDao(), clock),
         scope = scope,
     )
 }

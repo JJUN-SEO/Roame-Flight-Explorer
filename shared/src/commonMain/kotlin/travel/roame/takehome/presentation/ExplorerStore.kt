@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -17,27 +18,32 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import travel.roame.takehome.data.FlightRepository
+import travel.roame.takehome.data.SavedFlightsRepository
 import travel.roame.takehome.domain.cleared
 import travel.roame.takehome.domain.normalizedTo
 import travel.roame.takehome.model.FilterKind
+import travel.roame.takehome.model.FlightFilters
 
 /** The one source of truth for both apps (D2, D10). Every intent is a plain function, so it's easy to call from Swift. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExplorerStore internal constructor(
     private val flights: FlightRepository,
+    private val savedFlights: SavedFlightsRepository,
     private val scope: CoroutineScope,
     defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     reducer: suspend (Snapshot) -> ExplorerState = ::reduce,
 ) {
     private val inputs = MutableStateFlow(ExplorerInputs())
+    private var lastMessageId = 0L
 
-    val state: StateFlow<ExplorerState> = combine(flights.cache.map(::index), flights.syncStatus, inputs, ::Snapshot)
-        // Newer input cancels older work, so a slow result can't overwrite a newer one (PERF-3).
-        .mapLatest(reducer)
-        // F2, F4, F8: make what normalising dropped stay dropped, even if the data offers it again later.
-        .onEach { state -> inputs.update { it.copy(filters = it.filters.normalizedTo(state.options)) } }
-        .flowOn(defaultDispatcher)
-        .stateIn(scope, SharingStarted.Eagerly, ExplorerState.Initial)
+    val state: StateFlow<ExplorerState> =
+        combine(flights.cache.map(::index), flights.syncStatus, savedFlights.saved, inputs, ::Snapshot)
+            // Newer input cancels older work, so a slow result can't overwrite a newer one (PERF-3).
+            .mapLatest { snapshot -> reducer(snapshot) to snapshot.inputs }
+            .onEach { (state, used) -> keepDropped(state, used) }
+            .map { (state) -> state }
+            .flowOn(defaultDispatcher)
+            .stateIn(scope, SharingStarted.Eagerly, ExplorerState.Initial)
 
     init {
         // R1: the cache flow above shows cached data right away; this refreshes it in the background.
@@ -71,8 +77,71 @@ class ExplorerStore internal constructor(
     /** C3. */
     fun clearFilter(kind: FilterKind) = inputs.update { it.copy(filters = it.filters.cleared(kind)) }
 
-    /** C4. */
-    fun resetAll() = inputs.update { ExplorerInputs() }
+    /** C4. The selections, writes and messages stay; after a reset the results include every flight anyway. */
+    fun resetAll() = inputs.update { it.copy(originQuery = "", destinationQuery = "", filters = FlightFilters()) }
+
+    /** L1, L2: selecting the selected flight again, or passing null, deselects it. */
+    fun select(flightId: String?) =
+        inputs.update { it.copy(selectedFlightId = flightId.takeUnless { id -> id == it.selectedFlightId }) }
+
+    /** L7: the same, for the Saved view's own selection. */
+    fun selectSaved(flightId: String?) =
+        inputs.update { it.copy(savedSelectedId = flightId.takeUnless { id -> id == it.savedSelectedId }) }
+
+    /** V7: saves a flight from the results, or removes it if it's saved. Ignored while a write for it is running. */
+    fun toggleSave(flightId: String) {
+        val item = state.value.results.firstOrNull { it.id == flightId } ?: return
+        if (item.isSaved) {
+            write(flightId, UserMessageKind.RemoveFailed, saves = false) { savedFlights.remove(flightId) }
+        } else {
+            write(flightId, UserMessageKind.SaveFailed, saves = true) { savedFlights.save(item.toFlight()) }
+        }
+    }
+
+    /** V6, V7. Ignored while a write for this flight is running. */
+    fun removeSaved(flightId: String) =
+        write(flightId, UserMessageKind.RemoveFailed, saves = false) { savedFlights.remove(flightId) }
+
+    fun messageShown(id: Long) = inputs.update { input -> input.copy(messages = input.messages.filterNot { it.id == id }) }
+
+    /**
+     * V7: there's no optimistic UI. The flight stays pending until this store's own state shows the
+     * change, so the button never looks finished while the heart still shows the old state.
+     */
+    private fun write(flightId: String, failure: UserMessageKind, saves: Boolean, operation: suspend () -> Result<Unit>) {
+        var started = false
+        inputs.update { input ->
+            started = flightId !in input.pendingWriteIds
+            if (started) input.copy(pendingWriteIds = input.pendingWriteIds + flightId) else input
+        }
+        if (!started) return
+        scope.launch {
+            val succeeded = operation().isSuccess
+            if (succeeded) state.first { it.saved.any { saved -> saved.flight.id == flightId } == saves }
+            inputs.update { input ->
+                input.copy(
+                    pendingWriteIds = input.pendingWriteIds - flightId,
+                    messages = if (succeeded) input.messages else input.messages + UserMessage(++lastMessageId, failure, flightId),
+                )
+            }
+        }
+    }
+
+    /**
+     * F8: filter values the data no longer offers stay dropped, even if a later refresh offers them again.
+     * L3, L7: so does a selection the state no longer shows, unless the user has picked another since.
+     */
+    private fun keepDropped(state: ExplorerState, used: ExplorerInputs) = inputs.update { input ->
+        input.copy(
+            filters = input.filters.normalizedTo(state.options),
+            selectedFlightId = input.selectedFlightId.takeUnless {
+                it == used.selectedFlightId && state.selected == null
+            },
+            savedSelectedId = input.savedSelectedId.takeUnless {
+                it == used.savedSelectedId && state.savedSelected == null
+            },
+        )
+    }
 
     private fun isIsoDateOrNull(text: String?): Boolean = try {
         text?.let(LocalDate::parse)

@@ -226,7 +226,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 ## 7. Selection (L)
 
 - **L1** The shared store holds a single discovery selection, `selectedFlightId`. The list and the map both read it.
-- **L2** The user selects a flight by tapping a list row or a flight in a marker sheet. Tapping the selected row again, or the card's close button, deselects it.
+- **L2** The user selects a flight by tapping a list row or a flight in a marker sheet. Tapping the selected row again, or the card's close button, deselects it. The store does this, so both apps behave the same: selecting the selected flight again deselects it.
 - **L3** Every time the results are recomputed, a selected id that is no longer in the results is cleared. The clearing is permanent: the selection does not come back when the filter is undone. *(assumption)*
 - **L4** Switching between List and Map never changes the selection.
 - **L5** The selection is not persisted across launches.
@@ -246,13 +246,14 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 - **V1** Saved flights are stored as **full snapshots** (every `Flight` field) plus `savedAt`, in their own table, independent of the cache.
 - **V2** Saving is an **upsert by id**. Saving an already-saved id updates its details and leaves exactly one row. `savedAt` keeps its original value.
 - **V3** Every `FlightItem` has `isSaved`, which is true when its id is among the saved ids. The list, map, card and Saved view all derive it from the same source.
-- **V4** Saved flights stay in the Saved view when they are missing from the latest API response. When a cache exists and doesn't contain the id, the flight is labelled "No longer listed".
+- **V4** Saved flights stay in the Saved view when they are missing from the latest API response. When a cache exists (at least one refresh has succeeded, R8) and doesn't contain the id, the flight is labelled "No longer listed".
 - **V5** On a successful refresh, any saved snapshot whose id appears in the response is updated with the new details, in the same transaction as the cache replacement. *(assumption: keeps details consistent between the Saved view and discovery)*
 - **V6** Removal is by id. Save and remove are local-only operations, so both work offline.
 - **V7** **There is no optimistic UI.**
   - The saved state only changes when the database emits.
-  - While a write is pending, its button shows progress and is disabled.
-  - On failure the state is unchanged, and a `UserMessage` reports the error with a Retry action.
+  - While a write is pending, its button shows progress and is disabled. It stays pending until the saved state has changed, because the database reports the change a moment after the write returns. Otherwise the button would briefly look finished with the old state.
+  - A second tap while a write for that flight is pending is ignored.
+  - On failure the state is unchanged, and a `UserMessage` reports the error with a Retry action. Retry calls `toggleSave` after a failed save and `removeSaved` after a failed remove.
 - **V8** The Saved list ignores the discovery search and filters.
 
 ## 9. Refresh, cache & offline (R)

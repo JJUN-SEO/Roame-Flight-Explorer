@@ -10,6 +10,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import travel.roame.takehome.testing.FakeFlightRepository
+import travel.roame.takehome.testing.FakeSavedFlightsRepository
 import travel.roame.takehome.testing.flight
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.test.Test
@@ -23,7 +24,7 @@ class ExplorerStoreLatestWinsTest {
     @Test
     fun perf3_rapidInputOnlyEverEndsOnTheLatestValue() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val store = ExplorerStore(FakeFlightRepository(listOf(flight())), backgroundScope, dispatcher, reducer = {
+        val store = ExplorerStore(FakeFlightRepository(listOf(flight())), FakeSavedFlightsRepository(), backgroundScope, dispatcher, reducer = {
             delay(100)
             reduce(it)
         })
@@ -45,7 +46,7 @@ class ExplorerStoreLatestWinsTest {
     @Test
     fun perf3_aSlowOldResultCanNotOverwriteANewerOne() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val store = ExplorerStore(FakeFlightRepository(listOf(flight())), backgroundScope, dispatcher, reducer = { snapshot ->
+        val store = ExplorerStore(FakeFlightRepository(listOf(flight())), FakeSavedFlightsRepository(), backgroundScope, dispatcher, reducer = { snapshot ->
             // The older value takes far longer than the newer one, so it would finish last.
             delay(if (snapshot.inputs.filters.maxPoints == 10_000) 5_000 else 10)
             reduce(snapshot)
@@ -65,7 +66,7 @@ class ExplorerStoreLatestWinsTest {
     fun perf2_reducingRunsOnTheGivenDispatcherAndNotTheCallers() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler, name = "reducer")
         var usedDispatcher: CoroutineDispatcher? = null
-        ExplorerStore(FakeFlightRepository(listOf(flight())), backgroundScope, dispatcher, reducer = { snapshot ->
+        ExplorerStore(FakeFlightRepository(listOf(flight())), FakeSavedFlightsRepository(), backgroundScope, dispatcher, reducer = { snapshot ->
             usedDispatcher = currentCoroutineContext()[ContinuationInterceptor] as CoroutineDispatcher
             reduce(snapshot)
         })

@@ -19,6 +19,16 @@ data class ExplorerState(
     val results: List<FlightItem>,
     /** From exactly the same flights as [results] (M1), ordered by code. */
     val markers: List<DestinationMarker>,
+    /** The discovery selection, shared by the list and the map (L1). Always one of [results]. */
+    val selected: FlightItem?,
+    /** Every saved flight, whatever the filters (V8), in O3 order. */
+    val saved: List<SavedFlightItem>,
+    /** The Saved view's own selection (L7). */
+    val savedSelected: SavedFlightItem?,
+    /** Flights with a save or remove still running. Their buttons show progress and are disabled (V7). */
+    val pendingWriteIds: Set<String>,
+    /** One-shot errors. The app shows each once, then calls `messageShown(id)`. */
+    val messages: List<UserMessage>,
 ) {
     /** C1. */
     val resultCount: Int get() = results.size
@@ -34,6 +44,11 @@ data class ExplorerState(
             hasAnythingToReset = false,
             results = emptyList(),
             markers = emptyList(),
+            selected = null,
+            saved = emptyList(),
+            savedSelected = null,
+            pendingWriteIds = emptySet(),
+            messages = emptyList(),
         )
     }
 }
@@ -70,7 +85,22 @@ data class FlightItem(
     val program: String,
     val points: Int,
     val cabin: String,
+    /** The same answer everywhere this flight appears (V3). */
+    val isSaved: Boolean,
 )
+
+data class SavedFlightItem(
+    val flight: FlightItem,
+    /** Epoch milliseconds. */
+    val savedAt: Long,
+    /** False when the latest successful refresh no longer has this flight: "No longer listed" (V4). */
+    val isListed: Boolean,
+)
+
+/** Retry calls `toggleSave(flightId)` after [UserMessageKind.SaveFailed] and `removeSaved(flightId)` after [UserMessageKind.RemoveFailed]. */
+data class UserMessage(val id: Long, val kind: UserMessageKind, val flightId: String)
+
+enum class UserMessageKind { SaveFailed, RemoveFailed }
 
 data class DestinationMarker(
     val code: String,

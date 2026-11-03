@@ -12,6 +12,7 @@ import travel.roame.takehome.model.FilterKind
 import travel.roame.takehome.model.Flight
 import travel.roame.takehome.model.FlightFilters
 import travel.roame.takehome.testing.FakeFlightRepository
+import travel.roame.takehome.testing.FakeSavedFlightsRepository
 import travel.roame.takehome.testing.flight
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,7 +33,7 @@ class ExplorerStoreFiltersTest {
 
     private fun TestScope.storeWith(flights: List<Flight> = this@ExplorerStoreFiltersTest.flights): Pair<ExplorerStore, FakeFlightRepository> {
         val repository = FakeFlightRepository(flights)
-        val store = ExplorerStore(repository, backgroundScope, StandardTestDispatcher(testScheduler))
+        val store = ExplorerStore(repository, FakeSavedFlightsRepository(), backgroundScope, StandardTestDispatcher(testScheduler))
         runCurrent()
         return store to repository
     }
@@ -231,7 +232,7 @@ class ExplorerStoreFiltersTest {
         val cache = CacheSnapshot(listOf(cheapParis, hongKong), Instant.fromEpochMilliseconds(2_000))
         val inputs = ExplorerInputs(filters = FlightFilters(cabin = "Business", programs = setOf("Aeroplan")))
 
-        val state = reduce(Snapshot(index(cache), SyncStatus(), inputs))
+        val state = reduce(Snapshot(index(cache), SyncStatus(), emptyList(), inputs))
 
         assertEquals(FlightFilters(), state.filters)
         assertEquals(emptyList(), state.activeFilters)
@@ -328,7 +329,7 @@ class ExplorerStoreFiltersTest {
 
     @Test
     fun r1_theFirstStateIsLoadingAndEmpty() = runTest {
-        val store = ExplorerStore(FakeFlightRepository(flights), backgroundScope, StandardTestDispatcher(testScheduler))
+        val store = ExplorerStore(FakeFlightRepository(flights), FakeSavedFlightsRepository(), backgroundScope, StandardTestDispatcher(testScheduler))
         assertEquals(ExplorerState.Initial, store.state.value)
         assertEquals(DataStatus.Loading, store.state.value.data)
     }
