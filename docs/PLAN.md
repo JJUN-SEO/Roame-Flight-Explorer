@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 3.3, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 3.4, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D25) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -227,7 +227,7 @@ The apps stay untouched until Step 3.6. Pure rules come first, because they need
 - **Tests:** `MapAggregatorTest`, `GreatCircleTest` and `PointsFormatTest`.
 - **Done when:** marker counts add up to the result count, HND and NRT are separate markers, and JFK→HKG has no jump over 180° after unwrapping.
 
-#### [ ] 3.3 The store and its offline states
+#### [x] 3.3 The store and its offline states
 
 - **Goal:** one app-wide store turns data and inputs into `ExplorerState`, with the newest input always winning.
 - **Covers:** R1, R2, R4, R5, R6, R7, R11, R12, PERF-3, OFF-1, OFF-2, OFF-3, OFF-4, OFF-5, TEST-5, D2, D6, D10.
