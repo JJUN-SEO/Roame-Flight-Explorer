@@ -136,16 +136,16 @@ Fill this in as you go: date, ✅/❌, and a short note. This table *is* the rec
 | Q8b | Airplane mode with the map never opened, then open Map → the "Can't load the map" message and Retry. Turn the internet back on → the map loads | | — |
 | Q9 | (L6) Tap a marker → sheet ordered by points → tap a flight → route line + card | | |
 | Q10 | (L4) Switch Map → List: the same flight is selected and highlighted; the reverse also works | | |
-| Q11 | Apply a filter that excludes the selected flight → the card disappears; undo the filter → it stays cleared | | |
-| Q12 | Save from the list → the heart fills on the map card and in the Saved tab; the badge count updates | | |
-| Q13 | Saved tab with filters that exclude the saved flights → the saved flights are still listed | | |
+| Q11 | Apply a filter that excludes the selected flight → the card disappears; undo the filter → it stays cleared | ✅ 2026‑11‑03, emulator (Claude): Toronto → Barcelona selected, Cabin Business (344 flights) → card gone; clearing the chip → 1,000 flights, still no card | |
+| Q12 | Save from the list → the heart fills on the map card and in the Saved tab; the badge count updates | 🟨 2026‑11‑03, emulator (Claude): the row's heart fills, the card shows Remove, the Saved tab lists it, and the badge shows 1 (screenshot), with one haptic. The map card waits for Step 4.5 | |
+| Q13 | Saved tab with filters that exclude the saved flights → the saved flights are still listed | ✅ 2026‑11‑03, emulator (Claude): an Economy flight stays listed in Saved with Cabin Business active, and opens its own card | |
 | Q14 | Edit the fixture (change the points of a saved flight), refresh → the saved details are updated, with no duplicate | | |
 | Q15 | Remove a saved flight's record from the fixture, refresh → it is still in Saved with "No longer listed" | | |
 | Q16 | (T4) Stop the API, pull to refresh → stale banner, data intact, Retry shown | | |
 | Q17 | API stopped: force-quit, relaunch → cached results + saved flights; search and filters work; remove a saved flight | | |
 | Q18 | Clear app data (or reinstall) with the API stopped → full-screen offline error; start the API → Try again → loads | ✅ 2026‑11‑02, emulator (Claude) | |
 | Q19 | Temporarily change the fixture to `{"flights":[]}`, refresh → "No flights available" (not an error). Restore it, stop the API, refresh → stale banner, not the empty message | | |
-| Q20 | Simulated save failure (debug toggle or test build) → snackbar, heart unchanged | | |
+| Q20 | Simulated save failure (debug toggle or test build) → snackbar, heart unchanged | ✅ 2026‑11‑03, emulator (Claude), with the debug hook: a failed save shows "Couldn't save flight." + Retry, the heart stays empty, no badge and no haptic; Retry saves it. A failed remove shows "Couldn't remove flight.", the flight stays in Saved; Retry removes it. Screenshots checked | |
 | Q21 | Rotation, or the app in the background for a minute → state preserved (Android) | | — |
 | Q22 | Largest font size + VoiceOver/TalkBack pass over a row, a marker and the card | | |
 | Q23 | Dark mode pass | | |
@@ -159,6 +159,8 @@ To demo and QA failures without code changes:
 
 - Server: no switches (D25). Stop the API for a failed request (Q16–Q18). The server rereads the fixture on every request, so temporary edits show up on the next refresh (Q14, Q15, Q19). Afterwards, run `git restore fixtures/flights.json`.
 - App: a hidden debug toggle, "Fail next DB write", that makes `SavedFlightsRepository` throw once. This covers Q20 and OFF-8. Strip it from release builds or keep it behind `BuildConfig.DEBUG` / `#if DEBUG`.
+  - Built in Step 4.4 as `AppGraph.failNextSavedWrite()`. The next save or remove then fails once, without touching the database.
+  - **Android (debug builds only):** select a flight and long-press the card's "Selected flight" title. A snackbar confirms "Debug: the next save or remove will fail."
 
 ## 7. Demo recording script (DEL-4)
 

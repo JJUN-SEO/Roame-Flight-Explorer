@@ -61,4 +61,17 @@
     <string name="chip_active">%1$s: %2$s, active</string>
 
     <string name="row_description">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s</string>
+    <string name="row_description_saved">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s, saved</string>
+
+    <string name="selected_flight">Selected flight</string>
+    <string name="close">Close</string>
+    <string name="save_flight">Save flight</string>
+    <string name="remove">Remove</string>
+    <string name="remove_from_saved">Remove from saved</string>
+    <string name="not_listed">No longer listed</string>
+    <string name="save_failed">Couldn\'t save flight.</string>
+    <string name="remove_failed">Couldn\'t remove flight.</string>
+    <string name="retry">Retry</string>
+    <!-- Debug builds only (TEST_PLAN §6). -->
+    <string name="debug_fail_next">Debug: the next save or remove will fail.</string>
 </resources>

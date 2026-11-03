@@ -149,9 +149,11 @@ Use the same copy on both platforms.
 ## 5. Interaction details
 
 - **Typing** updates results live, without a submit button. The keyboard's Search or Done key dismisses the keyboard. Scrolling the list also dismisses the keyboard.
+- **A new search or filter** scrolls the list back to the top, so the best results are in view. A save or a background refresh keeps the scroll position. (Found in Step 4.4: Compose keeps the old top flight in view, so after Reset the first rows were hidden above it.)
 - **Tapping a suggestion** picks what it names, closes the dropdown and shows "Tokyo (HND)" or "Tokyo (all airports)" in the field. Editing the text clears the pick.
 - **Tapping a row** selects it, highlights it and shows the card. Tapping the selected row again, or ✕, deselects it.
-- **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the snackbar with no haptic.
+- **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the snackbar with no haptic. A write succeeded when its id leaves `pendingWriteIds` with no `UserMessage` for it, because the store has no success event.
+- **Hearts:** each row has a ♡ that saves or removes the flight, the same as the card's button. While its write runs, it shows a spinner and ignores taps (V7).
 - **Pull to refresh** on the List (`.refreshable` on iOS, `PullToRefreshBox` on Android). Map mode has a ⟳ button in the toolbar.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
 - **Map:**

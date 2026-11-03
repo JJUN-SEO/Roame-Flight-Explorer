@@ -4,6 +4,7 @@ import io.ktor.client.engine.HttpClientEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import travel.roame.takehome.data.FailNextWriteSavedFlights
 import travel.roame.takehome.data.RoomFlightRepository
 import travel.roame.takehome.data.RoomSavedFlightsRepository
 import travel.roame.takehome.data.local.AppDatabase
@@ -19,9 +20,14 @@ class AppGraph internal constructor(
     clock: Clock = Clock.System,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
 ) {
+    private val savedFlights = FailNextWriteSavedFlights(RoomSavedFlightsRepository(database.savedFlightDao(), clock))
+
     val store: ExplorerStore = ExplorerStore(
         flights = RoomFlightRepository(KtorFlightsApi(engine, baseUrl), database.flightCacheDao(), clock),
-        savedFlights = RoomSavedFlightsRepository(database.savedFlightDao(), clock),
+        savedFlights = savedFlights,
         scope = scope,
     )
+
+    /** Debug builds only (TEST_PLAN §6): the next save or remove fails once, to show V7 on screen. */
+    fun failNextSavedWrite() = savedFlights.failNextWrite()
 }

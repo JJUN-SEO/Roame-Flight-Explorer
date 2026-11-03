@@ -69,7 +69,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| SEL-1 | Selecting a flight shows its route connector and a card with: origin and destination, departure date, cabin, points price, loyalty program, and a Save or Remove action | The card shows all six items. On the map, a geodesic line connects the origin and the destination. | L6, M7 | ⬜ |
+| SEL-1 | Selecting a flight shows its route connector and a card with: origin and destination, departure date, cabin, points price, loyalty program, and a Save or Remove action | The card shows all six items. On the map, a geodesic line connects the origin and the destination. | L6, M7 | 🟨 |
 | SEL-2 | The selection is preserved when switching between list and map | Select in the list, switch to the map: the same flight is selected and its route is drawn. The reverse also works. | L1, L4 | 🟨 |
 | SEL-3 | The selection is cleared when the flight leaves the filtered results | Select a flight, then filter it out: the card disappears, and it does not come back when the filter is undone. | L3 | 🟨 |
 | SAVE-1 | A separate saved-flights view that is always reachable, whatever the discovery filters | The Saved tab lists every saved flight, even when the current filters match none of them. | V8, L7 | 🟨 |

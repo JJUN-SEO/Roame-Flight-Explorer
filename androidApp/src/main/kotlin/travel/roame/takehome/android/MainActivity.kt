@@ -11,9 +11,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val store = (application as RoameApp).graph.store
+        val graph = (application as RoameApp).graph
+        // TEST_PLAN §6: the "Fail next DB write" hook is reachable in debug builds only.
+        val failNextWrite = if (BuildConfig.DEBUG) graph::failNextSavedWrite else null
         setContent {
-            RoameTheme { ExplorerApp(store) }
+            RoameTheme { ExplorerApp(graph.store, failNextWrite) }
         }
     }
 }
