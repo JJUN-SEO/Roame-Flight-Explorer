@@ -219,7 +219,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Shell | `TabView` + `NavigationStack`. Portrait only (D28) | `Scaffold` + `NavigationBar`. Portrait only (D28) |
 | Sheets | `.sheet` + `.presentationDetents([.medium, .large])` | `ModalBottomSheet` |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
-| Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)` | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
+| Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5) | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
 | Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |

@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 5.5, in progress. Update this line at every review gate.
+> **Current step:** 5.5, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -397,6 +397,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
   - The UI works, but it looks plain and generic: Android's stock Material theme with no identity of its own. The owner will describe the look they want; don't design it ahead of them. Until then, build features in the current style.
   - Add a separate Filters button where people choose their filter options. Settle with the owner whether it replaces the four chips or sits beside them.
   - The owner chose to restyle here rather than before Step 4.4, knowing the card, the Saved tab, the map and the iOS app are built in the current look until then.
+- **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move.
 - **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app.
 - **Found in Step 4.4, for the TalkBack pass:**
   - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label.

@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 import Shared
 
 /**
@@ -95,7 +96,12 @@ private struct Toast: View {
 
 private struct ExploreScreen: View {
     @Environment(ExplorerModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var openSheet: FilterKind?
+    @State private var openMarker: String?
+    // Kept here, so switching between List and Map, or tabs, keeps the view and the map's camera (M8).
+    @State private var showMap = false
+    @State private var camera: MapCameraPosition?
     let onDebugLongPress: (() -> Void)?
 
     var body: some View {
@@ -114,11 +120,33 @@ private struct ExploreScreen: View {
                     SearchHeader()
                     FilterBar { openSheet = $0 }
                     ResultSummary()
-                    if state.results.isEmpty {
-                        FilteredEmpty()
-                    } else {
-                        ResultsList(onDebugLongPress: onDebugLongPress)
+                    // L4: switching changes only the view; the selection and filters stay in the store.
+                    Picker("View", selection: $showMap) {
+                        Text("List").tag(false)
+                        Text("Map").tag(true)
                     }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+                    Group {
+                        if showMap {
+                            ExplorerMap(camera: $camera) { openMarker = $0 }
+                                .safeAreaInset(edge: .bottom) { SelectionCard(onDebugLongPress: onDebugLongPress) }
+                                .sheet(isPresented: Binding(get: { openMarker != nil }, set: { if !$0 { openMarker = nil } })) {
+                                    if let code = openMarker { MarkerSheet(code: code) }
+                                }
+                        } else if state.results.isEmpty {
+                            FilteredEmpty()
+                        } else {
+                            ResultsList(onDebugLongPress: onDebugLongPress)
+                        }
+                    }
+                    // UI_SPEC §5: List and Map cross-fade, unless Reduce Motion is on.
+                    .animation(reduceMotion ? nil : .default, value: showMap)
+                }
+                // M5: the sheet closes when its destination drops out of the results.
+                .onChange(of: state.markers.map(\.code)) { _, codes in
+                    if let code = openMarker, !codes.contains(code) { openMarker = nil }
                 }
                 .background(Color(.systemGroupedBackground))
                 .sheet(isPresented: Binding(get: { openSheet != nil }, set: { if !$0 { openSheet = nil } })) {
@@ -156,18 +184,27 @@ private struct ResultsList: View {
         // UI_SPEC §5: scrolling the list dismisses the keyboard.
         .scrollDismissesKeyboard(.immediately)
         // L6: the card sits over the bottom of the list, which scrolls its last rows clear of it.
-        .safeAreaInset(edge: .bottom) {
-            if let selected = state.selected {
-                FlightCard(
-                    flight: selected,
-                    isPending: state.pendingWriteIds.contains(selected.id),
-                    onClose: { model.store.select(flightId: nil) },
-                    onToggleSave: { model.store.toggleSave(flightId: selected.id) },
-                    onDebugLongPress: onDebugLongPress
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-            }
+        .safeAreaInset(edge: .bottom) { SelectionCard(onDebugLongPress: onDebugLongPress) }
+    }
+}
+
+/** The discovery selection's card, the same over the list and the map (L1, L6). */
+private struct SelectionCard: View {
+    @Environment(ExplorerModel.self) private var model
+    let onDebugLongPress: (() -> Void)?
+
+    var body: some View {
+        let state = model.state
+        if let selected = state.selected {
+            FlightCard(
+                flight: selected,
+                isPending: state.pendingWriteIds.contains(selected.id),
+                onClose: { model.store.select(flightId: nil) },
+                onToggleSave: { model.store.toggleSave(flightId: selected.id) },
+                onDebugLongPress: onDebugLongPress
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
         }
     }
 }

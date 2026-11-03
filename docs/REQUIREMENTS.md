@@ -59,18 +59,18 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| VIEW-1 | List and map show the same filtered results and the same saved state | The list row count equals the sum of marker counts. Saving a flight on the map updates the list immediately, and the reverse. | M1, V3 | 🟨 |
-| MAP-1 | Group markers by destination airport | There is one marker per destination code in the current results. | M2 | 🟨 |
-| MAP-2 | Each marker shows the number of matching flights and the lowest points price | The marker label reads, for example, `CDG · 12 · 25k`, and the values match the filtered data. | M3, T2 | 🟨 |
-| MAP-3 | Tapping a marker lets the user browse those flights | Tapping a marker opens a sheet listing that destination's flights. Tapping a flight in the sheet selects it. | M5, O2 | 🟨 |
-| MAP-4 | Standard map gestures, including pan and zoom | Pan, pinch-zoom and double-tap zoom all work smoothly and are never fought by automatic camera moves. | M8 | 🟨 |
+| VIEW-1 | List and map show the same filtered results and the same saved state | The list row count equals the sum of marker counts. Saving a flight on the map updates the list immediately, and the reverse. | M1, V3 | ✅ 2026‑11‑03 |
+| MAP-1 | Group markers by destination airport | There is one marker per destination code in the current results. | M2 | ✅ 2026‑11‑03 |
+| MAP-2 | Each marker shows the number of matching flights and the lowest points price | The marker label reads, for example, `CDG · 12 · 25k`, and the values match the filtered data. | M3, T2 | ✅ 2026‑11‑03 |
+| MAP-3 | Tapping a marker lets the user browse those flights | Tapping a marker opens a sheet listing that destination's flights. Tapping a flight in the sheet selects it. | M5, O2 | ✅ 2026‑11‑03 |
+| MAP-4 | Standard map gestures, including pan and zoom | Pan, pinch-zoom and double-tap zoom all work smoothly and are never fought by automatic camera moves. | M8 | 🟨 pan and double-tap checked on both; pinch not yet (neither adb nor idb can make two fingers) |
 
 ## 5. Selection & saved flights
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| SEL-1 | Selecting a flight shows its route connector and a card with: origin and destination, departure date, cabin, points price, loyalty program, and a Save or Remove action | The card shows all six items. On the map, a geodesic line connects the origin and the destination. | L6, M7 | 🟨 |
-| SEL-2 | The selection is preserved when switching between list and map | Select in the list, switch to the map: the same flight is selected and its route is drawn. The reverse also works. | L1, L4 | 🟨 |
+| SEL-1 | Selecting a flight shows its route connector and a card with: origin and destination, departure date, cabin, points price, loyalty program, and a Save or Remove action | The card shows all six items. On the map, a geodesic line connects the origin and the destination. | L6, M7 | ✅ 2026‑11‑03 |
+| SEL-2 | The selection is preserved when switching between list and map | Select in the list, switch to the map: the same flight is selected and its route is drawn. The reverse also works. | L1, L4 | ✅ 2026‑11‑03 |
 | SEL-3 | The selection is cleared when the flight leaves the filtered results | Select a flight, then filter it out: the card disappears, and it does not come back when the filter is undone. | L3 | ✅ 2026‑11‑03 |
 | SAVE-1 | A separate saved-flights view that is always reachable, whatever the discovery filters | The Saved tab lists every saved flight, even when the current filters match none of them. | V8, L7 | ✅ 2026‑11‑03 |
 
@@ -102,7 +102,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
 | UX-1 | Smooth, understandable experience: responsive scrolling and map gestures | See PERF-1 and MAP-4. | — | ⬜ |
-| UX-2 | Consistent selection | See SEL-1 to SEL-3. The selected row and the selected marker are visually highlighted. | L1–L7 | 🟨 |
+| UX-2 | Consistent selection | See SEL-1 to SEL-3. The selected row and the selected marker are visually highlighted. | L1–L7 | ✅ 2026‑11‑03 |
 | UX-3 | Clear loading, empty and error states | Every state in [UI_SPEC.md §4](UI_SPEC.md#4-state-catalogue) is implemented on both platforms. | R, C | 🟨 |
 | UX-4 | Cohesive, visually appealing UI with attention to spacing, typography, hierarchy and interaction feedback | The design tokens in UI_SPEC are used. There is pressed, selected and loading feedback, plus haptics on save. Roame is a functional reference, not a pixel spec. | — | ⬜ |
 
