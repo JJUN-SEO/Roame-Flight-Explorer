@@ -219,7 +219,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Shell | `TabView` + `NavigationStack` | `Scaffold` + `NavigationBar` |
 | Sheets | `.sheet` + `.presentationDetents([.medium, .large])` | `ModalBottomSheet` |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
-| Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)` | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route |
+| Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)` | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
 | Refresh | `.refreshable` | `PullToRefreshBox` |
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |

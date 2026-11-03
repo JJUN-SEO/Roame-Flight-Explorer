@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.5, in progress. Update this line at every review gate.
+> **Current step:** 4.5, committed and waiting for the owner's review. Update this line at every review gate.
 
-This plan turns the decided design (D1–D26) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D27) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D26 doesn't work in practice.
+- finding that any of D1–D27 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -342,6 +342,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 
 - **Goal:** a full pass over the whole app before starting iOS.
 - **Covers:** TEST-6, PERF-1. QA: all Android rows Q1–Q24, including rotation (Q21).
+- **Found in Step 4.5, for the owner to decide:** in landscape, the search fields, chips, summary and List/Map switch fill the whole height, so neither the list nor the map has room. Rotation itself keeps the state and the map's camera.
 - **Done when:** every Android row is filled in honestly. Problems found are fixed, or listed for the owner.
 
 ### Phase 5: iOS app
@@ -368,6 +369,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Goal:** prove the app stays smooth and leak-free with the full dataset.
 - **Covers:** PERF-1, PERF-2, PERF-3, PERF-4, UX-1. QA: Q24.
 - **Read:** TEST_PLAN §4.
+- **Found in Step 4.5:** opening the map for the first time logs three StrictMode disk reads on the main thread, all inside MapLibre: loading its native library (425 ms on a slow emulator) and reading its default options. Try loading the library on a background thread before creating the `MapView`.
 - **Done when:** every check in TEST_PLAN §4 is run on both platforms and recorded.
 
 #### [ ] 6.2 Scale benchmarks

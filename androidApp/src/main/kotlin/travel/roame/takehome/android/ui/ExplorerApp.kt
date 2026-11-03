@@ -1,6 +1,9 @@
 package travel.roame.takehome.android.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +26,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -30,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -80,6 +88,13 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
     WriteMessages(state, store, snackbar)
     SuccessHaptics(state)
     var cardInset by remember { mutableStateOf(0.dp) }
+    // Kept here, outside both tabs, so List or Map, the list's position and the map's camera survive tab switches.
+    val view = ExploreView(
+        showMap = rememberSaveable { mutableStateOf(false) },
+        listState = rememberLazyListState(),
+        mapCamera = rememberSaveable { mutableStateOf<DoubleArray?>(null) },
+    )
+    ScrollToTopOnNewSearch(state, view.listState)
 
     Scaffold(
         // Above the selection card, so a message never hides the card's Save or Remove button.
@@ -100,7 +115,7 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                0 -> ExploreScreen(state, store, onDebugLongPress, onCardInset = { cardInset = it })
+                0 -> ExploreScreen(state, store, view, onDebugLongPress, onCardInset = { cardInset = it })
                 else -> SavedScreen(state, store, onDebugLongPress, onCardInset = { cardInset = it })
             }
         }
@@ -130,6 +145,25 @@ private fun WriteMessages(state: ExplorerState, store: ExplorerStore, snackbar: 
     }
 }
 
+/** What Explore shows and where, kept across tab switches and rotation. */
+private class ExploreView(val showMap: MutableState<Boolean>, val listState: LazyListState, val mapCamera: MutableState<DoubleArray?>)
+
+/**
+ * UI_SPEC §5: a new search or filter starts the list from the top. Otherwise the list keeps the old top flight in view,
+ * and after Reset the first rows are hidden above it. A save or a refresh keeps the position, and so does rotation,
+ * because the first value is only remembered.
+ */
+@Composable
+private fun ScrollToTopOnNewSearch(state: ExplorerState, listState: LazyListState) {
+    val search = listOf(state.originQuery, state.destinationQuery, state.originPick, state.destinationPick, state.filters)
+    var shown by remember { mutableStateOf(search) }
+    LaunchedEffect(search) {
+        // Works while the map is showing too: the list applies it when it next lays out.
+        if (search != shown) listState.requestScrollToItem(0)
+        shown = search
+    }
+}
+
 /** UI_SPEC §5: a haptic when a save or remove succeeds, that is when a write ends without an error message. */
 @Composable
 private fun SuccessHaptics(state: ExplorerState) {
@@ -145,7 +179,13 @@ private fun SuccessHaptics(state: ExplorerState) {
 }
 
 @Composable
-private fun ExploreScreen(state: ExplorerState, store: ExplorerStore, onDebugLongPress: (() -> Unit)?, onCardInset: (Dp) -> Unit) {
+private fun ExploreScreen(
+    state: ExplorerState,
+    store: ExplorerStore,
+    view: ExploreView,
+    onDebugLongPress: (() -> Unit)?,
+    onCardInset: (Dp) -> Unit,
+) {
     // UI_SPEC §5: back closes a sheet first (the sheet handles that), then deselects, then exits.
     BackHandler(enabled = state.selected != null) { store.select(null) }
     when (val data = state.data) {
@@ -156,9 +196,13 @@ private fun ExploreScreen(state: ExplorerState, store: ExplorerStore, onDebugLon
             state.options.isEmpty -> Message(stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
             else -> Column {
                 var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
+                var openMarker by rememberSaveable { mutableStateOf<String?>(null) }
+                var showMap by view.showMap
                 SearchHeader(state, store)
                 FilterBar(state, store, onOpen = { openSheet = it })
                 ResultSummary(state, onReset = store::resetAll)
+                // L4: switching changes only the view; the selection and filters stay in the store.
+                ViewSwitch(showMap, onChange = { showMap = it })
                 val selected = state.selected
                 WithSelectionCard(
                     card = selected?.let { flight ->
@@ -174,25 +218,53 @@ private fun ExploreScreen(state: ExplorerState, store: ExplorerStore, onDebugLon
                     },
                     onInset = onCardInset,
                 ) { bottomInset ->
-                    if (state.results.isEmpty()) FilteredEmpty(state, onReset = store::resetAll) else ResultsList(state, store, bottomInset)
+                    val reduceMotion = rememberReduceMotion()
+                    Crossfade(showMap, animationSpec = if (reduceMotion) snap() else tween(200), label = "List or Map") { map ->
+                        when {
+                            map -> ExplorerMap(
+                                state,
+                                camera = view.mapCamera,
+                                bottomInset = bottomInset,
+                                onMarkerTap = { openMarker = it },
+                                onReset = store::resetAll,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            state.results.isEmpty() -> FilteredEmpty(state, onReset = store::resetAll)
+                            else -> ResultsList(state, store, view.listState, bottomInset)
+                        }
+                    }
                 }
                 openSheet?.let { kind -> FilterSheet(kind, state, store, onDismiss = { openSheet = null }) }
+                // M5: the sheet follows the results live, and closes when its destination drops out.
+                val marker = state.markers.firstOrNull { it.code == openMarker }
+                if (showMap && marker != null) {
+                    MarkerSheet(marker, state, store, onDismiss = { openMarker = null })
+                } else if (openMarker != null) {
+                    LaunchedEffect(Unit) { openMarker = null }
+                }
             }
         }
     }
 }
 
+/** UI_SPEC §1: List | Map. */
 @Composable
-private fun ResultsList(state: ExplorerState, store: ExplorerStore, bottomInset: Dp) {
-    val listState = rememberLazyListState()
+private fun ViewSwitch(showMap: Boolean, onChange: (Boolean) -> Unit) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        SegmentedButton(selected = !showMap, onClick = { onChange(false) }, shape = SegmentedButtonDefaults.itemShape(0, 2)) {
+            Text(stringResource(R.string.view_list))
+        }
+        SegmentedButton(selected = showMap, onClick = { onChange(true) }, shape = SegmentedButtonDefaults.itemShape(1, 2)) {
+            Text(stringResource(R.string.view_map))
+        }
+    }
+}
+
+@Composable
+private fun ResultsList(state: ExplorerState, store: ExplorerStore, listState: LazyListState, bottomInset: Dp) {
     val focusManager = LocalFocusManager.current
     // UI_SPEC §5: scrolling the list dismisses the keyboard.
     LaunchedEffect(listState.isScrollInProgress) { if (listState.isScrollInProgress) focusManager.clearFocus() }
-    // UI_SPEC §5: a new search or filter starts from the top. Otherwise the list keeps the old top flight in view,
-    // and after Reset the first rows are hidden above it. A save or a refresh keeps the position.
-    LaunchedEffect(state.originQuery, state.destinationQuery, state.originPick, state.destinationPick, state.filters) {
-        listState.scrollToItem(0)
-    }
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp + bottomInset),
@@ -261,8 +333,9 @@ private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongP
  */
 @Composable
 private fun WithSelectionCard(card: (@Composable () -> Unit)?, onInset: (Dp) -> Unit, content: @Composable (bottomInset: Dp) -> Unit) {
-    var cardHeight by remember { mutableIntStateOf(0) }
-    val inset = if (card == null) 0.dp else with(LocalDensity.current) { cardHeight.toDp() } + 16.dp
+    // Starts at 0 for each new card, so the inset stays 0 until the card has really been measured.
+    var cardHeight by remember(card == null) { mutableIntStateOf(0) }
+    val inset = if (cardHeight == 0) 0.dp else with(LocalDensity.current) { cardHeight.toDp() } + 16.dp
     LaunchedEffect(inset) { onInset(inset) }
     DisposableEffect(Unit) { onDispose { onInset(0.dp) } }
     Box(Modifier.fillMaxSize()) {

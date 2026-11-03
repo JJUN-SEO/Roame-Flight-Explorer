@@ -1,5 +1,8 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- MapLibre adds these. D16 allows approximate location only, asked for by "Use my location". -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove" />
 
     <application
         android:name=".RoameApp"

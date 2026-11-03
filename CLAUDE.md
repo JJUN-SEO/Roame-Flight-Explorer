@@ -131,7 +131,11 @@ These were found in the starter and the fixture.
   - 364 routes cross the antimeridian, so draw them as geodesics or unwrap longitudes.
 - **Date pickers:** Android's Material 3 date picker returns **UTC** midnight millis, so convert them with UTC.
 - **Server working directory:** the Gradle `run` task's default working directory is the module dir. Set it to the repo root so `fixtures/` resolves.
-- **MapLibre (D8, D23, D24):** PLAN Step 4.5 lists what Step 0.3 found. MapLibre adds `ACCESS_FINE_LOCATION`, which has to be removed because D16 allows approximate location only, and `LatLngBounds.from` needs unwrapped longitudes across the antimeridian.
+- **MapLibre (D8, D23, D24, D27):** PLAN Step 4.5 lists what Step 0.3 found. MapLibre adds `ACCESS_FINE_LOCATION`, which has to be removed because D16 allows approximate location only, and `LatLngBounds.from` needs unwrapped longitudes across the antimeridian. Found in Step 4.5:
+  - Fit a selected route only after the selection card has been measured, or it lands under the card.
+  - Keep the ⓘ credit visible above the card: OpenStreetMap and OpenFreeMap require it.
+  - Creating the first `MapView` logs three StrictMode disk reads from inside MapLibre.
+- **The owner's 8 GB Mac:** a build takes about 15 s with the emulator off and up to 8 minutes with it on, and the emulator has crashed under memory pressure. The owner's API server may run inside Android Studio's Gradle process, so never stop Gradle processes you didn't start. After an install, Android 17 can show an "Updating…" screen; press back and open the app again.
 - **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Only request it when the user taps "Use my location".
 - **Ktor failures (found in Step 2.1):**
   - Check timeouts before connectivity. On the JVM and Android, every timeout is also an `IOException`.

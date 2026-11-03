@@ -72,6 +72,17 @@
     <string name="save_failed">Couldn\'t save flight.</string>
     <string name="remove_failed">Couldn\'t remove flight.</string>
     <string name="retry">Retry</string>
+
+    <string name="view_list">List</string>
+    <string name="view_map">Map</string>
+    <plurals name="marker_sheet_title">
+        <item quantity="one">%1$s · %2$s — %3$s flight from %4$s</item>
+        <item quantity="other">%1$s · %2$s — %3$s flights from %4$s</item>
+    </plurals>
+    <string name="map_unavailable_title">Can\'t load the map</string>
+    <string name="map_unavailable_body">It needs internet the first time. Your flights are still in the list.</string>
+    <string name="map_empty">No flights match</string>
+
     <!-- Debug builds only (TEST_PLAN §6). -->
     <string name="debug_fail_next">Debug: the next save or remove will fail.</string>
 </resources>
