@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.7's change to D30 (location asked on the first focus of From), committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 4.8, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -331,7 +331,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Changed after review (D29, owner):** pull to refresh, ⟳ and the banner's Retry were removed. The brief doesn't ask for a manual refresh; the app refreshes when it opens, and the first-load error keeps Try again.
 - **Done when:** those QA rows pass, including a force-quit and relaunch with the API stopped.
 
-#### [ ] 4.7 Use my location
+#### [x] 4.7 Use my location
 
 - **Goal:** the ⌖ button improves the origin ranking, and asks for nothing until tapped.
 - **Covers:** P2, P5, SRCH-7, D16. QA: Q2c.
