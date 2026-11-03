@@ -22,14 +22,32 @@ enum Format {
     }
 
     private static let row = formatter("EEE, MMM d")
+    private static let chip = formatter("MMM d")
 
     /** "Mon, Feb 1". */
     static func rowDate(_ iso: String) -> String {
-        guard let date = calendarDate(iso) else { return iso }
+        guard let date = calendarDate(iso, in: calendar) else { return iso }
         return row.string(from: date)
     }
 
-    private static func calendarDate(_ iso: String) -> Date? {
+    /** "Feb 10", for the dates chip. */
+    static func chipDate(_ iso: String) -> String {
+        guard let date = calendarDate(iso, in: calendar) else { return iso }
+        return chip.string(from: date)
+    }
+
+    /** For `DatePicker`, which works in the device's calendar: local midnight of that day. */
+    static func localDate(_ iso: String) -> Date? {
+        calendarDate(iso, in: .current)
+    }
+
+    /** Back from `DatePicker`: the day's year, month and day in the same calendar (UI_SPEC §9). */
+    static func iso(_ localDate: Date) -> String {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: localDate)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    private static func calendarDate(_ iso: String, in calendar: Calendar) -> Date? {
         let parts = iso.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))

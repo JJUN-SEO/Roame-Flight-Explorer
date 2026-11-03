@@ -145,6 +145,7 @@ These were found in the starter and the fixture.
 - **Store tests on a real database:** stop the store and wait for it before closing the database, because `backgroundScope` isn't enough (ARCHITECTURE §7). A read still running can hit the closed database and crash the test process.
 - **Xcode project (Step 5.1):** it doesn't use folder-synced groups, so every new Swift file must be added to `project.pbxproj` (a build file, a file reference, the group and the Sources phase), or it silently isn't compiled. The owner's working copy holds their signing settings (`DEVELOPMENT_TEAM`, a personal bundle ID), so commit only your own lines: stage the committed version plus your change (`git hash-object -w` and `git update-index --cacheinfo`), edit the working copy the same way, and check that no `DEVELOPMENT_TEAM` is staged.
 - **SwiftUI search fields (Step 5.2):** when a field loses focus, SwiftUI can write its old text back through the binding unchanged. Treat that as an edit and it clears a pick (S14), so the binding ignores writes that change nothing.
+- **Kotlin types in Swift (Step 5.3):** Kotlin/Native lowercases a whole enum entry name, so `FilterKind.MaxPoints` is `.maxpoints` in Swift; check the generated `Shared.h` when unsure. Kotlin classes aren't `Sendable`, so Swift 6 rejects a global `let` of them; use a computed `var`.
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"

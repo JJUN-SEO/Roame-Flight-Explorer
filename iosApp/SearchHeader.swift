@@ -150,13 +150,15 @@ private func hintText(_ hint: [AirportSuggestion]) -> String {
     return more > 0 ? "Showing \(shown) +\(more) more" : "Showing \(shown)"
 }
 
-/** UI_SPEC §4: an empty result that isn't an error, with a way back. Step 5.3 adds the list of active filters. */
+/** UI_SPEC §4: an empty result that isn't an error, with the active filters and a way back. */
 struct FilteredEmpty: View {
     @Environment(ExplorerModel.self) private var model
 
     var body: some View {
         ContentUnavailableView {
             Label("No flights match your search", systemImage: "magnifyingglass")
+        } description: {
+            ActiveFilterList(state: model.state)
         } actions: {
             Button("Reset filters") { model.store.resetAll() }
         }

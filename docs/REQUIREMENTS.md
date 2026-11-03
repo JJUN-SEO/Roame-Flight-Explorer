@@ -44,16 +44,16 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | SRCH-7 | *(owner-requested)* Ranking by user location and annual airport volume, falling back to the original data | Matches are ordered by priority. An airport with no passenger figure uses its flight count from `flights.json`. Without a location, it uses volume only. The destination field never uses location. | P1–P7 | 🟨 engine and store done, with the shipped passenger figures. Device location (D16): Android done in Step 4.7; iOS in Step 5.7. Ranking orders airports only, never the flight list (D17). |
 | SRCH-8 | *(owner-requested)* A "Showing … (CODE)" hint when fuzzy matching was used | Both apps show the hint under the field when the tier is `Fuzzy`. | S13 | ✅ 2026‑11‑03 |
 | SRCH-9 | *(owner-requested)* Suggestions appear and change as the user types | In From, typing `new` shows New York (JFK). Deleting that and typing `sea` shows Seattle (SEA). In To, `tokyo` also offers Tokyo (all airports). Tapping a suggestion picks what it names. | S14 | ✅ 2026‑11‑03 |
-| FILT-1 | Departure date range filter that includes both boundary dates | Flights on `start` and on `end` are included. Flights on the day before `start` and the day after `end` are excluded. | F1–F3 | 🟨 |
-| FILT-2 | Cabin filter | Choosing a cabin shows only that cabin. Choosing "Any" shows all cabins. | F5 | 🟨 |
-| FILT-3 | Maximum points filter that includes the selected limit | A flight whose points equal the limit is included. A flight 500 points above it is excluded. | F4 | 🟨 |
-| FILT-4 | Loyalty program filter with multiple selections | Selecting {Avios, Aeroplan} shows flights from either program. | F6 | 🟨 |
-| FILT-5 | Different filters combine with AND, and a flight may match any selected program | A cabin + points + programs combination returns only flights that satisfy every filter. | F7 | 🟨 |
-| FILT-6 | Empty filters include all values | With no filters set, all 1,000 fixture flights are shown. | F2, F4–F6 | 🟨 |
-| FILT-7 | Show the result count | The count always equals the number of rows in the list and the sum of all map marker counts. | C1 | 🟨 |
-| FILT-8 | Show the active filters | Every non-default filter is visible as a chip or label without opening a sheet. | C2 | 🟨 |
-| FILT-9 | Provide a clear way to reset | One tap on "Reset" restores all defaults. Each chip can also be cleared on its own. | C3, C4 | 🟨 |
-| FILT-10 | Start with the full fixture date range so results are visible immediately | On first launch, the date filter shows 2027‑02‑01 – 2027‑04‑01 and all flights. The bounds come from the data and are not hardcoded. | F2, F8 | 🟨 |
+| FILT-1 | Departure date range filter that includes both boundary dates | Flights on `start` and on `end` are included. Flights on the day before `start` and the day after `end` are excluded. | F1–F3 | ✅ 2026‑11‑03 |
+| FILT-2 | Cabin filter | Choosing a cabin shows only that cabin. Choosing "Any" shows all cabins. | F5 | ✅ 2026‑11‑03 |
+| FILT-3 | Maximum points filter that includes the selected limit | A flight whose points equal the limit is included. A flight 500 points above it is excluded. | F4 | ✅ 2026‑11‑03 |
+| FILT-4 | Loyalty program filter with multiple selections | Selecting {Avios, Aeroplan} shows flights from either program. | F6 | ✅ 2026‑11‑03 |
+| FILT-5 | Different filters combine with AND, and a flight may match any selected program | A cabin + points + programs combination returns only flights that satisfy every filter. | F7 | ✅ 2026‑11‑03 |
+| FILT-6 | Empty filters include all values | With no filters set, all 1,000 fixture flights are shown. | F2, F4–F6 | ✅ 2026‑11‑03 |
+| FILT-7 | Show the result count | The count always equals the number of rows in the list and the sum of all map marker counts. | C1 | ✅ 2026‑11‑03 |
+| FILT-8 | Show the active filters | Every non-default filter is visible as a chip or label without opening a sheet. | C2 | ✅ 2026‑11‑03 |
+| FILT-9 | Provide a clear way to reset | One tap on "Reset" restores all defaults. Each chip can also be cleared on its own. | C3, C4 | ✅ 2026‑11‑03 |
+| FILT-10 | Start with the full fixture date range so results are visible immediately | On first launch, the date filter shows 2027‑02‑01 – 2027‑04‑01 and all flights. The bounds come from the data and are not hardcoded. | F2, F8 | ✅ 2026‑11‑03 |
 
 ## 4. Flight list & map
 

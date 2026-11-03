@@ -15,6 +15,7 @@ struct ExplorerApp: View {
 
 private struct ExploreScreen: View {
     @Environment(ExplorerModel.self) private var model
+    @State private var openSheet: FilterKind?
 
     var body: some View {
         let state = model.state
@@ -30,6 +31,8 @@ private struct ExploreScreen: View {
             } else {
                 VStack(spacing: 0) {
                     SearchHeader()
+                    FilterBar { openSheet = $0 }
+                    ResultSummary()
                     if state.results.isEmpty {
                         FilteredEmpty()
                     } else {
@@ -37,6 +40,9 @@ private struct ExploreScreen: View {
                     }
                 }
                 .background(Color(.systemGroupedBackground))
+                .sheet(isPresented: Binding(get: { openSheet != nil }, set: { if !$0 { openSheet = nil } })) {
+                    if let kind = openSheet { FilterSheet(kind: kind) }
+                }
             }
         }
     }
@@ -47,12 +53,11 @@ private struct ResultsList: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 8) {
-                Text(flightCount(Int(state.resultCount)))
-                    .font(.headline)
+            LazyVStack(spacing: 8) {
                 ForEach(state.results, id: \.id) { FlightRow(flight: $0) }
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
         // UI_SPEC §5: scrolling the list dismisses the keyboard.
         .scrollDismissesKeyboard(.immediately)

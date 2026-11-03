@@ -396,6 +396,8 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 **Search (Step 5.2).** `SearchHeader.swift` mirrors Android: each field keeps the typed text locally and sends every change to the store, follows the store only when it empties the field, shows a pick's label while it's active, and ignores binding writes that change nothing (CLAUDE.md gotchas). Suggestions sit under the focused field, the Search key and scrolling dismiss the keyboard, and autocorrect is off, so fuzzy queries reach the store as typed.
 
+**Filters (Step 5.3).** `FilterBar.swift` has the chips, the summary and the active-filter list, and `FilterSheets.swift` one `.sheet` per filter, with "Show N flights" pinned to the bottom. Choices apply as they're made, like Android. The date pickers work in the device's calendar, so a picked day goes to the store as its year, month and day (`Format.iso`), and a stored day comes back as local midnight (`Format.localDate`).
+
 **Location (D16, D30).** Core Location with `requestWhenInUseAuthorization()`, asked the first time the From field gets focus, never again automatically after a denial, and read without asking on later launches once allowed. Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
 
 ## 9. Android integration
