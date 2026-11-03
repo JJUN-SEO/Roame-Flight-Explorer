@@ -24,7 +24,8 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.coroutines.core)
+            // api: the store's public state is a StateFlow, which the Android app has to see.
+            api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)

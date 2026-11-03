@@ -1,14 +1,22 @@
 package travel.roame.takehome.testing
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.LocalDate
+import travel.roame.takehome.data.CacheSnapshot
+import travel.roame.takehome.data.FlightRepository
+import travel.roame.takehome.data.SyncStatus
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.FlightsApi
 import travel.roame.takehome.model.Airport
 import travel.roame.takehome.model.Flight
+import travel.roame.takehome.presentation.ExplorerState
+import travel.roame.takehome.presentation.ExplorerStore
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -66,6 +74,26 @@ internal class FakeFlightsApi : FlightsApi {
         return results.removeFirst()
     }
 }
+
+/** For store tests that want everything on the test dispatcher, with no database. */
+internal class FakeFlightRepository(
+    flights: List<Flight> = emptyList(),
+    lastSuccessAt: Instant? = Instant.fromEpochMilliseconds(1_000),
+) : FlightRepository {
+    override val cache = MutableStateFlow(CacheSnapshot(flights, lastSuccessAt))
+    override val syncStatus = MutableStateFlow(SyncStatus())
+
+    var refreshes = 0
+        private set
+
+    override suspend fun refresh() {
+        refreshes++
+    }
+}
+
+/** Waits for real time, because a store on a real database doesn't run on the test scheduler. */
+internal suspend fun ExplorerStore.awaitState(predicate: (ExplorerState) -> Boolean): ExplorerState =
+    withContext(Dispatchers.Default) { withTimeout(5_000) { state.first(predicate) } }
 
 internal class TestClock(var current: Instant = Instant.fromEpochMilliseconds(1_000)) : Clock {
     override fun now(): Instant = current

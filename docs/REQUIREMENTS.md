@@ -50,7 +50,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | FILT-4 | Loyalty program filter with multiple selections | Selecting {Avios, Aeroplan} shows flights from either program. | F6 | 🟨 |
 | FILT-5 | Different filters combine with AND, and a flight may match any selected program | A cabin + points + programs combination returns only flights that satisfy every filter. | F7 | 🟨 |
 | FILT-6 | Empty filters include all values | With no filters set, all 1,000 fixture flights are shown. | F2, F4–F6 | 🟨 |
-| FILT-7 | Show the result count | The count always equals the number of rows in the list and the sum of all map marker counts. | C1 | ⬜ |
+| FILT-7 | Show the result count | The count always equals the number of rows in the list and the sum of all map marker counts. | C1 | 🟨 |
 | FILT-8 | Show the active filters | Every non-default filter is visible as a chip or label without opening a sheet. | C2 | 🟨 |
 | FILT-9 | Provide a clear way to reset | One tap on "Reset" restores all defaults. Each chip can also be cleared on its own. | C3, C4 | 🟨 |
 | FILT-10 | Start with the full fixture date range so results are visible immediately | On first launch, the date filter shows 2027‑02‑01 – 2027‑04‑01 and all flights. The bounds come from the data and are not hardcoded. | F2, F8 | 🟨 |
@@ -80,18 +80,18 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 |---|---|---|---|---|
 | PERF-1 | Scrolling, searching, filtering and map interaction stay responsive with the full dataset | No visible jank while scrolling 1,000 rows or typing quickly. The map stays smooth while results change. | — | ⬜ |
 | PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | ⬜ |
-| PERF-3 | Results always reflect the user's latest search and filter choices | A test sends rapid query changes and sees only the final query's results. A slow, stale computation can never overwrite a newer one (`mapLatest`). | — | ⬜ |
+| PERF-3 | Results always reflect the user's latest search and filter choices | A test sends rapid query changes and sees only the final query's results. A slow, stale computation can never overwrite a newer one (`mapLatest`). | — | ✅ 2026‑11‑02 |
 | PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | ⬜ |
 
 ## 7. Offline & error handling
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| OFF-1 | Cached results and saved flights survive closing and reopening the app | Force-quit, stop the API, relaunch: the cached results and saved flights are both present. | R1, V1 | ⬜ |
-| OFF-2 | Offline, the user can search cached results, view saved flights and remove saved flights | With the API stopped, search, filters, map, the Saved tab and Remove all work. | R6, V6 | ⬜ |
-| OFF-3 | A failed refresh keeps the existing data and shows an offline or stale-data indication | Stop the API and pull to refresh: the data is unchanged and a banner shows "Couldn't refresh · results from <time>" with Retry. | R5, R6, R11 | ⬜ |
-| OFF-4 | With no cached data, show an understandable error with a retry action | Fresh install with the API stopped: a full-screen error explains the cause. Retry works once the API is started. | R7, R9 | ⬜ |
-| OFF-5 | A successful empty response is distinguished from a failed request | A 200 response with `{"flights":[]}` shows "No flights available" (not an error). A failed request shows the error or stale state. | R4, R8 | ⬜ |
+| OFF-1 | Cached results and saved flights survive closing and reopening the app | Force-quit, stop the API, relaunch: the cached results and saved flights are both present. | R1, V1 | 🟨 |
+| OFF-2 | Offline, the user can search cached results, view saved flights and remove saved flights | With the API stopped, search, filters, map, the Saved tab and Remove all work. | R6, V6 | 🟨 |
+| OFF-3 | A failed refresh keeps the existing data and shows an offline or stale-data indication | Stop the API and pull to refresh: the data is unchanged and a banner shows "Couldn't refresh · results from <time>" with Retry. | R5, R6, R11 | 🟨 |
+| OFF-4 | With no cached data, show an understandable error with a retry action | Fresh install with the API stopped: a full-screen error explains the cause. Retry works once the API is started. | R7, R9 | 🟨 |
+| OFF-5 | A successful empty response is distinguished from a failed request | A 200 response with `{"flights":[]}` shows "No flights available" (not an error). A failed request shows the error or stale state. | R4, R8 | 🟨 |
 | OFF-6 | Saving the same flight again updates its details without creating a duplicate | Re-saving an id after its details change leaves one row with the new details. | V2 | ✅ 2026‑11‑02 |
 | OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | 🟨 |
 | OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | ⬜ |

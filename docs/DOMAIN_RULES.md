@@ -181,7 +181,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - The default is both bounds `null`. The UI displays them as the dataset's min and max dates, so the full fixture range is the starting state and results show immediately. *(assumption)*
   - If the user picks a bound equal to the dataset bound, store `null` instead.
   - Because of this, the default range follows the data after a refresh.
-- **F3** The UI cannot produce `start > end`, because the pickers constrain each other. If it happens anyway, the domain returns zero results; it does not swap the dates.
+- **F3** The UI cannot produce `start > end`, because the pickers constrain each other. If it happens anyway, the domain returns zero results; it does not swap the dates. A date that isn't ISO `yyyy-MM-dd` is ignored, which the pickers can't produce either. *(assumption)*
 - **F4** The maximum points limit is inclusive: `points ≤ maxPoints`. `null` means no limit.
   - The UI slider spans the dataset's [min, max] points in steps of 500.
   - Dragging to the top end stores `null`, displayed as "Any".

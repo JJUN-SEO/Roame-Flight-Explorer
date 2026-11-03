@@ -1,0 +1,85 @@
+package travel.roame.takehome.presentation
+
+import travel.roame.takehome.model.ActiveFilter
+import travel.roame.takehome.model.FetchError
+import travel.roame.takehome.model.FilterOptions
+import travel.roame.takehome.model.FlightFilters
+
+/** Everything both apps show (ARCHITECTURE §4.1). They render this and never filter, sort or group flights themselves. */
+data class ExplorerState(
+    val data: DataStatus,
+    val originQuery: String,
+    val destinationQuery: String,
+    val filters: FlightFilters,
+    /** From the whole cache, so options don't disappear while filtering (F8). */
+    val options: FilterOptions,
+    val activeFilters: List<ActiveFilter>,
+    val hasAnythingToReset: Boolean,
+    /** After search and filters, in O1 order. */
+    val results: List<FlightItem>,
+    /** From exactly the same flights as [results] (M1), ordered by code. */
+    val markers: List<DestinationMarker>,
+) {
+    /** C1. */
+    val resultCount: Int get() = results.size
+
+    companion object {
+        val Initial = ExplorerState(
+            data = DataStatus.Loading,
+            originQuery = "",
+            destinationQuery = "",
+            filters = FlightFilters(),
+            options = FilterOptions(),
+            activeFilters = emptyList(),
+            hasAnythingToReset = false,
+            results = emptyList(),
+            markers = emptyList(),
+        )
+    }
+}
+
+/** The offline rules (R6–R8). Whether a sync ever succeeded decides this, not how many flights are cached. */
+sealed class DataStatus {
+    /** Nothing has ever synced, and no failure to report yet. */
+    data object Loading : DataStatus()
+
+    /** Nothing has ever synced and the fetch failed (R7). */
+    data class Unavailable(val error: FetchError) : DataStatus()
+
+    /** At least one sync succeeded, so there's data to show, even if the latest refresh failed (R6). */
+    data class Ready(
+        /** Epoch milliseconds (T4). */
+        val lastSuccessAt: Long,
+        val isRefreshing: Boolean,
+        val refreshError: FetchError?,
+    ) : DataStatus()
+}
+
+data class FlightItem(
+    val id: String,
+    val originCode: String,
+    val originCity: String,
+    val originLatitude: Double,
+    val originLongitude: Double,
+    val destinationCode: String,
+    val destinationCity: String,
+    val destinationLatitude: Double,
+    val destinationLongitude: Double,
+    /** ISO `yyyy-MM-dd`: a calendar date, never an instant (T3). */
+    val departureDate: String,
+    val program: String,
+    val points: Int,
+    val cabin: String,
+)
+
+data class DestinationMarker(
+    val code: String,
+    val city: String,
+    val latitude: Double,
+    val longitude: Double,
+    val minPoints: Int,
+    /** In O2 order (M5). */
+    val flights: List<FlightItem>,
+) {
+    val flightCount: Int get() = flights.size
+}

@@ -63,6 +63,8 @@ shared/schemas/     Room's exported schema JSON (version 1)
 
 ### 4.1 State
 
+Step 3.3 builds `data`, the queries, `filters`, `options`, `activeFilters`, `hasAnythingToReset`, `results` and `markers`. Steps 3.4 and 3.5 add the rest. `resultCount` is `results.size`, so the two can't disagree (C1).
+
 ```kotlin
 data class ExplorerState(
     val data: DataStatus,                 // Loading | Unavailable(error) | Ready(lastSuccessAt, isRefreshing, refreshError?)
@@ -86,7 +88,7 @@ data class ExplorerState(
 
 `DataStatus` encodes the offline rules directly:
 
-- `Loading`: nothing cached yet and the first fetch is running.
+- `Loading`: nothing has ever synced and there's no failure to report, including during a retry from the error screen.
 - `Unavailable(error)`: nothing has ever synced and the fetch failed. The UI shows a full-screen error (R7).
 - `Ready(lastSuccessAt, isRefreshing, refreshError)`: at least one sync has succeeded. An empty `results` list here means either "synced empty" (R4) or "filtered empty", and the UI tells them apart by checking whether the cache itself is empty (`options.isEmpty`).
 
@@ -110,16 +112,17 @@ private val inputs = MutableStateFlow(ExplorerInputs())  // queries, filters, se
 val state: StateFlow<ExplorerState> = combine(
     flightRepository.cache.map(::index),  // CacheSnapshot → IndexedFlights: O1 and O2 orders and normalised search keys computed once
     flightRepository.syncStatus,          // isRefreshing + the latest error, which stays during a retry (R11)
-    savedRepository.saved,                // Flow<List<SavedFlight>>
+    savedRepository.saved,                // Flow<List<SavedFlight>>, added in Step 3.4
     inputs,
 ) { cache, sync, saved, input -> Snapshot(cache, sync, saved, input) }
     .mapLatest(::reduce)                  // pure; cancelled if newer input arrives → latest wins (PERF-3)
-    .onEach(::clearStaleSelection)        // L3: write selectedFlightId = null back to inputs
+    .onEach(::normaliseFilters)           // F8: write dropped filter values back to inputs, so they stay dropped
+    .onEach(::clearStaleSelection)        // L3: write selectedFlightId = null back to inputs, added in Step 3.4
     .flowOn(Dispatchers.Default)
     .stateIn(scope, SharingStarted.Eagerly, ExplorerState.Initial)
 ```
 
-- `reduce` is a pure function, so it can be unit-tested without coroutines. On 1,000 flights it runs in well under a millisecond (0.1 ms on a Mac, excluding text search), so search needs no debounce. Add a debounce of about 100 ms only if profiling shows a problem.
+- `reduce` is a pure function, so it can be unit-tested without coroutines. On 1,000 flights with no filters, it takes 1.1–1.7 ms on a Mac JVM and 10–11 ms on the iOS simulator's debug build, excluding text search, and it runs off the main thread. So search needs no debounce. Add a debounce of about 100 ms only if profiling shows a problem. Android isn't measured yet.
 - The search index and the two sorted lists (O1 for results, O2 for marker flights) are rebuilt only when the cache emits, never on each keystroke. Filtering keeps their order, so `reduce` doesn't sort.
 - `Dispatchers.Default` keeps the CPU work off the main thread. `stateIn` hands the result to collectors.
 
@@ -332,7 +335,8 @@ The platform passes the base URL into `AppGraph`. Shared code never hardcodes a 
 
 - `AppGraph` is created **once per process** and owns `CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)`. Because the store is app-scoped, Android rotation or configuration changes never lose state, and there are no per-screen stores to leak.
 - UI observers are the only things that come and go. Compose uses `collectAsStateWithLifecycle`, and Swift cancels its `Cancellable` (§8).
-- Tests inject dispatchers and a `Clock`, and use `runTest` with `StandardTestDispatcher` plus `Dispatchers.setMain`.
+- Tests inject dispatchers and a `Clock`, and use `runTest` with `StandardTestDispatcher`.
+- A test using a store on a real database must stop the store and wait for it before closing the database, because `backgroundScope` isn't enough. A read still running on a real thread can otherwise hit the closed database, which crashed the test process in Step 3.3. The apps never close their database while running.
 - Debug builds enable Android `StrictMode` (detect disk reads, disk writes and network on the main thread, with `penaltyLog`) to prove PERF-2.
 
 ## 8. iOS interop
@@ -463,7 +467,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Filter / sort pipeline | In memory, pure functions, `mapLatest` on `Dispatchers.Default`, sorted once per data change | Measured in Step 3.1, on a Mac JVM after warm-up / the iOS simulator's debug build, excluding text search, at 1k, 10k and 100k. Filter per input change, O(n): 0.14–0.16, 0.35–2 and 0.46–0.58 ms / 0.12–0.15, 1.2–1.3 and 12–18 ms. Sort per data change, O(n log n): 0.23–0.28, 2–5 and 22–23 ms / 1.8–2.2, 33–36 and 482–520 ms. Filter options per data change, O(n): 0.38–0.43, 1–2.3 and 4.6–4.7 ms / 0.8–0.9, 8.4–9.3 and 91–104 ms. Android not measured yet. | ~100k flights | Build a marker's flights only when its sheet opens (4.1 ms per change + 1.6 ms per sheet at 100k); then push predicates into indexed SQL that returns ids and page the results |
 | Text search (§4.4) | Trie (O(m)) + inverted trigram and phonetic indexes over **airports**; flights are then filtered by code | Prefix O(m); fuzzy O(candidates × len²). The lookup takes under 0.003 ms with 24 airports. The pass over flights brings one keystroke to at most 0.006 ms at 1k, 0.047 ms at 10k and 0.56 ms at 100k (measured on a Mac in Java). | Thousands of airports (est. well under 1 ms per keystroke) | Cap the ids stored per trie node to the top K by priority; move fuzzy candidate generation server-side; fuzzy over flights is never needed |
 | Map aggregation | Group results by destination | O(n). Measured at 1k, 10k and 100k flights on a Mac JVM: 0.22, 0.5–0.59 and 2.5–9.3 ms. On the iOS simulator's debug build: 0.58–0.65, 5–5.9 and 53–63 ms. One 64-segment route line takes about 0.04 ms on both. Android not measured yet | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
-| State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
+| State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission. Measured at 1k, 10k and 100k flights, on a Mac JVM / the iOS simulator's debug build. `reduce` with no filters: 1.1–1.7, 4.4–5.4 and 17–34 ms / 10–11, 106–108 and 1,149–1,264 ms. With narrow filters: 0.6–0.8, 1.9–2.7 and 4.7–5.7 ms / 0.7–1, 7–7.7 and 74–79 ms. `index`, per data change: 0.7–1.4, 9.7–12 and 68–79 ms / 5–6, 87–90 and 1,300–1,353 ms. Android not measured yet | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
 | Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved). V5 is one statement, so a refresh's cost grows with saved flights, not with the response. A whole refresh of 100k flights on a Mac JVM took 240–284 ms with none saved, 248–268 ms with 1k saved and 264–269 ms with 10k saved. Not measured on iOS or Android | 10k+ | Paging in the Saved tab |
 | Memory | Dataset + indexes in memory | Flights alone: 0.4 MB at 1k, 3.4 MB at 10k, 35 MB at 100k (measured on the JVM, about 350 bytes per flight) | ~100k flights | Keep rows in SQLite and hold only windows plus indexes in memory |
 

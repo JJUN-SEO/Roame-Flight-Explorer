@@ -63,7 +63,8 @@ shared/                KMP module → Android library + static Shared.framework 
     data/remote/         fetch, decode and classify failures (ARCHITECTURE §6.3)
     data/                FlightRepository (cache flow, sync status, refresh), SavedFlightsRepository
     data/local/          Room database (ARCHITECTURE §5)
-    {presentation,di} †
+    presentation/        ExplorerStore, ExplorerState, the reducer
+    di/                  AppGraph, the single composition root
   shared/schemas/        Room's exported schema JSON
   src/commonTest/        rule tests (run on JVM and iOS)
   src/jvmTest/           fixture contracts, DoubleMetaphoneOracleTest (port vs commons-codec jar), real OkHttp failures
@@ -135,6 +136,7 @@ These were found in the starter and the fixture.
   - JSON errors arrive as `ContentConvertException`, not `SerializationException`.
   - Ktor decodes on the caller's thread, so `KtorFlightsApi` moves the whole fetch to `Dispatchers.Default`.
   - The iOS engine ignores connect timeouts (R10).
+- **Store tests on a real database:** stop the store and wait for it before closing the database, because `backgroundScope` isn't enough (ARCHITECTURE §7). A read still running can hit the closed database and crash the test process.
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"

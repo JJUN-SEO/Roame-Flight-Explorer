@@ -5,6 +5,11 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
@@ -14,6 +19,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.KtorFlightsApi
+import travel.roame.takehome.di.AppGraph
 import travel.roame.takehome.domain.GreatCircle
 import travel.roame.takehome.domain.MarkerSheetOrder
 import travel.roame.takehome.domain.ResultOrder
@@ -23,6 +29,9 @@ import travel.roame.takehome.domain.toFilterOptions
 import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.Flight
 import travel.roame.takehome.model.FlightFilters
+import travel.roame.takehome.presentation.DataStatus
+import travel.roame.takehome.testing.awaitState
+import travel.roame.takehome.testing.testDb
 import java.io.File
 import java.security.MessageDigest
 import kotlin.math.abs
@@ -260,6 +269,40 @@ class FixtureContractTest {
             points.zipWithNext { a, b -> assertTrue(abs(b.longitude - a.longitude) < 180.0, label) }
             assertTrue(abs(points.last().longitude - points.first().longitude) <= 180.0, label)
             assertEquals(from.distanceKmTo(to), points.zipWithNext { a, b -> a.distanceKmTo(b) }.sum(), 1e-3, label)
+        }
+    }
+
+    // The whole app graph on the real data. Only the network is fake.
+
+    @Test
+    fun r3_theRealFixtureReachesTheStateBothAppsRead() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val db = testDb()
+        try {
+            val engine = MockEngine {
+                respond(fixtureText, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+            }
+            val store = AppGraph(db, engine, "http://api.test", scope = scope).store
+
+            val all = store.awaitState { it.data is DataStatus.Ready && it.resultCount > 0 }
+            assertEquals(1000, all.resultCount)
+            assertEquals(24, all.markers.size)
+            assertEquals(1000, all.markers.sumOf { it.flightCount })
+            assertEquals("fx-YYZ-BCN-20270201", all.results.first().id)
+            assertEquals(decoded.toFilterOptions(), all.options)
+
+            store.setCabin("Business")
+            store.setMaxPoints(60_000)
+            val filtered = store.awaitState { it.filters.cabin == "Business" && it.filters.maxPoints == 60_000 }
+            assertEquals(171, filtered.resultCount)
+            assertEquals(22, filtered.markers.size)
+            assertEquals(171, filtered.markers.sumOf { it.flightCount })
+            val paris = filtered.markers.first { it.code == "CDG" }
+            assertEquals(12 to 39_000, paris.flightCount to paris.minPoints)
+        } finally {
+            // Stop the store first, so no read is still running when the database closes.
+            scope.coroutineContext.job.cancelAndJoin()
+            db.close()
         }
     }
 
