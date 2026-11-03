@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.8, in progress. Update this line at every review gate.
+> **Current step:** 4.8, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -346,6 +346,11 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Covers:** TEST-6, PERF-1. QA: all Android rows Q1–Q24, including rotation (Q21).
 - **Found in Step 4.5:** in landscape the header left no room for the list or the map. The owner chose portrait only (D28), built on Android right after Step 4.5. Rotation itself keeps the state and the map's camera.
 - **Done when:** every Android row is filled in honestly. Problems found are fixed, or listed for the owner.
+- **Result (2026‑11‑03):** every Android row has an entry. Q8, Q22 and Q24 are 🟨 for the reasons in their rows. Found and listed, none blocking:
+  - Q8: pinch and double-tap zoom need checking by hand (`adb` can't make them); Step 0.3 saw both work in MapLibre.
+  - Q24: scroll smoothness can't be measured on this emulator, which renders in software → Step 6.1.
+  - Q22: at 2× font, cities truncate and the card's points wrap; TalkBack can't reach map pills or hear the Saved badge count → Step 6.3.
+  - Q23: the light-grey map is much brighter than the rest of the app in dark mode → Step 6.3.
 
 ### Phase 5: iOS app
 
@@ -371,6 +376,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Goal:** prove the app stays smooth and leak-free with the full dataset.
 - **Covers:** PERF-1, PERF-2, PERF-3, PERF-4, UX-1. QA: Q24.
 - **Read:** TEST_PLAN §4.
+- **Found in Step 4.8:** the emulator renders graphics in software, so frame timing measured there says nothing about the app (Android's own Settings app was as slow). Measure scrolling on a real phone or a hardware-GPU emulator.
 - **Found in Step 4.5:** opening the map for the first time logs three StrictMode disk reads on the main thread, all inside MapLibre: loading its native library (425 ms on a slow emulator) and reading its default options. Try loading the library on a background thread before creating the `MapView`.
 - **Done when:** every check in TEST_PLAN §4 is run on both platforms and recorded.
 
@@ -391,6 +397,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
   - The UI works, but it looks plain and generic: Android's stock Material theme with no identity of its own. The owner will describe the look they want; don't design it ahead of them. Until then, build features in the current style.
   - Add a separate Filters button where people choose their filter options. Settle with the owner whether it replaces the four chips or sits beside them.
   - The owner chose to restyle here rather than before Step 4.4, knowing the card, the Saved tab, the map and the iOS app are built in the current look until then.
+- **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app.
 - **Found in Step 4.4, for the TalkBack pass:**
   - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label.
   - Each row's spoken description sits on a child node of the clickable row, so check what TalkBack actually reads. A selected row is announced as "Selected", through the checked state.
