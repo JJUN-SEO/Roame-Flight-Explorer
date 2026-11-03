@@ -394,6 +394,8 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 **The app's files (Step 5.1).** `RoameStarterApp.swift` creates the model from `API_BASE_URL` in `Info.plist` (`http://localhost:8080`, which the simulator reaches on the Mac). `ExplorerModel.swift` holds the state, `ExplorerApp.swift` the tabs and states, `FlightRow.swift` the row, connector and cabin tag, `Format.swift` the dates and counts, and `Theme.swift` the colours. Empty and error states use SwiftUI's `ContentUnavailableView`. Dates are built from year, month and day and formatted in UTC, so the device's zone can't shift them (T3). `Info.plist` also has `NSAppTransportSecurity › NSAllowsLocalNetworking`, for cleartext to local addresses, and portrait only (D28). The project lists every Swift file by hand (CLAUDE.md gotchas).
 
+**Search (Step 5.2).** `SearchHeader.swift` mirrors Android: each field keeps the typed text locally and sends every change to the store, follows the store only when it empties the field, shows a pick's label while it's active, and ignores binding writes that change nothing (CLAUDE.md gotchas). Suggestions sit under the focused field, the Search key and scrolling dismiss the keyboard, and autocorrect is off, so fuzzy queries reach the store as typed.
+
 **Location (D16, D30).** Core Location with `requestWhenInUseAuthorization()`, asked the first time the From field gets focus, never again automatically after a denial, and read without asking on later launches once allowed. Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
 
 ## 9. Android integration

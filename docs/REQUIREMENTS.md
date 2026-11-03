@@ -35,15 +35,15 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| SRCH-1 | Separate origin and destination search fields | There are two fields. Each one only constrains its own side of the route. | S3 | 🟨 Android done; iOS pending |
-| SRCH-2 | Fields match airport codes or city names | `jfk` and `new york` both find JFK flights. `tokyo` finds both HND and NRT. | S4, S5 | 🟨 Android done; iOS pending |
-| SRCH-3 | Search ignores capitalisation and surrounding whitespace | `"  BoStOn "` behaves exactly like `boston`. | S1 | 🟨 Android done; iOS pending |
+| SRCH-1 | Separate origin and destination search fields | There are two fields. Each one only constrains its own side of the route. | S3 | ✅ 2026‑11‑03 |
+| SRCH-2 | Fields match airport codes or city names | `jfk` and `new york` both find JFK flights. `tokyo` finds both HND and NRT. | S4, S5 | ✅ 2026‑11‑03 |
+| SRCH-3 | Search ignores capitalisation and surrounding whitespace | `"  BoStOn "` behaves exactly like `boston`. | S1 | ✅ 2026‑11‑03 |
 | SRCH-4 | *(owner-requested)* Prefix search walks a prefix tree in O(m) | Typing `new` walks n→e→w and returns every airport under that node. `completions()` returns full names. | S4 | ✅ engine |
 | SRCH-5 | *(owner-requested)* Fuzzy fallback for typos, sound-alike spellings, partial spellings and accents | `sydeny`, `sidnee`, `johanesburg` and `São Paulo` all find the right airport. Unrelated places (`berlin`) find nothing. Fuzzy only runs when prefix finds nothing. | S6–S12 | ✅ engine |
 | SRCH-6 | *(owner-requested)* Phonetic matching with Double Metaphone, as credited third-party code | The vendored port matches commons-codec on 150k+ generated words (oracle test). Credited in THIRD_PARTY_NOTICES.md and SUBMISSION_NOTES §8. | S8 | ✅ |
 | SRCH-7 | *(owner-requested)* Ranking by user location and annual airport volume, falling back to the original data | Matches are ordered by priority. An airport with no passenger figure uses its flight count from `flights.json`. Without a location, it uses volume only. The destination field never uses location. | P1–P7 | 🟨 engine and store done, with the shipped passenger figures. Device location (D16): Android done in Step 4.7; iOS in Step 5.7. Ranking orders airports only, never the flight list (D17). |
-| SRCH-8 | *(owner-requested)* A "Showing … (CODE)" hint when fuzzy matching was used | Both apps show the hint under the field when the tier is `Fuzzy`. | S13 | 🟨 Android done; iOS pending |
-| SRCH-9 | *(owner-requested)* Suggestions appear and change as the user types | In From, typing `new` shows New York (JFK). Deleting that and typing `sea` shows Seattle (SEA). In To, `tokyo` also offers Tokyo (all airports). Tapping a suggestion picks what it names. | S14 | 🟨 Android done; iOS pending |
+| SRCH-8 | *(owner-requested)* A "Showing … (CODE)" hint when fuzzy matching was used | Both apps show the hint under the field when the tier is `Fuzzy`. | S13 | ✅ 2026‑11‑03 |
+| SRCH-9 | *(owner-requested)* Suggestions appear and change as the user types | In From, typing `new` shows New York (JFK). Deleting that and typing `sea` shows Seattle (SEA). In To, `tokyo` also offers Tokyo (all airports). Tapping a suggestion picks what it names. | S14 | ✅ 2026‑11‑03 |
 | FILT-1 | Departure date range filter that includes both boundary dates | Flights on `start` and on `end` are included. Flights on the day before `start` and the day after `end` are excluded. | F1–F3 | 🟨 |
 | FILT-2 | Cabin filter | Choosing a cabin shows only that cabin. Choosing "Any" shows all cabins. | F5 | 🟨 |
 | FILT-3 | Maximum points filter that includes the selected limit | A flight whose points equal the limit is included. A flight 500 points above it is excluded. | F4 | 🟨 |

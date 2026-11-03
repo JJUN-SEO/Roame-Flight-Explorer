@@ -10,15 +10,17 @@
   B10000000000000000000003 = {isa = PBXBuildFile; fileRef = B20000000000000000000003; };
   B10000000000000000000004 = {isa = PBXBuildFile; fileRef = B20000000000000000000004; };
   B10000000000000000000005 = {isa = PBXBuildFile; fileRef = B20000000000000000000005; };
+  B10000000000000000000006 = {isa = PBXBuildFile; fileRef = B20000000000000000000006; };
   A10000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoameStarterApp.swift; sourceTree = "<group>"; };
   B20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerModel.swift; sourceTree = "<group>"; };
   B20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerApp.swift; sourceTree = "<group>"; };
   B20000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlightRow.swift; sourceTree = "<group>"; };
   B20000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
   B20000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+  B20000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHeader.swift; sourceTree = "<group>"; };
   A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RoameStarter.app; sourceTree = BUILT_PRODUCTS_DIR; };
   A10000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-  A10000000000000000000005 = {isa = PBXGroup; children = (A10000000000000000000002, B20000000000000000000001, B20000000000000000000002, B20000000000000000000003, B20000000000000000000004, B20000000000000000000005, A10000000000000000000004, A10000000000000000000006); sourceTree = "<group>"; };
+  A10000000000000000000005 = {isa = PBXGroup; children = (A10000000000000000000002, B20000000000000000000001, B20000000000000000000002, B20000000000000000000003, B20000000000000000000004, B20000000000000000000005, B20000000000000000000006, A10000000000000000000004, A10000000000000000000006); sourceTree = "<group>"; };
   A10000000000000000000006 = {isa = PBXGroup; children = (A10000000000000000000003); name = Products; sourceTree = "<group>"; };
   A10000000000000000000007 = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000008; buildPhases = (A10000000000000000000009, A1000000000000000000000A, A1000000000000000000000B, A1000000000000000000000C); buildRules = (); dependencies = (); name = RoameStarter; productName = RoameStarter; productReference = A10000000000000000000003; productType = "com.apple.product-type.application"; };
   A10000000000000000000009 = {
@@ -33,7 +35,7 @@
    shellPath = /bin/sh;
    shellScript = "set -e\nif [ \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" = \"YES\" ]; then exit 0; fi\nif [ -z \"$JAVA_HOME\" ]; then export JAVA_HOME=$(/usr/libexec/java_home 2>/dev/null || echo \"/Applications/Android Studio.app/Contents/jbr/Contents/Home\"); fi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
   };
-  A1000000000000000000000A = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005); runOnlyForDeploymentPostprocessing = 0; };
+  A1000000000000000000000A = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B10000000000000000000006); runOnlyForDeploymentPostprocessing = 0; };
   A1000000000000000000000B = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
   A1000000000000000000000C = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
   A1000000000000000000000D = {

@@ -28,7 +28,15 @@ private struct ExploreScreen: View {
                 // UI_SPEC §4: a successful empty response is not an error (R4).
                 ContentUnavailableView("No flights available right now", systemImage: "airplane", description: Text("The server returned no flights."))
             } else {
-                ResultsList(state: state)
+                VStack(spacing: 0) {
+                    SearchHeader()
+                    if state.results.isEmpty {
+                        FilteredEmpty()
+                    } else {
+                        ResultsList(state: state)
+                    }
+                }
+                .background(Color(.systemGroupedBackground))
             }
         }
     }
@@ -46,7 +54,8 @@ private struct ResultsList: View {
             }
             .padding(16)
         }
-        .background(Color(.systemGroupedBackground))
+        // UI_SPEC §5: scrolling the list dismisses the keyboard.
+        .scrollDismissesKeyboard(.immediately)
     }
 }
 
