@@ -35,5 +35,6 @@
     <string name="filtered_empty_title">No flights match your search</string>
     <string name="reset_filters">Reset filters</string>
 
+    <string name="route_cities">%1$s → %2$s</string>
     <string name="row_description">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s</string>
 </resources>

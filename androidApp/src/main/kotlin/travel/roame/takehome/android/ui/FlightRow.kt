@@ -56,8 +56,15 @@ fun FlightRow(flight: FlightItem, modifier: Modifier = Modifier) {
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(flight.originCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(flight.destinationCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    stringResource(R.string.route_cities, flight.originCity, flight.destinationCity),
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.width(8.dp))
                 CabinTag(flight.cabin)
             }
             Text(

@@ -46,7 +46,7 @@ Tab bar
 │ ⚠ Couldn't refresh · results from 3:42 PM   Retry │
 │ ┌────────────────────────────────────┐ │
 │ │ BOS ───────✈─────── CDG  25,000 pts│ │
-│ │ Boston        Paris     Prem. Econ.│ │
+│ │ Boston → Paris          Prem. Econ.│ │
 │ │ Mon, Feb 1 · Avios              ♡  │ │
 │ └────────────────────────────────────┘ │
 │   … rows (selected row = tinted + accent border) …
