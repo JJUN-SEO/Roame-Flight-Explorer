@@ -97,6 +97,8 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
         mapCamera = rememberSaveable { mutableStateOf<DoubleArray?>(null) },
     )
     ScrollToTopOnNewSearch(state, view.listState)
+    // Here, above both tabs, so switching tabs doesn't read the location again (D30).
+    val onOriginFocused = rememberOriginLocation(store::setUserLocation)
 
     Scaffold(
         // Above the selection card, so a message never hides the card's Save or Remove button.
@@ -117,7 +119,7 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when (tab) {
-                0 -> ExploreScreen(state, store, view, onDebugLongPress, onCardInset = { cardInset = it })
+                0 -> ExploreScreen(state, store, view, onOriginFocused, onDebugLongPress, onCardInset = { cardInset = it })
                 else -> SavedScreen(state, store, onDebugLongPress, onCardInset = { cardInset = it })
             }
         }
@@ -185,6 +187,7 @@ private fun ExploreScreen(
     state: ExplorerState,
     store: ExplorerStore,
     view: ExploreView,
+    onOriginFocused: () -> Unit,
     onDebugLongPress: (() -> Unit)?,
     onCardInset: (Dp) -> Unit,
 ) {
@@ -204,7 +207,7 @@ private fun ExploreScreen(
                 var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
                 var openMarker by rememberSaveable { mutableStateOf<String?>(null) }
                 var showMap by view.showMap
-                SearchHeader(state, store)
+                SearchHeader(state, store, onOriginFocused)
                 FilterBar(state, store, onOpen = { openSheet = it })
                 ResultSummary(state, onReset = store::resetAll)
                 // L4: switching changes only the view; the selection and filters stay in the store.

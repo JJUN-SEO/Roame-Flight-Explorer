@@ -87,7 +87,7 @@ data class ExplorerState(
     val destinationHint: List<AirportSuggestion>,
     val originPick: AirportSuggestion?,           // S14: the tapped row; the app shows "Tokyo (HND)" while it's set
     val destinationPick: AirportSuggestion?,
-    val isLocationShared: Boolean,                // D16: fills the ⌖ button
+    val isLocationShared: Boolean,                // D16: a location was set. Unused on screen since D30 removed ⌖
 )
 ```
 
@@ -101,7 +101,7 @@ data class ExplorerState(
 
 | Group | Methods |
 |---|---|
-| Search | `setOriginQuery(text)` and `setDestinationQuery(text)`, which also clear that field's pick; `pickOrigin(codes)` and `pickDestination(codes)`, passing a suggestion's codes; `setUserLocation(latitude, longitude)`, only after the user taps ⌖ (D16) |
+| Search | `setOriginQuery(text)` and `setDestinationQuery(text)`, which also clear that field's pick; `pickOrigin(codes)` and `pickDestination(codes)`, passing a suggestion's codes; `setUserLocation(latitude, longitude)`, only once the user has allowed location (D16, D30) |
 | Filters | `setDateRange(startIso?, endIso?)`, `setCabin(cabin?)`, `setMaxPoints(points?)`, `toggleProgram(name)`, `clearFilter(kind)`, `resetAll()` |
 | Selection | `select(flightId?)`, `selectSaved(flightId?)`. Selecting the selected flight again deselects it (L2) |
 | Saved | `toggleSave(flightId)` for a flight in the results, `removeSaved(flightId)` for the Saved view. Each flight has at most one write at a time (V7) |
@@ -157,7 +157,7 @@ flowchart LR
 
 **Data sources for ranking.**
 - **Passenger volume** comes from `fixtures/airports.json` (`{"airports":[{"code","annualPassengers"}…]}`). A copy ships inside the app as a Kotlin data file (`domain/search/AirportPassengers.kt`, added in PLAN Step 3.5), so ranking is the same online and offline and needs no endpoint or table. `FixtureContractTest` keeps the copy equal to the file. An airport with no figure uses its flight count from `flights.json` (P4).
-- **User location** comes from the device (D16): Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. Platform code reads one fix and passes its latitude and longitude to `setUserLocation` (Android: `MyLocationButton`, Step 4.7). It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
+- **User location** comes from the device (D16): Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. Platform code reads one fix and passes its latitude and longitude to `setUserLocation` (Android: `rememberOriginLocation`, Step 4.7, D30). It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
 
 **Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
@@ -392,7 +392,7 @@ Rules for the Swift-facing API:
 
 The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, and passes the model down through `.environment(model)`. Built and checked in Step 3.6: the iOS app showed the live flight count from the running API, and again after relaunching with the API stopped.
 
-**Location (D16).** Core Location with `requestWhenInUseAuthorization()`, triggered only by "Use my location". Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
+**Location (D16, D30).** Core Location with `requestWhenInUseAuthorization()`, asked the first time the From field gets focus, never again automatically after a denial, and read without asking on later launches once allowed. Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
 
 ## 9. Android integration
 
@@ -416,7 +416,7 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 - Add these dependencies: `material3`, `lifecycle-runtime-compose`, MapLibre (D8), and `leakcanary-android` (debug only).
 - **Location (D16):**
   - Fused Location Provider comes from Google Play services (`com.google.android.gms:play-services-location`), so the emulator needs a "Google Play" or "Google APIs" system image.
-  - Declare `ACCESS_COARSE_LOCATION` and request it only when the user taps "Use my location".
+  - Declare `ACCESS_COARSE_LOCATION`. Ask for it the first time From gets focus (D30), in `rememberOriginLocation`. It asks only while Android's rationale flag is false, which means not asked before, so a denial is never asked again automatically. Once granted, each launch reads the location without asking.
   - Read one location with `getCurrentLocation(PRIORITY_BALANCED_POWER_ACCURACY)` and pass it to the store as a `GeoPoint`.
   - Built in Step 4.7 with `play-services-location` 21.4.0 (June 2026; needs API 23, adds no permissions). A denial, a missing fix or a failure changes nothing and shows no error, so ranking stays volume-only. Tapping ⌖ again takes a fresh reading.
   - Testing: on the API 37 emulator, `adb emu geo fix` didn't reach the location providers. Android's test providers did: allow `android:mock_location` for `com.android.shell` with `appops`, then `cmd location providers add-test-provider`, `set-test-provider-enabled` and `set-test-provider-location` for `gps` and `network`. Remove them afterwards. The emulator's Extended controls › Location also works by hand.
@@ -466,7 +466,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D13 | **Double Metaphone comes from a library** (Apache Commons Codec), translated to Kotlin with credit and verified against the jar | **Owner** (a library, disclosed); translation route: owner's choice | No KMP library exists, and the Java one can't run on iOS. A port keeps one shared implementation. | Android-only library (platforms would diverge); our own Metaphone-lite |
 | D14 | A **"Showing … (CODE)" hint** when results come from fuzzy matching | Owner's choice | Silent corrections confuse people | A suggestions dropdown (more UI work); silent |
 | D15 | **Ranking by location + passenger volume.** Volume lives in a separate `fixtures/airports.json`, a copy ships inside the app, and any airport with no figure falls back to its flight count from `flights.json` | **Owner** | Familiar and nearby airports first, without touching the provided data. Shipping the figures keeps the order the same offline with less to build, and Roame's website also ships its airport data with its scripts | Fetching the figures from `GET /airports` and saving them in a table (more code for yearly figures); editing `flights.json` (rejected: the API must serve it verbatim) |
-| D16 | **Location comes from the device** (Fused Location Provider / Core Location), approximate accuracy, only on "Use my location" | **Owner** | Works offline (GPS needs no internet), more accurate, no third party, no extra endpoint | Geo-IP through the local API (Claude's earlier proposal): it would locate the developer's machine rather than the user, and needs an outside geo-IP service |
+| D16 | **Location comes from the device** (Fused Location Provider / Core Location), approximate accuracy, only on "Use my location" (changed by D30: asked on the first focus of From) | **Owner** | Works offline (GPS needs no internet), more accurate, no third party, no extra endpoint | Geo-IP through the local API (Claude's earlier proposal): it would locate the developer's machine rather than the user, and needs an outside geo-IP service |
 | D17 | **Ranking only orders the matched airports.** The flight list keeps O1 | Owner's choice (option A) | Earlier and cheaper flights are never pushed down; the list order doesn't depend on where you are | Reordering the flight list by airport priority (option B) |
 | D18 | Search runs on **airports, not flights**, behind indexes | Owner's choice (follow Roame); built | The brief names Roame as its functional reference, and Roame's website finds the place first and then searches flights for it. The brief's fields also "match airport codes or city names", and the prefix tree, hint, ranking and suggestions all work on airports. Scale is a side benefit: at most 0.56 ms per keystroke at 100,000 flights (measured on a Mac in Java). | Matching each flight's strings: the same results, up to 49 ms at 100,000 flights, and those features would still need an airport list |
 | D19 | Ranking weights: origin 0.6 / 0.4, destination 0 / 1, and proximity halves every 250 km | Owner's choice (Claude's recommendation); assumption A13; built | Your location says nothing about where you're flying to, so the destination uses popularity alone, as Amadeus's keyword search, Duffel, AirLabs and Roame's website do. The origin split is Photon's default, and 250 km is the widest range in Google's patent. Both are borrowed, not measured on real usage. | 0.7 / 0.3 and 0.2 / 0.8 with proximity halving every 693 km, chosen by judgement; popularity only in both fields, as on Roame's website |
@@ -480,6 +480,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D27 | Grey map style (OpenFreeMap "Positron") with the MapLibre logo hidden | **Owner** | The owner found the colourful default ugly and asked for grey with no watermark. Grey also lets the pills and the route stand out. Checked on 2026‑11‑03: OpenFreeMap lists Positron among its styles, and its JSON uses greys (background rgb(242,243,240), water rgb(194,200,202)). MapLibre's licence is BSD-2 with no logo clause; OpenFreeMap and OpenStreetMap require attribution, so the ⓘ button stays, lifted above the selection card. One-line change to switch back | "Liberty" (the colourful default from Step 0.3); "Bright"; "Dark" (its URL isn't listed on OpenFreeMap's pages) |
 | D28 | Portrait only, on both platforms | **Owner** | In landscape the search header left no room for results. A one-line setting on each platform. Android 16 ignores orientation locks for apps targeting API 36 on large screens (600 dp and wider), so tablets may still rotate; the brief targets phones. Rotation tests (Q21) now cover only tablets, backgrounding and other configuration changes | Make the header scroll away in landscape (more work, and the owner plans to redesign the header in Step 6.3) |
 | D29 | No manual refresh | **Owner** (over Claude's recommendation) | The brief asks for failed refreshes to be shown, not for a way to start one, and the data is a static fixture. Removing pull to refresh, ⟳ and the banner's Retry leaves less to explain. Cost: a failed refresh is shown by reopening the app, and the user can't retry without reopening. The store's `refresh()` stays, for launch and Try again | Keep pull to refresh and the Map-mode ⟳ (Claude's recommendation: a standard mobile pattern, and an easy way to show a failed refresh in the demo) |
+| D30 | Location asked on the first focus of From, with no ⌖ button | **Owner** | The owner wanted a prompt, not a button. Asking where location helps follows Android's and Apple's guidance to ask in context. Not asking again after a denial respects it, and Android would stop showing the dialog after a second denial anyway. Cost: no on-screen way to share location after denying, other than system settings | Ask when the app first opens (simpler, but asks before the user has done anything); keep the ⌖ button (Step 4.7 as first built) |
 
 ## 12. Scalability
 

@@ -165,7 +165,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   `(w_proximity · proximity + w_volume · volume) / (w_proximity + w_volume)`
 - **P2** `proximity = 0.5^(distance_km / 250)`, so it halves every 250 km. The distance is the great-circle (haversine) distance from the user's location to the airport.
   - Without a location (unknown, permission denied, or not available yet), priority is volume only.
-  - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". There is no geo-IP and no third party.
+  - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is asked for the first time the From field gets focus, and never again automatically after a denial (D30). Once allowed, each launch reads it again without asking. There is no geo-IP and no third party.
 - **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched. A copy ships inside the app (owner decision D15), so ranking is the same online and offline, and a test keeps the copy equal to the file.
 - **P4 Fallback to the original data.**
   - With no passenger figures at all, `volume = flights per airport in flights.json / max`.

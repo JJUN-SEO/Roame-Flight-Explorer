@@ -66,7 +66,7 @@ class ExplorerStore internal constructor(
 
     fun pickDestination(codes: List<String>) = inputs.update { it.copy(destinationPick = codes.takeIf(List<String>::isNotEmpty)) }
 
-    /** D16: only call this after the user taps "Use my location". It ranks the origin field only (P5). */
+    /** D16, D30: only call this once the user has allowed location. It ranks the origin field only (P5). */
     fun setUserLocation(latitude: Double, longitude: Double) =
         inputs.update { it.copy(userLocation = GeoPoint(latitude, longitude)) }
 

@@ -2,7 +2,6 @@ package travel.roame.takehome.android.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -34,9 +33,9 @@ import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
 
-/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). */
+/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). [onOriginFocused] asks for location (D30). */
 @Composable
-fun SearchHeader(state: ExplorerState, store: ExplorerStore, modifier: Modifier = Modifier) {
+fun SearchHeader(state: ExplorerState, store: ExplorerStore, onOriginFocused: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.padding(horizontal = 16.dp)) {
         SearchField(
             label = stringResource(R.string.search_from),
@@ -46,8 +45,8 @@ fun SearchHeader(state: ExplorerState, store: ExplorerStore, modifier: Modifier 
             hint = state.originHint,
             onQueryChange = store::setOriginQuery,
             onPick = store::pickOrigin,
-            // P5: location only ranks origins, so only From has ⌖.
-            action = { MyLocationButton(state.isLocationShared, store::setUserLocation) },
+            // P5: location only ranks origins, so only From asks for it.
+            onFocused = onOriginFocused,
         )
         SearchField(
             label = stringResource(R.string.search_to),
@@ -70,7 +69,7 @@ private fun SearchField(
     hint: List<AirportSuggestion>,
     onQueryChange: (String) -> Unit,
     onPick: (List<String>) -> Unit,
-    action: (@Composable () -> Unit)? = null,
+    onFocused: () -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
@@ -87,21 +86,19 @@ private fun SearchField(
                 text = it
                 onQueryChange(it)
             },
-            modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
+            modifier = Modifier.fillMaxWidth().onFocusChanged {
+                if (it.isFocused && !focused) onFocused()
+                focused = it.isFocused
+            },
             label = { Text(label) },
             placeholder = { Text(stringResource(R.string.search_placeholder)) },
             singleLine = true,
-            trailingIcon = if (shown.isNotEmpty() || action != null) {
+            trailingIcon = if (shown.isNotEmpty()) {
                 {
-                    Row(Modifier.padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (shown.isNotEmpty()) {
-                            TextButton(onClick = {
-                                text = ""
-                                onQueryChange("")
-                            }) { Text("ⓧ") }
-                        }
-                        action?.invoke()
-                    }
+                    TextButton(onClick = {
+                        text = ""
+                        onQueryChange("")
+                    }) { Text("ⓧ") }
                 }
             } else {
                 null

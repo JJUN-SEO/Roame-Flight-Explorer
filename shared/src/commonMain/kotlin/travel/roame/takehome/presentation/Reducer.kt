@@ -38,7 +38,7 @@ internal data class ExplorerInputs(
     /** The codes of a tapped suggestion (S14), or null while the field's text decides. */
     val originPick: List<String>? = null,
     val destinationPick: List<String>? = null,
-    /** Only ever set when the user taps "Use my location" (D16). */
+    /** Only ever set once the user has allowed location (D16, D30). */
     val userLocation: GeoPoint? = null,
 )
 

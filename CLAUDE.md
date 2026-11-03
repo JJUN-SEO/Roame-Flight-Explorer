@@ -136,7 +136,7 @@ These were found in the starter and the fixture.
   - Keep the ⓘ credit visible above the card: OpenStreetMap and OpenFreeMap require it.
   - Creating the first `MapView` logs three StrictMode disk reads from inside MapLibre.
 - **The owner's 8 GB Mac:** a build takes about 15 s with the emulator off and up to 8 minutes with it on, and the emulator has crashed under memory pressure. The owner's API server may run inside Android Studio's Gradle process, so never stop Gradle processes you didn't start. After an install, Android 17 can show an "Updating…" screen; press back and open the app again.
-- **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Only request it when the user taps "Use my location". On the Android 37 emulator, `adb emu geo fix` didn't take effect; Android's test location providers did (ARCHITECTURE §9).
+- **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Ask for it the first time From gets focus, and never again automatically after a denial (D30). On the Android 37 emulator, `adb emu geo fix` didn't take effect; Android's test location providers did (ARCHITECTURE §9).
 - **Ktor failures (found in Step 2.1):**
   - Check timeouts before connectivity. On the JVM and Android, every timeout is also an `IOException`.
   - JSON errors arrive as `ContentConvertException`, not `SerializationException`.

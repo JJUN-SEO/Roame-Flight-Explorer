@@ -16,7 +16,7 @@ Tab bar
 │   ├── Search header: From / To fields
 │   │     ├── Suggestions dropdown under the focused field, updated on every keystroke (S14)
 │   │     ├── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
-│   │     └── "Use my location" button (⌖) at the end of the From field: the only place location is requested (D16)
+│   │     └── Location is asked for the first time From gets focus, with no button (D16, D30)
 │   ├── Filter bar: [Dates] [Cabin] [Points] [Programs]  ·  Reset
 │   ├── Summary line: "238 flights · 2 filters"
 │   ├── Segmented control: List | Map      (switching never changes the selection, L4)
@@ -135,8 +135,8 @@ Use the same copy on both platforms.
 | Unavailable: other | `Unavailable(Unknown)` | "Something went wrong while loading flights." + **Try again** |
 | Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights." No error styling. |
 | Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
-| Location not shared | The user never tapped ⌖, or denied the permission (D16) | Nothing extra is shown and there is no error. Ranking uses airport volume only. ⌖ stays outlined. |
-| Location shared | Permission granted and a location received | ⌖ is filled with the accent colour. In the From field, matched airports near the user rank higher in the hint and suggestions. The To field doesn't use location. |
+| Location not shared | From hasn't had focus yet, or the permission was denied (D16, D30) | Nothing extra is shown and there is no error. Ranking uses airport volume only. A denial isn't asked again by the app. |
+| Location shared | Permission granted and a location received | Nothing extra is shown. In the From field, matched airports near the user rank higher in the hint and suggestions. The To field doesn't use location. |
 | Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
 | Search suggestions | A field has focus and its query has matches (S14) | A dropdown under the field with up to 5 rows, such as "Tokyo (all airports)" and "Tokyo (HND)". Hidden for a blank query or no match. |
 | Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |
@@ -224,7 +224,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
-| Location for ranking (D16) | Core Location, "when in use", approximate accuracy, asked on tapping ⌖ | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on tapping ⌖ |
+| Location for ranking (D16, D30) | Core Location, "when in use", approximate accuracy, asked on the first focus of From | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on the first focus of From |
 
 ## 10. Scalability
 
