@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 4.8, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 5.1, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -340,7 +340,7 @@ The apps only render `ExplorerState` and send intents. If a step needs an `if` a
 - **Done when:** QA row Q2c passes: with Seattle set, From `y` lists Vancouver first, and denying permission causes no error.
 - **Changed after review (D30, owner):** no ⌖ button. Location is asked for the first time From gets focus, read without asking on later launches, and never asked again automatically after a denial.
 
-#### [ ] 4.8 Android QA
+#### [x] 4.8 Android QA
 
 - **Goal:** a full pass over the whole app before starting iOS.
 - **Covers:** TEST-6, PERF-1. QA: all Android rows Q1–Q24, including rotation (Q21).
