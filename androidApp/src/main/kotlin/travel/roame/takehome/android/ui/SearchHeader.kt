@@ -2,6 +2,7 @@ package travel.roame.takehome.android.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,8 @@ fun SearchHeader(state: ExplorerState, store: ExplorerStore, modifier: Modifier 
             hint = state.originHint,
             onQueryChange = store::setOriginQuery,
             onPick = store::pickOrigin,
+            // P5: location only ranks origins, so only From has ⌖.
+            action = { MyLocationButton(state.isLocationShared, store::setUserLocation) },
         )
         SearchField(
             label = stringResource(R.string.search_to),
@@ -67,6 +70,7 @@ private fun SearchField(
     hint: List<AirportSuggestion>,
     onQueryChange: (String) -> Unit,
     onPick: (List<String>) -> Unit,
+    action: (@Composable () -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
@@ -87,12 +91,17 @@ private fun SearchField(
             label = { Text(label) },
             placeholder = { Text(stringResource(R.string.search_placeholder)) },
             singleLine = true,
-            trailingIcon = if (shown.isNotEmpty()) {
+            trailingIcon = if (shown.isNotEmpty() || action != null) {
                 {
-                    TextButton(onClick = {
-                        text = ""
-                        onQueryChange("")
-                    }) { Text("ⓧ") }
+                    Row(Modifier.padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (shown.isNotEmpty()) {
+                            TextButton(onClick = {
+                                text = ""
+                                onQueryChange("")
+                            }) { Text("ⓧ") }
+                        }
+                        action?.invoke()
+                    }
                 }
             } else {
                 null

@@ -157,7 +157,7 @@ flowchart LR
 
 **Data sources for ranking.**
 - **Passenger volume** comes from `fixtures/airports.json` (`{"airports":[{"code","annualPassengers"}…]}`). A copy ships inside the app as a Kotlin data file (`domain/search/AirportPassengers.kt`, added in PLAN Step 3.5), so ranking is the same online and offline and needs no endpoint or table. `FixtureContractTest` keeps the copy equal to the file. An airport with no figure uses its flight count from `flights.json` (P4).
-- **User location** comes from the device (D16), through a small platform `LocationProvider` that returns `GeoPoint?`: Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
+- **User location** comes from the device (D16): Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. Platform code reads one fix and passes its latitude and longitude to `setUserLocation` (Android: `MyLocationButton`, Step 4.7). It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
 
 **Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
@@ -418,6 +418,8 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
   - Fused Location Provider comes from Google Play services (`com.google.android.gms:play-services-location`), so the emulator needs a "Google Play" or "Google APIs" system image.
   - Declare `ACCESS_COARSE_LOCATION` and request it only when the user taps "Use my location".
   - Read one location with `getCurrentLocation(PRIORITY_BALANCED_POWER_ACCURACY)` and pass it to the store as a `GeoPoint`.
+  - Built in Step 4.7 with `play-services-location` 21.4.0 (June 2026; needs API 23, adds no permissions). A denial, a missing fix or a failure changes nothing and shows no error, so ranking stays volume-only. Tapping ⌖ again takes a fresh reading.
+  - Testing: on the API 37 emulator, `adb emu geo fix` didn't reach the location providers. Android's test providers did: allow `android:mock_location` for `com.android.shell` with `appops`, then `cmd location providers add-test-provider`, `set-test-provider-enabled` and `set-test-provider-location` for `gps` and `network`. Remove them afterwards. The emulator's Extended controls › Location also works by hand.
 
 ## 10. Libraries
 
@@ -437,7 +439,7 @@ Versions are pinned in `gradle/libs.versions.toml`. These were proven together o
 | iOS bridge | Hand-written `observe()` wrapper | No dependency on Kotlin-version-specific plugins | SKIE, if compatible |
 | iOS map | MapKit for SwiftUI (`Map`, `Annotation`, `MapPolyline(…, contourStyle: .geodesic)`) | Built in, iOS 17, no API key | — |
 | Android map (D8, D23, D24) | **MapLibre Native Android** 13.7.1, default Vulkan package (`android-sdk`), with OpenFreeMap tiles in the grey "Positron" style (D27), no API key. Adds 9.2–13.0 MB per CPU architecture (measured), which doesn't grow with the flights | Reviewers can run it with no setup | Google Maps Compose (needs an API key), only with the owner's approval if MapLibre fails |
-| Device location *(D16)* | Android: Fused Location Provider (`play-services-location`). iOS: Core Location (built in) | Works offline, no third party | — |
+| Device location *(D16)* | Android: Fused Location Provider (`play-services-location` 21.4.0). iOS: Core Location (built in) | Works offline, no third party | — |
 | Leaks | LeakCanary (Android debug), Xcode Memory Graph and Leaks instrument | — | — |
 | Phonetic matching | **Vendored** Double Metaphone: a Kotlin port of Apache Commons Codec 1.23.0, Apache-2.0 | No KMP library exists, and commons-codec is JVM-only (no iOS) | — |
 | Port verification | `commons-codec:commons-codec:1.23.0`, **test-only** (`jvmTest`) | The original library acts as the oracle for the port | — |

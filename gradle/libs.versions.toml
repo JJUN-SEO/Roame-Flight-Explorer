@@ -9,6 +9,8 @@ leakcanary = "2.14"
 lifecycle = "2.11.0"
 # D8, D23: the default package, which draws with Vulkan. Proven in Step 0.3.
 maplibre = "13.7.1"
+# D16: the Fused Location Provider for "Use my location". Needs Google Play services on the device.
+playServicesLocation = "21.4.0"
 # Room 3 (androidx.room3) is the newer line, but 3.0.3 publishes no iosX64 target, which the starter builds.
 room = "2.8.5"
 serialization = "1.12.0"
@@ -37,6 +39,7 @@ ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 maplibre-android = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 # Lets the server's CallLogging plugin print; it has no output without a logging backend.

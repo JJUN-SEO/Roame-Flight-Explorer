@@ -82,6 +82,9 @@
     <string name="map_unavailable_title">Can\'t load the map</string>
     <string name="map_unavailable_body">It needs internet the first time. Your flights are still in the list.</string>
     <string name="map_empty">No flights match</string>
+    <string name="use_my_location">Use my location</string>
+    <string name="location_shared">Using your location</string>
+    <string name="location_not_shared">Not shared</string>
     <string name="stale_banner">Couldn\'t refresh · showing results from %s</string>
 
     <!-- Debug builds only (TEST_PLAN §6). -->
