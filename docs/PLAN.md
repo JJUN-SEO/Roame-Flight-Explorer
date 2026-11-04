@@ -4,7 +4,7 @@
 >
 > **Current step:** 6.1, committed and waiting for the owner's review. Update this line at every review gate.
 
-This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D31) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D30 doesn't work in practice.
+- finding that any of D1–D31 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -385,7 +385,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Found in Step 4.8:** the emulator renders graphics in software, so frame timing measured there says nothing about the app (Android's own Settings app was as slow). Measure scrolling on a real phone or a hardware-GPU emulator.
 - **Done in Step 6.1 (Android, 2026‑11‑03):**
   - StrictMode: opening the map read the disk on the main thread three times, all inside MapLibre (its native library, its cache folder, and the files folder for its default options). They now happen on a background thread first, and StrictMode reports nothing, also after switching List and Map again.
-  - Found: each time the map opens, about 7 MB of native memory stays behind after it closes. Over 18 opens it grew in a straight line, 11 → 59 → 100 → 141 MB, while Java memory, views and threads stayed flat. The build from before Step 6.1 grows the same way, and calling `onPause` and `onStop` before `onDestroy` (now done) didn't change it. Waiting for the owner's choice of fix.
+  - Found: each time the map opens, about 7 MB of native memory stays behind after it closes (11 → 141 MB over 18 opens; the build from before Step 6.1 too). Fixed with D31 (owner, 2026‑11‑04): one map, never detached from the window. Native memory then stayed at about 53 MB across 18 map opens and 14 trips to Saved and back.
   - Frame timing with the Mac's GPU (TEST_PLAN §3): 18 flings through the list on a debug build → 9.3% janky frames, median 17 ms, 90th percentile 32 ms, 99th 93 ms. Android's Settings app, flung the same way: 4.5%, 16 ms, 18 ms, 40 ms. A release build was built for a fairer number, but the Mac ran out of swap and the emulator stalled, so it wasn't measured.
 - **Found in Step 5.8 (iOS):** Instruments' Animation Hitches doesn't run on the simulator ("Hitches is not supported on this platform"), and the Thread Performance Checker only runs from Xcode. Measure both from Xcode on a real iPhone. The `leaks`, `heap` and `footprint` tools do work against the simulator app's process.
 - **Found in Step 4.5:** opening the map for the first time logs three StrictMode disk reads on the main thread, all inside MapLibre: loading its native library (425 ms on a slow emulator) and reading its default options. Try loading the library on a background thread before creating the `MapView`.

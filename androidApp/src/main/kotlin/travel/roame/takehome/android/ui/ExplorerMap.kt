@@ -6,6 +6,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.view.View
+import android.view.ViewGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -106,56 +110,156 @@ private val FitPadding = 56.dp
 private val FitPaddingVertical = 40.dp
 
 /**
+ * D31: the screen's one MapLibre map. It's made the first time Map is shown and kept while the list or the Saved tab
+ * is shown, paused and stopped, because every map MapLibre destroys leaves about 7 MB of native memory behind
+ * (Step 6.1). It keeps its style and listeners too, so showing it again is instant. [rememberMapHolder] destroys it
+ * with the screen.
+ */
+class MapHolder internal constructor() {
+    internal var view: MapView? = null
+        private set
+    internal var map: MapLibreMap? by mutableStateOf(null)
+        private set
+    internal var style: Style? by mutableStateOf(null)
+    internal var attempt by mutableIntStateOf(0)
+    internal var timedOut by mutableStateOf(false)
+
+    // The map's listeners are added once, so they read the latest screen from here.
+    internal var onMarkerTap: (code: String) -> Unit = {}
+    internal var markers: List<DestinationMarker> = emptyList()
+
+    private var started = false
+    private var resumed = false
+
+    internal fun create(context: Context, options: MapLibreMapOptions, camera: MutableState<DoubleArray?>, fitPadding: Int): MapView {
+        MapLibre.getInstance(context.applicationContext)
+        val created = MapView(context, options).apply { onCreate(null) }
+        created.getMapAsync { loadedMap ->
+            // D27: MapLibre's BSD licence doesn't require its logo. The ⓘ credit stays.
+            loadedMap.uiSettings.isLogoEnabled = false
+            val saved = camera.value
+            if (saved != null) {
+                loadedMap.cameraPosition = saved.toCameraPosition()
+            } else {
+                // M8: on first display, fit every marker. Wait for layout, which fitting needs.
+                created.post { markersCamera(markers, fitPadding)?.let(loadedMap::moveCamera) }
+            }
+            loadedMap.addOnCameraIdleListener { camera.value = loadedMap.cameraPosition.toArray() }
+            loadedMap.addOnMapClickListener { point ->
+                val hit = loadedMap.queryRenderedFeatures(loadedMap.projection.toScreenLocation(point), PILLS)
+                    .maxByOrNull { it.getNumberProperty("sort")?.toInt() ?: 0 }
+                hit?.getStringProperty("code")?.let { onMarkerTap(it) }
+                hit != null
+            }
+            map = loadedMap
+        }
+        view = created
+        return created
+    }
+
+    // MapLibre expects onStart before onResume, onPause before onStop, and both before onDestroy.
+    internal fun start() {
+        if (!started) view?.onStart()
+        started = true
+    }
+
+    internal fun resume() {
+        start()
+        if (!resumed) view?.onResume()
+        resumed = true
+    }
+
+    internal fun pause() {
+        if (resumed) view?.onPause()
+        resumed = false
+    }
+
+    internal fun stop() {
+        pause()
+        if (started) view?.onStop()
+        started = false
+    }
+
+    internal fun destroy() {
+        stop()
+        view?.onDestroy()
+        view = null
+        map = null
+        style = null
+    }
+}
+
+/** D31: one map per screen. It outlives List and Map switches and tab switches, and goes with the activity. */
+@Composable
+fun rememberMapHolder(): MapHolder {
+    val holder = remember { MapHolder() }
+    DisposableEffect(holder) { onDispose { holder.destroy() } }
+    return holder
+}
+
+/**
  * The results as destination pills, with the selected flight's great-circle route (UI_SPEC §2.2, M1–M8).
- * [camera] outlives this map, so switching to the list and back, or rotating, keeps the view (M8).
+ * [camera] outlives the map, so it's kept even when the activity is recreated (M8). While not [visible], the map
+ * stays in place but hidden, paused, and out of reach of taps and TalkBack (D31).
  */
 @Composable
 fun ExplorerMap(
     state: ExplorerState,
+    holder: MapHolder,
+    visible: Boolean,
     camera: MutableState<DoubleArray?>,
     bottomInset: Dp,
     onMarkerTap: (code: String) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // PLAN 6.1: starting MapLibre reads the disk to load its native library, to find its cache folder and to find
-    // the app's files folder for its default options. MapLibre keeps each result, so doing them here on a
-    // background thread first means the main thread never reads the disk.
-    val appContext = LocalContext.current.applicationContext
+    SideEffect {
+        holder.onMarkerTap = onMarkerTap
+        holder.markers = state.markers
+    }
+    val mapView = holder.view ?: rememberNewMapView(holder, camera)
+    if (mapView == null) {
+        Box(modifier)
+    } else {
+        MapContent(mapView, holder, visible, state, bottomInset, onReset, modifier)
+    }
+}
+
+/**
+ * PLAN 6.1: starting MapLibre reads the disk to load its native library, to find its cache folder and to find the
+ * app's files folder for its default options. MapLibre keeps each result, so doing them on a background thread first
+ * means the main thread never reads the disk. Null until that's done.
+ */
+@Composable
+private fun rememberNewMapView(holder: MapHolder, camera: MutableState<DoubleArray?>): MapView? {
+    val context = LocalContext.current
+    val fitPadding = with(LocalDensity.current) { FitPadding.roundToPx() }
     val options by produceState<MapLibreMapOptions?>(null) {
+        val appContext = context.applicationContext
         value = withContext(Dispatchers.IO) {
             LibraryLoader.load()
             FileSource.getResourcesCachePath(appContext)
             MapLibreMapOptions.createFromAttributes(appContext)
         }
     }
-    options?.let { MapContent(it, state, camera, bottomInset, onMarkerTap, onReset, modifier) } ?: Box(modifier)
+    return options?.let { remember(it) { holder.create(context, it, camera, fitPadding) } }
 }
 
 @Composable
 private fun MapContent(
-    options: MapLibreMapOptions,
+    mapView: MapView,
+    holder: MapHolder,
+    visible: Boolean,
     state: ExplorerState,
-    camera: MutableState<DoubleArray?>,
     bottomInset: Dp,
-    onMarkerTap: (code: String) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier,
 ) {
-    val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val density = LocalDensity.current
     val reduceMotion = rememberReduceMotion()
-    val mapView = remember {
-        MapLibre.getInstance(context.applicationContext)
-        MapView(context, options).apply { onCreate(null) }
-    }
-    var map by remember { mutableStateOf<MapLibreMap?>(null) }
-    var style by remember { mutableStateOf<Style?>(null) }
-    var attempt by remember { mutableIntStateOf(0) }
-    var timedOut by remember { mutableStateOf(false) }
-    val latestTap by rememberUpdatedState(onMarkerTap)
-    val latestMarkers by rememberUpdatedState(state.markers)
+    val map = holder.map
+    val style = holder.style
     val colors = PillColors(
         fill = MaterialTheme.colorScheme.surface.toArgb(),
         text = MaterialTheme.colorScheme.onSurface.toArgb(),
@@ -163,38 +267,41 @@ private fun MapContent(
         onAccent = MaterialTheme.colorScheme.onPrimary.toArgb(),
     )
 
-    DisposableEffect(lifecycle, mapView) {
+    // D31: while shown, the map follows the screen's lifecycle. While hidden, or when it leaves with the Explore tab,
+    // it's paused and stopped, not destroyed.
+    DisposableEffect(lifecycle, holder, visible) {
+        if (!visible) {
+            holder.stop()
+            return@DisposableEffect onDispose {}
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_START -> holder.start()
+                Lifecycle.Event.ON_RESUME -> holder.resume()
+                Lifecycle.Event.ON_PAUSE -> holder.pause()
+                Lifecycle.Event.ON_STOP -> holder.stop()
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
-            // The map usually leaves while the screen stays resumed (List was chosen). MapLibre expects onPause
-            // and onStop before onDestroy, so that it stops its renderer and connectivity listener.
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) mapView.onPause()
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) mapView.onStop()
-            mapView.onDestroy()
+            holder.stop()
         }
     }
 
-    // D24: load the style, and show "Can't load the map" if it hasn't arrived in time. Retry starts again.
-    LaunchedEffect(map, attempt) {
+    // D24: load the style once, and show "Can't load the map" if it hasn't arrived in time. Retry starts again.
+    LaunchedEffect(map, holder.attempt) {
         val loadedMap = map ?: return@LaunchedEffect
-        timedOut = false
+        if (holder.style != null) return@LaunchedEffect
+        holder.timedOut = false
         loadedMap.setStyle(Style.Builder().fromUri(STYLE_URL)) { loaded ->
             loaded.addOverlays()
-            style = loaded
-            timedOut = false
+            holder.style = loaded
+            holder.timedOut = false
         }
         delay(STYLE_TIMEOUT_MS)
-        if (style == null) timedOut = true
+        if (holder.style == null) holder.timedOut = true
     }
 
     LaunchedEffect(style, state.markers, state.selected) {
@@ -206,11 +313,13 @@ private fun MapContent(
     // M8: the camera moves on an explicit selection, never because filters changed.
     val inset by rememberUpdatedState(bottomInset)
     var shownSelection by remember { mutableStateOf(state.selected?.id) }
-    LaunchedEffect(map, state.selected?.id) {
+    LaunchedEffect(map, state.selected?.id, visible) {
         val loadedMap = map ?: return@LaunchedEffect
         val selected = state.selected
         val isNew = selected != null && selected.id != shownSelection
         shownSelection = selected?.id
+        // A flight chosen in the list while the map is hidden doesn't move it, as before D31 and as on iOS.
+        if (!visible) return@LaunchedEffect
         if (selected != null && isNew) {
             // The card appears with the selection. Wait for its height, or the route is fitted underneath it.
             val cardInset = withTimeoutOrNull(1_000) { snapshotFlow { inset }.first { it > 0.dp } } ?: inset
@@ -230,35 +339,21 @@ private fun MapContent(
         settings.setAttributionMargins(left, settings.attributionMarginTop, settings.attributionMarginRight, bottom)
     }
 
-    Box(modifier) {
+    Box(if (visible) modifier else modifier.clearAndSetSemantics {}) {
         AndroidView(
+            // D31: the same view comes back when the Explore tab does, so take it from where it was shown last.
             factory = {
-                mapView.also { view ->
-                    view.getMapAsync { loadedMap ->
-                        // D27: MapLibre's BSD licence doesn't require its logo. The ⓘ credit stays.
-                        loadedMap.uiSettings.isLogoEnabled = false
-                        val saved = camera.value
-                        if (saved != null) {
-                            loadedMap.cameraPosition = saved.toCameraPosition()
-                        } else {
-                            // M8: on first display, fit every marker. Wait for layout, which fitting needs.
-                            view.post { markersCamera(latestMarkers, with(density) { FitPadding.roundToPx() })?.let(loadedMap::moveCamera) }
-                        }
-                        loadedMap.addOnCameraIdleListener { camera.value = loadedMap.cameraPosition.toArray() }
-                        loadedMap.addOnMapClickListener { point ->
-                            val hit = loadedMap.queryRenderedFeatures(loadedMap.projection.toScreenLocation(point), PILLS)
-                                .maxByOrNull { it.getNumberProperty("sort")?.toInt() ?: 0 }
-                            hit?.getStringProperty("code")?.let { latestTap(it) }
-                            hit != null
-                        }
-                        map = loadedMap
-                    }
-                }
+                (mapView.parent as? ViewGroup)?.removeView(mapView)
+                mapView
             },
             modifier = Modifier.fillMaxSize(),
+            // An invisible view gets no taps and isn't read by TalkBack. Its surface goes too, as when the app is in
+            // the background, but the view stays attached: detaching it is what leaks (Step 6.1).
+            update = { it.visibility = if (visible) View.VISIBLE else View.INVISIBLE },
         )
         when {
-            style == null && timedOut -> MapUnavailable(onRetry = { attempt++ })
+            !visible -> Unit
+            style == null && holder.timedOut -> MapUnavailable(onRetry = { holder.attempt++ })
             // M6: no markers, but the map stays usable around the message.
             style != null && state.results.isEmpty() -> MapEmpty(onReset, Modifier.align(Alignment.TopCenter).padding(16.dp))
         }

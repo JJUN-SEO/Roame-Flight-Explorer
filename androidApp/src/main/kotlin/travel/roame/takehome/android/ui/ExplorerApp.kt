@@ -50,11 +50,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -90,11 +92,13 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
     WriteMessages(state, store, snackbar)
     SuccessHaptics(state)
     var cardInset by remember { mutableStateOf(0.dp) }
-    // Kept here, outside both tabs, so List or Map, the list's position and the map's camera survive tab switches.
+    // Kept here, outside both tabs, so List or Map, the list's position, the map's camera and the map itself (D31)
+    // survive tab switches.
     val view = ExploreView(
         showMap = rememberSaveable { mutableStateOf(false) },
         listState = rememberLazyListState(),
         mapCamera = rememberSaveable { mutableStateOf<DoubleArray?>(null) },
+        map = rememberMapHolder(),
     )
     ScrollToTopOnNewSearch(state, view.listState)
     // Here, above both tabs, so switching tabs doesn't read the location again (D30).
@@ -118,10 +122,12 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            when (tab) {
-                0 -> ExploreScreen(state, store, view, onOriginFocused, onDebugLongPress, onCardInset = { cardInset = it })
-                else -> SavedScreen(state, store, onDebugLongPress, onCardInset = { cardInset = it })
+            // D31: Explore stays composed while Saved is shown, so its map is never detached from the window.
+            val exploring = tab == 0
+            Box(Modifier.fillMaxSize().notPlacedUnless(exploring)) {
+                ExploreScreen(state, store, view, exploring, onOriginFocused, onDebugLongPress, onCardInset = { if (exploring) cardInset = it })
             }
+            if (!exploring) SavedScreen(state, store, onDebugLongPress, onCardInset = { cardInset = it })
         }
     }
 }
@@ -149,8 +155,16 @@ private fun WriteMessages(state: ExplorerState, store: ExplorerStore, snackbar: 
     }
 }
 
-/** What Explore shows and where, kept across tab switches and rotation. */
-private class ExploreView(val showMap: MutableState<Boolean>, val listState: LazyListState, val mapCamera: MutableState<DoubleArray?>)
+/**
+ * What Explore shows and where, kept across tab switches and rotation. The map itself is kept across tab switches,
+ * but made again when the activity is recreated, because it holds the activity (D31).
+ */
+private class ExploreView(
+    val showMap: MutableState<Boolean>,
+    val listState: LazyListState,
+    val mapCamera: MutableState<DoubleArray?>,
+    val map: MapHolder,
+)
 
 /**
  * UI_SPEC §5: a new search or filter starts the list from the top. Otherwise the list keeps the old top flight in view,
@@ -182,17 +196,34 @@ private fun SuccessHaptics(state: ExplorerState) {
     }
 }
 
+/**
+ * D31: kept composed but not placed while the Saved tab is shown, so the map stays attached. Nothing is drawn, tapped
+ * or read by TalkBack then. It's still measured, so the map keeps its size and the list its layout.
+ */
+private fun Modifier.notPlacedUnless(placed: Boolean): Modifier = if (placed) {
+    this
+} else {
+    clearAndSetSemantics {}.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) {}
+    }
+}
+
 @Composable
 private fun ExploreScreen(
     state: ExplorerState,
     store: ExplorerStore,
     view: ExploreView,
+    active: Boolean,
     onOriginFocused: () -> Unit,
     onDebugLongPress: (() -> Unit)?,
     onCardInset: (Dp) -> Unit,
 ) {
     // UI_SPEC §5: back closes a sheet first (the sheet handles that), then deselects, then exits.
-    BackHandler(enabled = state.selected != null) { store.select(null) }
+    BackHandler(enabled = active && state.selected != null) { store.select(null) }
+    // Leaving the tab used to remove its fields, which hid the keyboard. Now they stay, so let go of the focus.
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(active) { if (!active) focusManager.clearFocus() }
     when (val data = state.data) {
         DataStatus.Loading -> LoadingList()
         is DataStatus.Unavailable -> UnavailableMessage(data.error, store::refresh)
@@ -230,18 +261,32 @@ private fun ExploreScreen(
                     onInset = onCardInset,
                 ) { bottomInset ->
                     val reduceMotion = rememberReduceMotion()
-                    Crossfade(showMap, animationSpec = if (reduceMotion) snap() else tween(200), label = "List or Map") { map ->
-                        when {
-                            map -> ExplorerMap(
+                    Box(Modifier.fillMaxSize()) {
+                        // D31: once made, the map stays in place under the list, hidden, so switching back doesn't
+                        // detach it from the window. MapLibre leaks memory each time its view is attached again (Step 6.1).
+                        if (showMap || view.map.view != null) {
+                            ExplorerMap(
                                 state,
+                                holder = view.map,
+                                visible = showMap && active,
                                 camera = view.mapCamera,
                                 bottomInset = bottomInset,
                                 onMarkerTap = { openMarker = it },
                                 onReset = store::resetAll,
                                 modifier = Modifier.fillMaxSize(),
                             )
-                            state.results.isEmpty() -> FilteredEmpty(state, onReset = store::resetAll)
-                            else -> ResultsList(state, store, view.listState, bottomInset)
+                        }
+                        Crossfade(showMap, animationSpec = if (reduceMotion) snap() else tween(200), label = "List or Map") { map ->
+                            if (!map) {
+                                // Opaque, so the hidden map can't show through.
+                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                                    if (state.results.isEmpty()) {
+                                        FilteredEmpty(state, onReset = store::resetAll)
+                                    } else {
+                                        ResultsList(state, store, view.listState, bottomInset)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
