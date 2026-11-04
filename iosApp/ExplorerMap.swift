@@ -62,6 +62,8 @@ struct ExplorerMap: View {
                 }
             }
         }
+        // D45: the map stays light in dark mode, with its pills, route and plane, as Android's always-light map does.
+        .environment(\.colorScheme, .light)
         .onMapCameraChange(frequency: .continuous) { cameraMoves.count &+= 1 }
         // M8: the first display uses MapKit's automatic framing, which fits every marker. Recording that camera once
         // turns it into a fixed position, so later filter changes don't reframe the map; the user's own moves reach

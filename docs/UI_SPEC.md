@@ -296,6 +296,8 @@ Use the same tokens on both platforms, mapped to native APIs.
 
 **Icons (D37).** The same 22 Material Symbols (Rounded, 24) on both: vector drawables on Android, template SVGs in an asset catalog on iOS, each tinted by its context. They're decorative: the control around them carries the spoken label (THIRD_PARTY_NOTICES).
 
+**The map in dark mode (D45):** the map, its pills, the route and the plane stay light on both apps, with the light theme's colours.
+
 **Program logos (D34):** each program's logo on a white pill with a thin border, white in dark mode too. Aeroplan, MileagePlus and Mileage Plan use their public-domain logos. Avios and Flying Blue show their name, because no freely licensed logo exists (THIRD_PARTY_NOTICES).
 
 **Components (D38).** Each is written once per platform, under the same name, in `DesignSystem.kt` and `DesignSystem.swift`, at the same sizes (pt = dp):

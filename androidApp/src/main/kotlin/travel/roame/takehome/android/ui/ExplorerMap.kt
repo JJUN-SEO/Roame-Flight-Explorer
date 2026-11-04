@@ -40,7 +40,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
@@ -289,15 +288,7 @@ private fun MapContent(
     val reduceMotion = rememberReduceMotion()
     val map = holder.map
     val style = holder.style
-    // The same tokens as iOS's pills: card, text, card border, accent, on-accent and the light pink tint.
-    val colors = PillColors(
-        card = MaterialTheme.colorScheme.surfaceContainer.toArgb(),
-        text = MaterialTheme.colorScheme.onSurface.toArgb(),
-        border = MaterialTheme.colorScheme.outlineVariant.toArgb(),
-        accent = MaterialTheme.colorScheme.primary.toArgb(),
-        onAccent = MaterialTheme.colorScheme.onPrimary.toArgb(),
-        tint = MaterialTheme.colorScheme.primaryContainer.toArgb(),
-    )
+    val colors = LightPillColors
 
     // D31: while shown, the map follows the screen's lifecycle. While hidden, or when it leaves with the Explore tab,
     // it's paused and stopped, not destroyed.
@@ -336,7 +327,7 @@ private fun MapContent(
         if (holder.style == null) holder.timedOut = true
     }
 
-    // The colours and font scale are keys too, so the pills follow the appearance setting and the text size.
+    // The font scale is a key too, so the pills follow the text size.
     LaunchedEffect(style, state.markers, state.selected, colors, density) {
         val loaded = style ?: return@LaunchedEffect
         holder.pillImages = loaded.showMarkers(context, state.markers, state.selected?.destinationCode, density, colors, holder.pillImages)
@@ -520,6 +511,19 @@ private fun pillProperties() = arrayOf(
 private const val ROUTE_COLOR = 0xFFEA4167.toInt()
 
 private data class PillColors(val card: Int, val text: Int, val border: Int, val accent: Int, val onAccent: Int, val tint: Int)
+
+/**
+ * D45: the map stays light in dark mode, so its pills keep the light theme's card, text, card border, accent,
+ * on-accent and light pink tint (Theme.kt), as iOS's do.
+ */
+private val LightPillColors = PillColors(
+    card = 0xFFFFFFFF.toInt(),
+    text = 0xFF302D2A.toInt(),
+    border = 0xFFE8E5E0.toInt(),
+    accent = 0xFFD63A60.toInt(),
+    onAccent = 0xFFFFFFFF.toInt(),
+    tint = 0xFFFDE3E9.toInt(),
+)
 
 /**
  * M2, M3: one pill per destination (UI_SPEC §3). Each pill is an image named by what it shows; returns the names this
