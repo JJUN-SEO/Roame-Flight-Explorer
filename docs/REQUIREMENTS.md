@@ -27,8 +27,8 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | DATA-1 | Networking is implemented once in KMP | The HTTP client and DTO decoding live in `shared/commonMain`. Neither app makes HTTP calls. | R1–R12 | ✅ 2026‑11‑02 |
 | DATA-2 | Persistence is implemented once in KMP | The Room entities, DAOs, database and repositories live in `shared` (D3). Only the database file location is per platform. | V1–V8, R3 | ✅ 2026‑11‑02 |
 | DATA-3 | Search and filtering are implemented once in KMP and consumed by both apps | Neither app filters, sorts or groups flights itself. Both render `ExplorerState`. | S, F, O, M | 🟨 |
-| DATA-4 | The last successful API results are persisted | After a successful fetch, killing the app and relaunching with the API stopped shows the same results. | R1, R3 | 🟨 |
-| DATA-5 | Saved flights are stored locally | Saved flights survive app restarts and do not depend on the cache. | V1 | 🟨 |
+| DATA-4 | The last successful API results are persisted | After a successful fetch, killing the app and relaunching with the API stopped shows the same results. | R1, R3 | ✅ 2026‑11‑03 |
+| DATA-5 | Saved flights are stored locally | Saved flights survive app restarts and do not depend on the cache. | V1 | ✅ 2026‑11‑03 |
 | DATA-6 | Each platform keeps its own local data (no sync) | No sync code exists. This is noted in the submission notes. | — | ✅ 2026‑11‑02 |
 
 ## 3. Search & filters
@@ -87,13 +87,13 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| OFF-1 | Cached results and saved flights survive closing and reopening the app | Force-quit, stop the API, relaunch: the cached results and saved flights are both present. | R1, V1 | 🟨 |
-| OFF-2 | Offline, the user can search cached results, view saved flights and remove saved flights | With the API stopped, search, filters, map, the Saved tab and Remove all work. | R6, V6 | 🟨 |
-| OFF-3 | A failed refresh keeps the existing data and shows an offline or stale-data indication | Stop the API and reopen the app: the data is unchanged and a banner shows "Couldn't refresh · showing results from <time>". | R5, R6, R11 | 🟨 |
+| OFF-1 | Cached results and saved flights survive closing and reopening the app | Force-quit, stop the API, relaunch: the cached results and saved flights are both present. | R1, V1 | ✅ 2026‑11‑03 |
+| OFF-2 | Offline, the user can search cached results, view saved flights and remove saved flights | With the API stopped, search, filters, map, the Saved tab and Remove all work. | R6, V6 | ✅ 2026‑11‑03 |
+| OFF-3 | A failed refresh keeps the existing data and shows an offline or stale-data indication | Stop the API and reopen the app: the data is unchanged and a banner shows "Couldn't refresh · showing results from <time>". | R5, R6, R11 | ✅ 2026‑11‑03 |
 | OFF-4 | With no cached data, show an understandable error with a retry action | Fresh install with the API stopped: a full-screen error explains the cause. Retry works once the API is started. | R7, R9 | ✅ 2026‑11‑03 |
-| OFF-5 | A successful empty response is distinguished from a failed request | A 200 response with `{"flights":[]}` shows "No flights available" (not an error). A failed request shows the error or stale state. | R4, R8 | 🟨 |
+| OFF-5 | A successful empty response is distinguished from a failed request | A 200 response with `{"flights":[]}` shows "No flights available" (not an error). A failed request shows the error or stale state. | R4, R8 | ✅ 2026‑11‑03 |
 | OFF-6 | Saving the same flight again updates its details without creating a duplicate | Re-saving an id after its details change leaves one row with the new details. | V2 | ✅ 2026‑11‑02 |
-| OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | 🟨 |
+| OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | ✅ 2026‑11‑03 |
 | OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | ✅ 2026‑11‑03 |
 | OFF-9 | Offline map tiles are **not** required | Noted as out of scope. Once the map has loaded online, it works offline from its cache. If the Android map has never loaded online, it shows a message with Retry (D24), and flights stay available in the list. iOS is expected to show markers over empty tiles. | — | ⬜ |
 

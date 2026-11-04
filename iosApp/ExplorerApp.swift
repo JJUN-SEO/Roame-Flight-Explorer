@@ -107,14 +107,16 @@ private struct ExploreScreen: View {
     var body: some View {
         let state = model.state
         switch state.data {
-        case is DataStatus.Loading:
-            LoadingList()
         case let unavailable as DataStatus.Unavailable:
             UnavailableMessage(error: unavailable.error) { model.store.refresh() }
-        default:
+        case let data as DataStatus.Ready:
             if state.options.isEmpty {
                 // UI_SPEC §4: a successful empty response is not an error (R4).
-                ContentUnavailableView("No flights available right now", systemImage: "airplane", description: Text("The server returned no flights."))
+                VStack(spacing: 0) {
+                    StaleBanner(data: data)
+                    RefreshProgress(data: data)
+                    ContentUnavailableView("No flights available right now", systemImage: "airplane", description: Text("The server returned no flights."))
+                }
             } else {
                 VStack(spacing: 0) {
                     SearchHeader()
@@ -128,6 +130,8 @@ private struct ExploreScreen: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
+                    StaleBanner(data: data)
+                    RefreshProgress(data: data)
                     Group {
                         if showMap {
                             ExplorerMap(camera: $camera) { openMarker = $0 }
@@ -153,6 +157,63 @@ private struct ExploreScreen: View {
                     if let kind = openSheet { FilterSheet(kind: kind) }
                 }
             }
+        default:
+            // DataStatus.Loading, the only other case.
+            LoadingList()
+        }
+    }
+}
+
+/**
+ * R11: the refresh on launch shows a thin bar over the data, never a full-screen loader. On iOS, SwiftUI's
+ * linear `ProgressView` with no value is a still grey line, so this slides a short bar along a track, as
+ * Android's does. With Reduce Motion on, the bar fades in and out instead of moving.
+ */
+private struct RefreshProgress: View {
+    let data: DataStatus.Ready
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if data.isRefreshing {
+            TimelineView(.animation) { context in
+                let phase = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.2) / 1.2
+                GeometryReader { geometry in
+                    let width = geometry.size.width
+                    if reduceMotion {
+                        Rectangle().fill(Color.accent).opacity(0.3 + 0.7 * abs(sin(phase * .pi)))
+                    } else {
+                        Capsule().fill(Color.accent)
+                            .frame(width: width / 3)
+                            .offset(x: -width / 3 + phase * width * 4 / 3)
+                    }
+                }
+            }
+            .frame(height: 4)
+            .background(Color.accent.opacity(0.2))
+            .clipped()
+            .accessibilityElement()
+            .accessibilityLabel("Refreshing flights")
+        }
+    }
+}
+
+/**
+ * R6, T4: the last refresh failed, so say how old the data is. There's no Retry (D29): the app refreshes
+ * when it opens, and the next success clears the banner (R11).
+ */
+private struct StaleBanner: View {
+    let data: DataStatus.Ready
+
+    var body: some View {
+        if data.refreshError != nil {
+            Text("Couldn't refresh · showing results from \(Format.syncTime(data.lastSuccessAt))")
+                .font(.footnote)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.orange.opacity(0.15), in: .rect(cornerRadius: 12))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
         }
     }
 }

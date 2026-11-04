@@ -54,6 +54,19 @@ enum Format {
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
+    /**
+     * T4: `lastSuccessAt` is an instant, so unlike flight dates it's shown in the device's zone.
+     * "3:42 PM" if it was today there, otherwise "Nov 2, 3:42 PM".
+     */
+    static func syncTime(_ epochMillis: Int64, now: Date = .now, zone: TimeZone = .current) -> String {
+        let at = Date(timeIntervalSince1970: TimeInterval(epochMillis) / 1000)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let formatter = formatter(calendar.isDate(at, inSameDayAs: now) ? "h:mm a" : "MMM d, h:mm a")
+        formatter.timeZone = zone
+        return formatter.string(from: at)
+    }
+
     private static func calendarDate(_ iso: String, in calendar: Calendar) -> Date? {
         let parts = iso.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }

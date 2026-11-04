@@ -147,6 +147,8 @@ These were found in the starter and the fixture.
 - **SwiftUI search fields (Step 5.2):** when a field loses focus, SwiftUI can write its old text back through the binding unchanged. Treat that as an edit and it clears a pick (S14), so the binding ignores writes that change nothing.
 - **Kotlin types in Swift (Step 5.3):** Kotlin/Native lowercases a whole enum entry name, so `FilterKind.MaxPoints` is `.maxpoints` in Swift; check the generated `Shared.h` when unsure. Kotlin classes aren't `Sendable`, so Swift 6 rejects a global `let` of them; use a computed `var`.
 - **`#if DEBUG` in Swift (Step 5.4):** the hand-written Xcode project didn't define `DEBUG`, so `#if DEBUG` code compiled away even in Debug builds. The Debug configuration now sets `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG`.
+- **SwiftUI progress (Step 5.6):** a linear `ProgressView` with no value is a still grey line on iOS, so the refresh bar is drawn by hand.
+- **A hanging API for QA (Step 5.6):** macOS's `nc -l 8080` closes the connection once its input ends, so in the background it gives a quick failure. Use `sleep 45 | nc -l 8080` to hold a request open (TEST_PLAN §6).
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"

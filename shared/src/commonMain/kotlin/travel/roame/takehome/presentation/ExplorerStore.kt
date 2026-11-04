@@ -51,7 +51,7 @@ class ExplorerStore internal constructor(
         refresh()
     }
 
-    /** Pull to refresh and Retry. Ignored while a refresh is running (R2). */
+    /** Try again on the first-load error; there's no manual refresh (D29). Ignored while a refresh is running (R2). */
     fun refresh() {
         scope.launch { flights.refresh() }
     }
