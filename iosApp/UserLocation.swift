@@ -1,34 +1,26 @@
 import CoreLocation
 
 /**
- * The device's location for ranking origins (D16, D30). Call `fromFocused()` when From gets focus:
+ * The device's location, for ranking origins (P2) and the home airport's deals (B5). D32: asked when the app opens.
  * - The first time, iOS asks for location while using the app. `Info.plist` asks for approximate accuracy only.
  *   If allowed, the location is read straight away.
  * - Once allowed, each launch reads it again without asking.
  * - After a denial the app never asks again: iOS won't show the dialog twice. Nothing changes and no error
- *   shows, so ranking stays volume-only (P4).
+ *   shows, so ranking stays volume-only (P4) and the deals come from every airport.
  */
 @MainActor
-final class OriginLocation: NSObject, CLLocationManagerDelegate {
+final class UserLocation: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private let onLocation: @MainActor (_ latitude: Double, _ longitude: Double) -> Void
     private var located = false
     private var reading = false
 
-    /** Create it on the main thread: Core Location calls back on the thread that created the manager. */
+    /** Create it on the main thread, once, at launch: Core Location calls back on the thread that created the manager. */
     init(onLocation: @escaping @MainActor (_ latitude: Double, _ longitude: Double) -> Void) {
         self.onLocation = onLocation
         super.init()
         manager.desiredAccuracy = kCLLocationAccuracyReduced
         manager.delegate = self
-    }
-
-    func fromFocused() {
-        switch manager.authorizationStatus {
-        case .notDetermined: manager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways: read()
-        default: break
-        }
     }
 
     private func read() {
@@ -37,11 +29,14 @@ final class OriginLocation: NSObject, CLLocationManagerDelegate {
         manager.requestLocation()
     }
 
-    // Also called once when the manager is created, so a later launch with the permission granted reads quietly.
+    // Called once when the manager is created, with the current permission, and again after the user answers.
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         MainActor.assumeIsolated {
-            let status = self.manager.authorizationStatus
-            if status == .authorizedWhenInUse || status == .authorizedAlways { read() }
+            switch self.manager.authorizationStatus {
+            case .notDetermined: self.manager.requestWhenInUseAuthorization()
+            case .authorizedWhenInUse, .authorizedAlways: read()
+            default: break
+            }
         }
     }
 

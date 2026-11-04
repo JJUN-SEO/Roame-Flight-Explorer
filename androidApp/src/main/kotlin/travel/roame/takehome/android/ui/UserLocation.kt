@@ -26,47 +26,33 @@ import kotlin.coroutines.resume
 private const val PERMISSION = Manifest.permission.ACCESS_COARSE_LOCATION
 
 /**
- * The device's location for ranking origins (D16, D30). Call the returned function when From gets focus:
+ * The device's location, for ranking origins (P2) and the home airport's deals (B5). D32: asked when the app opens.
  * - The first time, Android asks for approximate location. If allowed, the location is read straight away.
  * - Once allowed, each launch reads it again without asking.
- * - After a denial the app never asks again by itself. Nothing changes and no error shows: ranking stays volume-only (P4).
+ * - After a denial the app never asks again by itself. Nothing changes and no error shows: ranking stays volume-only
+ *   (P4) and the deals come from every airport.
  */
 @Composable
-fun rememberOriginLocation(onLocation: (latitude: Double, longitude: Double) -> Unit): () -> Unit {
+fun UserLocation(onLocation: (latitude: Double, longitude: Double) -> Unit) {
     val context = LocalContext.current
     val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
     val latestOnLocation by rememberUpdatedState(onLocation)
-    // Saveable, so rotation neither asks again nor re-reads; a new launch starts fresh.
-    var asked by rememberSaveable { mutableStateOf(false) }
-    var located by rememberSaveable { mutableStateOf(false) }
-    var reading by rememberSaveable { mutableStateOf(false) }
+    // Saveable, so recreating the activity neither asks again nor re-reads; a new launch starts fresh.
+    var handled by rememberSaveable { mutableStateOf(false) }
 
     val read = {
-        if (!located && !reading) {
-            reading = true
-            scope.launch {
-                approximateLocation(context)?.let {
-                    latestOnLocation(it.latitude, it.longitude)
-                    located = true
-                }
-                reading = false
-            }
-        }
+        scope.launch { approximateLocation(context)?.let { latestOnLocation(it.latitude, it.longitude) } }
     }
     val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) read() }
 
-    // A later launch, with the permission already granted: read quietly.
-    LaunchedEffect(Unit) { if (context.hasLocationPermission()) read() }
-
-    return {
+    LaunchedEffect(Unit) {
+        if (handled) return@LaunchedEffect
+        handled = true
         when {
             context.hasLocationPermission() -> read()
             // Android shows a rationale flag only after a denial, so "false" here means it hasn't been asked yet.
-            !asked && activity?.shouldShowRequestPermissionRationale(PERMISSION) == false -> {
-                asked = true
-                askPermission.launch(PERMISSION)
-            }
+            activity?.shouldShowRequestPermissionRationale(PERMISSION) == false -> askPermission.launch(PERMISSION)
         }
     }
 }

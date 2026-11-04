@@ -111,7 +111,7 @@
     <string name="profile_placeholder">Profiles aren\'t part of this demo. There\'s no sign-in, so there\'s nothing to change yet.</string>
     <string name="log_out_placeholder">There\'s no account to log out of in this demo.</string>
     <string name="privacy_location_title">Your location</string>
-    <string name="privacy_location_body">Only your approximate location, and only if you allow it. It\'s used on this phone to put nearby airports first, and it\'s never sent anywhere.</string>
+    <string name="privacy_location_body">Only your approximate location, and only if you allow it. It\'s used on this phone to put nearby airports first and to show deals from the airport nearest you, and it\'s never sent anywhere.</string>
     <string name="privacy_data_title">Your flights</string>
     <string name="privacy_data_body">The flights you last downloaded and the flights you save stay on this phone. There\'s no account and no tracking.</string>
     <string name="privacy_map_title">Maps</string>
@@ -122,4 +122,29 @@
     <string name="info_about_body">A take-home project inspired by Roame, built natively for Android and iOS on one Kotlin Multiplatform core. It isn\'t affiliated with Roame or with the loyalty programs shown.</string>
     <string name="info_credits_title">Credits</string>
     <string name="info_credits_body_android">Icons: Material Symbols by Google (Apache 2.0). Font: Inter (SIL Open Font License 1.1). Program logos: Wikimedia Commons, public domain; trademarks of their owners. Map: MapLibre, with OpenFreeMap tiles and OpenStreetMap data.</string>
+    <string name="info_photos_title">Photo credits</string>
+    <string name="info_photos_body">From Wikimedia Commons, cropped and resized. Each keeps its own licence (CC0, CC BY or CC BY-SA, at creativecommons.org).\n\nAmsterdam: Basile Morin, CC BY-SA 4.0\nAthens: Jebulon, CC0\nAuckland: DXR, CC BY-SA 4.0\nBangkok: Diego Delso, CC BY-SA 3.0\nBarcelona: kallerna, CC BY-SA 4.0\nDoha: Zairon, CC BY 4.0\nDubai: Tim Reckmann from Hamm, Deutschland, CC BY-SA 3.0\nDublin: Christian David, CC BY-SA 4.0\nFrankfurt: Thomas Wolf (Der Wolf im Wald), CC BY-SA 3.0\nHong Kong: Diliff, CC BY 3.0\nJohannesburg: Frankbel, CC BY-SA 4.0\nLisbon: Ingo Mehling, CC BY-SA 4.0\nLondon: Diego Delso, CC BY-SA 4.0\nMadrid: Carlos Delgado, CC BY-SA 3.0\nMelbourne: DXR, CC BY-SA 4.0\nMexico City: Daniel Case, CC BY-SA 3.0\nParis: © Jorge Royan / http://www.royan.com.ar, CC BY-SA 3.0\nRome: Diliff, CC BY-SA 2.5\nSao Paulo: Marcosleal, CC BY-SA 3.0\nSeoul: © Frank Schulenburg, CC BY-SA 4.0\nSingapore: Basile Morin, CC BY-SA 4.0\nSydney: Diliff, CC BY-SA 3.0\nTokyo: David Kernan, CC BY 4.0\nTuscany (the banner): Ciorophotoproject, CC BY-SA 4.0</string>
+    <!-- The landing page (Step 6.3b, UI_SPEC §2.0) -->
+    <string name="landing_search_title">Where to?</string>
+    <string name="landing_anywhere">Anywhere</string>
+    <string name="landing_any_cabin">Any cabin</string>
+    <string name="landing_search_route">%1$s → %2$s</string>
+    <string name="landing_search_details">%1$s · %2$s</string>
+    <string name="landing_search_description">Search flights. %1$s, %2$s</string>
+    <string name="landing_hero_title">Fly further on your points</string>
+    <string name="landing_hero_button">I\'m flexible</string>
+    <string name="landing_destinations_title">Best deals by destination</string>
+    <string name="landing_offers_title">Best offers by program</string>
+    <string name="landing_from_home">From %1$s (%2$s), the airport nearest you</string>
+    <string name="landing_from_everywhere">From every airport, best value first</string>
+    <string name="landing_from_points">from %1$s</string>
+    <string name="landing_up_to_below">Up to %1$d%% below typical</string>
+    <string name="landing_below_typical">%1$d%% below typical</string>
+    <string name="landing_value">≈ $%1$s value</string>
+    <string name="landing_destination_description">%1$s, from %2$s points</string>
+    <string name="landing_destination_description_below">%1$s, from %2$s points, up to %3$d%% below typical</string>
+    <string name="landing_offer_description">%1$s best offer: %2$s to %3$s, %4$s, %5$s, %6$s points</string>
+    <string name="landing_offer_below">, %1$d%% below typical</string>
+    <string name="landing_offer_value">, worth about $%1$s</string>
+    <string name="results_title">Search flights</string>
 </resources>

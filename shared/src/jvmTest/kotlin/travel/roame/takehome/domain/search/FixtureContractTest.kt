@@ -20,6 +20,7 @@ import kotlinx.serialization.json.jsonObject
 import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.KtorFlightsApi
 import travel.roame.takehome.di.AppGraph
+import travel.roame.takehome.domain.DealIndex
 import travel.roame.takehome.domain.GreatCircle
 import travel.roame.takehome.domain.MarkerSheetOrder
 import travel.roame.takehome.domain.ResultOrder
@@ -231,6 +232,42 @@ class FixtureContractTest {
     @Test
     fun o2_fixtureSortsTheSameAsAnIndependentSort() {
         assertEquals("8f3196e19d5a757e06c79e5bff8e15a4a0a6d2d26863861e04466238a4f6f359", orderHash(MarkerSheetOrder))
+    }
+
+    // The landing page's deals on the real data, checked against an independent Python calculation (2026‑11‑04).
+
+    @Test
+    fun b7_fixtureBestOfferPerProgram() {
+        val index = DealIndex.of(decoded)
+        val everywhere = index.dealsFrom(null).offers.map { Triple(it.program, it.best.flight.id, it.best.percentBelowTypical) }
+        assertEquals(
+            listOf(
+                Triple("MileagePlus", "fx-BOS-SIN-20270323", 37),
+                Triple("Avios", "fx-JFK-SYD-20270224", 36),
+                Triple("Mileage Plan", "fx-BOS-SIN-20270220", 36),
+                Triple("Aeroplan", "fx-BOS-BKK-20270315", 36),
+                Triple("Flying Blue", "fx-YVR-SYD-20270328", 35),
+            ),
+            everywhere,
+        )
+        val ottawa = GeoPoint(45.42, -75.70)
+        val home = index.homeAirport(ottawa)
+        assertEquals("YYZ", home?.code)
+        assertEquals(
+            listOf("fx-YYZ-JNB-20270322", "fx-YYZ-SIN-20270224", "fx-YYZ-AKL-20270309", "fx-YYZ-MAD-20270210", "fx-YYZ-DXB-20270330"),
+            index.dealsFrom(home).offers.map { it.best.flight.id },
+        )
+    }
+
+    @Test
+    fun b8_fixtureDestinationDeck() {
+        val deck = DealIndex.of(decoded).dealsFrom(null).destinations
+        assertEquals(23, deck.size, "24 airports, but Tokyo's two are one card")
+        assertEquals(
+            listOf("Singapore" to 25_000, "Sydney" to 24_000, "Bangkok" to 26_000, "Johannesburg" to 26_000, "Auckland" to 21_000),
+            deck.take(5).map { it.city to it.minPoints },
+        )
+        assertEquals(listOf("HND", "NRT"), deck.single { it.city == "Tokyo" }.codes)
     }
 
     // The map on the real data.

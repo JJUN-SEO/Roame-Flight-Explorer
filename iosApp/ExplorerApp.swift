@@ -14,16 +14,46 @@ struct ExplorerApp: View {
     @State private var note: String?
     @State private var pendingBefore: Set<String> = []
     @State private var successes = 0
-    @State private var location: OriginLocation?
+    @State private var location: UserLocation?
+    /** D36: Explore opens on the landing page; a search, a deal or "I'm flexible" shows the results. */
+    @State private var showResults = false
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                // Explore stays alive behind the other tabs, as on Android (D31), so its list, map and camera survive.
-                ExploreScreen(isActive: tab == .explore, onOriginFocused: { location?.fromFocused() }, onDebugLongPress: debugHook)
-                    .opacity(tab == .explore ? 1 : 0)
-                    .allowsHitTesting(tab == .explore)
-                    .accessibilityHidden(tab != .explore)
+                // The results stay alive behind the landing page and the other tabs, as on Android (D31), so the list,
+                // map and camera survive. The landing page stays too, so it keeps its scroll position.
+                let results = tab == .explore && showResults
+                VStack(spacing: 0) {
+                    SubpageTopBar(title: "Search flights") {
+                        dismissKeyboard()
+                        showResults = false
+                    }
+                    ExploreScreen(isActive: results, onDebugLongPress: debugHook)
+                }
+                .opacity(results ? 1 : 0)
+                .allowsHitTesting(results)
+                .accessibilityHidden(!results)
+                let landing = tab == .explore && !showResults
+                LandingScreen(
+                    onSearch: { showResults = true },
+                    onFlexible: {
+                        model.store.resetAll()
+                        showResults = true
+                    },
+                    onDestination: { deal in
+                        model.store.openDestination(codes: deal.codes)
+                        showResults = true
+                    },
+                    onOffer: { offer in
+                        model.store.openOffer(flightId: offer.flight.id)
+                        showResults = true
+                    }
+                )
+                .background(Color.background)
+                .opacity(landing ? 1 : 0)
+                .allowsHitTesting(landing)
+                .accessibilityHidden(!landing)
                 switch tab {
                 case .saved: SavedScreen(onDebugLongPress: debugHook)
                 case .account: AccountScreen(onToast: { note = $0 })
@@ -46,9 +76,9 @@ struct ExplorerApp: View {
             pendingBefore = now
         }
         .sensoryFeedback(.success, trigger: successes)
-        // D30: made at launch, so a permission granted on an earlier launch is read without asking.
+        // D32: made at launch, so it asks the first time and reads a permission granted on an earlier launch.
         .task {
-            location = OriginLocation { latitude, longitude in
+            location = UserLocation { latitude, longitude in
                 model.store.setUserLocation(latitude: latitude, longitude: longitude)
             }
         }
@@ -109,7 +139,6 @@ private struct ExploreScreen: View {
     @State private var camera: MapCameraPosition?
     /** False while another tab is shown on top; this screen stays alive underneath (D31, as on Android). */
     let isActive: Bool
-    let onOriginFocused: () -> Void
     let onDebugLongPress: (() -> Void)?
 
     var body: some View {
@@ -127,7 +156,7 @@ private struct ExploreScreen: View {
                 }
             } else {
                 VStack(spacing: 0) {
-                    SearchHeader(onOriginFocused: onOriginFocused)
+                    SearchHeader()
                     FilterBar { openSheet = $0 }
                     ResultSummary()
                     // L4: switching changes only the view; the selection and filters stay in the store.
@@ -174,7 +203,7 @@ private struct ExploreScreen: View {
  * linear `ProgressView` with no value is a still grey line, so this slides a short bar along a track, as
  * Android's does. With Reduce Motion on, the bar fades in and out instead of moving.
  */
-private struct RefreshProgress: View {
+struct RefreshProgress: View {
     let data: DataStatus.Ready
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -206,7 +235,7 @@ private struct RefreshProgress: View {
  * R6, T4: the last refresh failed, so say how old the data is. There's no Retry (D29): the app refreshes
  * when it opens, and the next success clears the banner (R11).
  */
-private struct StaleBanner: View {
+struct StaleBanner: View {
     let data: DataStatus.Ready
 
     var body: some View {
@@ -294,7 +323,7 @@ private struct LoadingList: View {
 }
 
 /** R7, R9: the cause, in the words UI_SPEC §4 gives it, with Try again. */
-private struct UnavailableMessage: View {
+struct UnavailableMessage: View {
     let error: FetchError
     let onRetry: () -> Void
 

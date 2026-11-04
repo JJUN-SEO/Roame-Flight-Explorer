@@ -165,7 +165,7 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   `(w_proximity · proximity + w_volume · volume) / (w_proximity + w_volume)`
 - **P2** `proximity = 0.5^(distance_km / 250)`, so it halves every 250 km. The distance is the great-circle (haversine) distance from the user's location to the airport.
   - Without a location (unknown, permission denied, or not available yet), priority is volume only.
-  - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is asked for the first time the From field gets focus, and never again automatically after a denial (D30). Once allowed, each launch reads it again without asking. There is no geo-IP and no third party.
+  - The location comes from **the device** (owner decision D16): Fused Location Provider on Android and Core Location on iOS, at approximate accuracy. It is asked for when the app first opens (D32, which replaced D30's first focus of From), and never again automatically after a denial. Once allowed, each launch reads it again without asking. There is no geo-IP and no third party. The same location picks the home airport for the landing page's deals (B5).
 - **P3** `volume = annualPassengers / max(annualPassengers)` over that side's airports. The figures come from `fixtures/airports.json`, a **separate file we added**; `flights.json` is untouched. A copy ships inside the app (owner decision D15), so ranking is the same online and offline, and a test keeps the copy equal to the file.
 - **P4 Fallback to the original data.**
   - With no passenger figures at all, `volume = flights per airport in flights.json / max`.
@@ -223,6 +223,20 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
   - On first display, fit all markers.
   - **Never** move the camera automatically when filters change, so the user's pan and zoom are respected.
   - On an explicit selection, animate to fit the route.
+
+## 6b. Landing page deals (B)
+
+Implemented in `domain/Deals.kt` (`DealIndex`), built once per data change in `index()`, and exposed as `ExplorerState.landing`. The owner left the method to Claude (D35). Points alone favour short hops, so a deal is a flight that costs few points **for its distance**, compared with others in the same cabin. The deals ignore the search and filters, like Saved (V8).
+
+- **B1** A flight's distance is the great-circle (haversine) distance between its two airports, as in P2.
+- **B2** Its rate is points per 1,000 km: `points / (distanceKm / 1000)`. A flight shorter than 1 km, or with no points, has no rate and is never a deal. *(defensive: the fixture has neither)*
+- **B3** A cabin's typical rate is the median rate of every cached flight in that cabin; for an even count, the mean of the middle two. It comes from the whole cache, like F8, so it doesn't move while the user filters.
+- **B4** A flight's value is `rate / typical rate of its cabin`; lower is better. `percentBelowTypical = floor((1 − value) × 100)`, and 0 when the flight isn't below typical. The apps show it only above 0.
+- **B5** **Home airport (D32).** When the user's location is known, the home airport is the origin airport nearest to it (B1's distance; ties by code), and every deal comes from flights leaving it. Without a location, the deals come from every cached flight. *(assumption: "location-aware" means deals from the origin nearest you, however far away it is; the data only has North American origins)*
+- **B6** **Estimated value (A22):** `points × cents per point / 100`, in US dollars, rounded to the nearest dollar: 1.80¢ for Economy and Premium Economy, 4.10¢ for Business and 10.5¢ for First. A cabin with no published value has no estimate. Shown as an estimate only.
+- **B7** **Best offer per program:** for each program among the candidates (B5), its best-value flight; ties by points ↑, then date ↑, then id ↑. Offers are ordered best value first, then by program name. Each offer's flight carries `isSaved` (V3).
+- **B8** **Destination deals:** one per destination city among the candidates, so a city's airports are one deal (Tokyo is HND and NRT). Each has the city's codes, its lowest points, the best value among its flights (B4), and a photo key, `dest_` plus the city in lowercase ASCII with other characters as `_` (`dest_sao_paulo`), which each app uses to find its bundled photo (D33). Ordered best value first, then by city. At most 30. *(assumption: the cap keeps the deck short at any size; the fixture has 23 cities)*
+- **B9** **Opening a deal starts a new search.** `openDestination(codes)` resets everything as C4 does, picks the deal's airports in To (S14) and, with a home airport, picks it in From. `openOffer(flightId)` resets the same way, picks the flight's origin and destination airports, and selects the flight (L1). An id that isn't one of the current offers changes nothing. *(assumption: a deal replaces the current search, as tapping one in Roame does)*
 
 ## 7. Selection (L)
 
@@ -296,6 +310,7 @@ The rules are written so that their cost stays predictable as the data grows (RE
 | Filters (F) | Per-flight predicates: O(n) per input change, off the main thread | Same rules evaluated as indexed SQL `WHERE` clauses. Semantics and tests unchanged. |
 | Ordering (O) | O(n log n), once per data change, because filtering keeps the order (D6). Every ordering ends with an `id` tiebreak | The deterministic order makes paging safe |
 | Map (M) | O(n) grouping by destination | Beyond ~200 markers, clustering changes the *rendering*, not M1–M3 |
+| Deals (B) | Once per data change: one distance per flight, a median per cabin, and an O(n log n) sort, for every flight and per origin. A location only looks up the nearest origin's deals: O(origins) | Measured at 6 ms for 10k flights and about 150 ms for 100k, off the main thread (ARCHITECTURE §12). At 100k+, keep only each program's and city's best in one pass instead of sorting everything |
 | Selection (L) | O(1) membership check against the result ids | Unchanged |
 | Saved (V) | One upsert or delete per id; independent of cache size | Unchanged; the Saved tab pages |
 | Refresh (R) | Full replace is O(n) in one transaction | Incremental sync keeps R3's atomicity: one transaction per sync |

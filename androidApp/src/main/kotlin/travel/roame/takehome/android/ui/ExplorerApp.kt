@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -108,17 +109,46 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
         map = rememberMapHolder(),
     )
     ScrollToTopOnNewSearch(state, view.listState)
-    // Here, above the tabs, so switching tabs doesn't read the location again (D30).
-    val onOriginFocused = rememberOriginLocation(store::setUserLocation)
+    // D32: asked when the app opens. Here, above the tabs, so switching tabs doesn't read the location again.
+    UserLocation(store::setUserLocation)
+    // D36: Explore opens on the landing page; a search, a deal or "I'm flexible" shows the results.
+    var showResults by rememberSaveable { mutableStateOf(false) }
+    val landingScroll = rememberScrollState()
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
-                // D31: Explore stays composed while another tab is shown, so its map is never detached from the window.
+                // D31: the results stay composed under the landing page and the other tabs, so the map is never
+                // detached from the window. The landing page stays too, so it keeps its scroll position.
                 val exploring = tab == AppTab.Explore
-                Box(Modifier.fillMaxSize().notPlacedUnless(exploring)) {
-                    ExploreScreen(state, store, view, exploring, onOriginFocused, onDebugLongPress)
+                Box(Modifier.fillMaxSize().notPlacedUnless(exploring && showResults)) {
+                    Column {
+                        SubpageTopBar(stringResource(R.string.results_title), onBack = { showResults = false })
+                        ExploreScreen(state, store, view, exploring && showResults, onDebugLongPress)
+                    }
                 }
+                Box(Modifier.fillMaxSize().notPlacedUnless(exploring && !showResults)) {
+                    LandingScreen(
+                        state,
+                        landingScroll,
+                        onSearch = { showResults = true },
+                        onFlexible = {
+                            store.resetAll()
+                            showResults = true
+                        },
+                        onDestination = { deal ->
+                            store.openDestination(deal.codes)
+                            showResults = true
+                        },
+                        onOffer = { offer ->
+                            store.openOffer(offer.flight.id)
+                            showResults = true
+                        },
+                        onRetry = store::refresh,
+                    )
+                }
+                // After a selection's back (ExploreScreen), back returns to the landing page.
+                BackHandler(enabled = exploring && showResults && state.selected == null) { showResults = false }
                 when (tab) {
                     AppTab.Saved -> SavedScreen(state, store, onDebugLongPress)
                     AppTab.Account -> AccountScreen(appearance, onToast = { note = it })
@@ -243,7 +273,6 @@ private fun ExploreScreen(
     store: ExplorerStore,
     view: ExploreView,
     active: Boolean,
-    onOriginFocused: () -> Unit,
     onDebugLongPress: (() -> Unit)?,
 ) {
     // UI_SPEC §5: back closes a sheet first (the sheet handles that), then deselects, then exits.
@@ -265,7 +294,7 @@ private fun ExploreScreen(
                 var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
                 var openMarker by rememberSaveable { mutableStateOf<String?>(null) }
                 var showMap by view.showMap
-                SearchHeader(state, store, onOriginFocused)
+                SearchHeader(state, store)
                 FilterBar(state, store, onOpen = { openSheet = it })
                 ResultSummary(state, onReset = store::resetAll)
                 // L4: switching changes only the view; the selection and filters stay in the store.
@@ -331,7 +360,7 @@ private fun ExploreScreen(
 
 /** R11: the refresh on launch shows a thin bar over the data, never a full-screen loader. */
 @Composable
-private fun RefreshProgress(data: DataStatus.Ready) {
+internal fun RefreshProgress(data: DataStatus.Ready) {
     if (data.isRefreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
 }
 
@@ -340,7 +369,7 @@ private fun RefreshProgress(data: DataStatus.Ready) {
  * when it opens, and the next success clears the banner (R11).
  */
 @Composable
-private fun StaleBanner(data: DataStatus.Ready) {
+internal fun StaleBanner(data: DataStatus.Ready) {
     if (data.refreshError == null) return
     Surface(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
         Text(
@@ -459,7 +488,7 @@ private fun LoadingList() {
 
 /** R7, R9: the cause, in the words UI_SPEC §4 gives it, with Try again. */
 @Composable
-private fun UnavailableMessage(error: FetchError, onRetry: () -> Unit) {
+internal fun UnavailableMessage(error: FetchError, onRetry: () -> Unit) {
     val (title, body) = when (error) {
         FetchError.Offline -> stringResource(R.string.error_offline_title) to stringResource(R.string.error_offline_body)
         FetchError.Timeout -> stringResource(R.string.error_timeout) to null

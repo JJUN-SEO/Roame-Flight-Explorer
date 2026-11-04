@@ -2,7 +2,10 @@ package travel.roame.takehome.presentation
 
 import travel.roame.takehome.data.CacheSnapshot
 import travel.roame.takehome.data.SyncStatus
+import travel.roame.takehome.domain.DealIndex
 import travel.roame.takehome.domain.MarkerSheetOrder
+import travel.roame.takehome.domain.estimatedValueUsd
+import travel.roame.takehome.domain.photoKey
 import travel.roame.takehome.domain.ResultOrder
 import travel.roame.takehome.domain.active
 import travel.roame.takehome.domain.hasAnythingToReset
@@ -104,6 +107,7 @@ internal class IndexedFlights(
     val ids: Set<String>,
     val origins: SideIndex,
     val destinations: SideIndex,
+    val deals: DealIndex,
 )
 
 internal fun index(cache: CacheSnapshot) = IndexedFlights(
@@ -114,6 +118,7 @@ internal fun index(cache: CacheSnapshot) = IndexedFlights(
     ids = cache.flights.mapTo(HashSet()) { it.id },
     origins = SideIndex.of(cache.flights.map { it.origin }, RankingWeights.ORIGIN),
     destinations = SideIndex.of(cache.flights.map { it.destination }, RankingWeights.DESTINATION),
+    deals = DealIndex.of(cache.flights),
 )
 
 internal data class Snapshot(
@@ -175,6 +180,23 @@ internal fun reduce(snapshot: Snapshot): ExplorerState {
         originPick = origin.pick,
         destinationPick = destination.pick,
         isLocationShared = inputs.userLocation != null,
+        landing = landing(index.deals, inputs.userLocation, item),
+    )
+}
+
+/** B5–B8: the deals ignore the search and filters, so only the location and saved flights change them. */
+private fun landing(deals: DealIndex, location: GeoPoint?, item: (Flight) -> FlightItem): Landing {
+    val home = deals.homeAirport(location)
+    val fromHome = deals.dealsFrom(home)
+    return Landing(
+        homeAirport = home?.let { HomeAirport(it.code, it.city) },
+        offers = fromHome.offers.map { offer ->
+            val flight = offer.best.flight
+            ProgramOffer(offer.program, item(flight), offer.best.percentBelowTypical, estimatedValueUsd(flight.points, flight.cabin))
+        },
+        destinations = fromHome.destinations.map { deal ->
+            DestinationDeal(deal.city, deal.codes, deal.minPoints, deal.best.percentBelowTypical, photoKey(deal.city))
+        },
     )
 }
 

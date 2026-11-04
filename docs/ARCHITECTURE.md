@@ -88,6 +88,7 @@ data class ExplorerState(
     val originPick: AirportSuggestion?,           // S14: the tapped row; the app shows "Tokyo (HND)" while it's set
     val destinationPick: AirportSuggestion?,
     val isLocationShared: Boolean,                // D16: a location was set. Unused on screen since D30 removed ⌖
+    val landing: Landing,                         // B5–B8: homeAirport?, offers (one per program), destinations (≤ 30); ignores search and filters
 )
 ```
 
@@ -101,9 +102,10 @@ data class ExplorerState(
 
 | Group | Methods |
 |---|---|
-| Search | `setOriginQuery(text)` and `setDestinationQuery(text)`, which also clear that field's pick; `pickOrigin(codes)` and `pickDestination(codes)`, passing a suggestion's codes; `setUserLocation(latitude, longitude)`, only once the user has allowed location (D16, D30) |
+| Search | `setOriginQuery(text)` and `setDestinationQuery(text)`, which also clear that field's pick; `pickOrigin(codes)` and `pickDestination(codes)`, passing a suggestion's codes; `setUserLocation(latitude, longitude)`, only once the user has allowed location (D16, D32) |
 | Filters | `setDateRange(startIso?, endIso?)`, `setCabin(cabin?)`, `setMaxPoints(points?)`, `toggleProgram(name)`, `clearFilter(kind)`, `resetAll()` |
 | Selection | `select(flightId?)`, `selectSaved(flightId?)`. Selecting the selected flight again deselects it (L2) |
+| Landing page | `openDestination(codes)` and `openOffer(flightId)`: each starts a new search for a deal, and an offer is selected (B9) |
 | Saved | `toggleSave(flightId)` for a flight in the results, `removeSaved(flightId)` for the Saved view. Each flight has at most one write at a time (V7) |
 | Data and messages | `refresh()`, `messageShown(id)` |
 
@@ -157,7 +159,7 @@ flowchart LR
 
 **Data sources for ranking.**
 - **Passenger volume** comes from `fixtures/airports.json` (`{"airports":[{"code","annualPassengers"}…]}`). A copy ships inside the app as a Kotlin data file (`domain/search/AirportPassengers.kt`, added in PLAN Step 3.5), so ranking is the same online and offline and needs no endpoint or table. `FixtureContractTest` keeps the copy equal to the file. An airport with no figure uses its flight count from `flights.json` (P4).
-- **User location** comes from the device (D16): Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. Platform code reads one fix and passes its latitude and longitude to `setUserLocation` (Android: `rememberOriginLocation`, Step 4.7, D30). It is requested only when the user taps "Use my location". The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
+- **User location** comes from the device (D16): Fused Location Provider on Android, Core Location on iOS, at approximate accuracy. Platform code reads one fix and passes its latitude and longitude to `setUserLocation` (`UserLocation` on both platforms). Since D32 it is asked for when the app first opens (Step 4.7 first used a "Use my location" button, and D30 the first focus of From). The same point picks the landing page's home airport (B5). The shared code only ever sees an optional point; `null` means ranking by volume only, and the destination field ignores the point (P5). There is no geo-IP endpoint and no third party.
 
 **Third-party code.** `vendor/commonscodec/DoubleMetaphone.kt` is a Java → Kotlin translation of Apache Commons Codec 1.23.0 (Apache-2.0). It is **not our own algorithm**: we didn't design it and don't claim to understand every rule in it. Its correctness is established by the `jvmTest` oracle, which compares it with the original jar. See SUBMISSION_NOTES §8 and THIRD_PARTY_NOTICES.md.
 
@@ -414,14 +416,16 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 Cost: 1.67 MB of fonts and 12 KB of icons in the app, the same on Android; nothing per frame.
 
+**The landing page (Step 6.3b, D36).** `LandingScreen.swift`, the same layout and sizes as Android's. `ExplorerApp` keeps it and the results alive in its `ZStack`, hidden from sight, touch and VoiceOver when not shown, so each keeps its state. Its horizontal rows carry `.id(homeAirport)`, so new deals start from their first card, as on Android. The scroll view is `.clipped()`, because otherwise its content draws under the status bar when scrolled (found in QA). Photos are `dest_*` image sets in `Assets.xcassets`, looked up by the shared photo key; a missing one gets the drawn card.
+
 **Dark mode (Step 5.8).** System colours adapt by themselves. The accent is the app's own colour, so `Theme.swift` gives it a dark-mode value, Android's dark `primary` (`#AFC6FF`), because the deep blue was too dark to read as text on dark grey (about 1.8:1). Text and icons on an accent fill use `Color.onAccent`, white or Android's `onPrimary` (`#002D6C`). MapKit switches to its dark map by itself. Since Step 6.3a the colours are Roame's, and every one is the app's own with a dark value (UI_SPEC §6); the user can also fix light or dark in Account › Settings.
 
-**Location (Step 5.7, D16, D30).** `OriginLocation.swift` wraps a `CLLocationManager`, made once at launch in the tab view's `.task`. The From field calls `fromFocused()` each time it gets focus:
-- If iOS hasn't asked yet, it calls `requestWhenInUseAuthorization()`.
-- If allowed, it reads one location with `requestLocation()` and passes it to the store's `setUserLocation`.
+**Location (Step 5.7, D16; asked at launch since Step 6.3b, D32).** `UserLocation.swift` wraps a `CLLocationManager`, made once at launch in the tab view's `.task`. Core Location reports the current permission when the manager is made:
+- If iOS hasn't asked yet, it calls `requestWhenInUseAuthorization()`, so the dialog shows as the app opens.
+- If allowed, now or after the dialog, it reads one location with `requestLocation()` and passes it to the store's `setUserLocation`.
 - After a denial it does nothing. iOS won't show the dialog twice anyway.
 
-Core Location reports the current permission when the manager is made, so a permission granted on an earlier launch is read straight away without asking. `Info.plist` sets `NSLocationDefaultAccuracyReduced`, so the dialog offers approximate location only (no Precise switch), matching Android's coarse permission. It also sets `NSLocationWhenInUseUsageDescription`, the reason the dialog shows. A missing fix or an error changes nothing and shows nothing. Callbacks arrive on the main thread, because the manager is made there. Cost: one reading per launch at most, and no background location.
+So a permission granted on an earlier launch is read straight away without asking. `Info.plist` sets `NSLocationDefaultAccuracyReduced`, so the dialog offers approximate location only (no Precise switch), matching Android's coarse permission. It also sets `NSLocationWhenInUseUsageDescription`, the reason the dialog shows. A missing fix or an error changes nothing and shows nothing. Callbacks arrive on the main thread, because the manager is made there. Cost: one reading per launch at most, and no background location.
 
 For QA, `xcrun simctl location <udid> set <lat>,<lon>` sets the simulator's location, and `xcrun simctl privacy <udid> reset location <bundle id>` makes the app ask again (TEST_PLAN §3).
 
@@ -449,15 +453,16 @@ For QA, `xcrun simctl location <udid> set <lat>,<lon>` sets the simulator's loca
   - `DesignSystem.kt` holds the shared components, each matching a view of the same name in `DesignSystem.swift`, and `AccountScreen.kt` the Account tab (D39). Material's own `NavigationBar`, `SegmentedButton`, `FilterChip` and `Snackbar` are no longer used. The tab bar's spoken label carries the badge's count, which Material's hid (Step 4.4 finding).
   - The appearance setting (`Appearance.kt`) is kept in `SharedPreferences`. `RoameApp` reads it on a background thread at launch, so the first frame has it without a main-thread disk read; a change is written with `apply()`. `MainActivity` passes it to `RoameTheme` and sets the system bars' icon colour to match.
   - `CabinLabel` and `ProgramLogo` are in `FlightRow.kt`. Icons are 22 Material Symbols copied into `res/drawable/ms_*.xml` (D37); the logos are PNGs in `res/drawable-nodpi/`. StrictMode logs nothing from loading the fonts or icons.
+- **The landing page (Step 6.3b, D36):** `LandingScreen.kt`. Explore shows it until a search, a deal or "I'm flexible" opens the results, which have a Back bar above the existing search and results; back returns to it after a selection's back. The flag is `rememberSaveable`. The results stay composed but unplaced under the landing page, like under the other tabs, so the map is never detached (D31), and the landing page stays composed under the results, so it keeps its scroll position. The deck and offer rows are `LazyRow`s keyed by the home airport, so new deals start from their first card; otherwise a lazy row keeps its first visible item in view when the items reorder, and the new best deal sat off-screen to the left (found in QA). Photos are `res/drawable-nodpi/dest_*.jpg`, looked up through an explicit map from the shared photo key to `R.drawable`, not by name at runtime, so resource shrinking can't drop one.
 - The app targets API 36 (D26). Debug builds turn on StrictMode, and a fresh launch logs no main-thread disk or network access (Step 4.1). That needed two fixes: the database builder gets a file name rather than a path, and `KtorFlightsApi` creates its HTTP client on first use, on a background thread, because setting up JSON reads from disk. There is no Android `ViewModel` layer, because the shared store already outlives configuration changes.
 - Navigation uses `rememberSaveable` tab state, and Account's pages a `rememberSaveable` page with `BackHandler`. Three tabs and four pages don't need a navigation library.
 - Lists use `LazyColumn(items(results, key = { it.id }))`, with stable and immutable models (`@Immutable` where helpful).
 - Add these dependencies: `material3`, `lifecycle-runtime-compose`, MapLibre (D8), and `leakcanary-android` (debug only).
 - **Location (D16):**
   - Fused Location Provider comes from Google Play services (`com.google.android.gms:play-services-location`), so the emulator needs a "Google Play" or "Google APIs" system image.
-  - Declare `ACCESS_COARSE_LOCATION`. Ask for it the first time From gets focus (D30), in `rememberOriginLocation`. It asks only while Android's rationale flag is false, which means not asked before, so a denial is never asked again automatically. Once granted, each launch reads the location without asking.
+  - Declare `ACCESS_COARSE_LOCATION`. Ask for it when the app opens (D32; D30's first focus of From before Step 6.3b), in `UserLocation`, once per launch. It asks only while Android's rationale flag is false, which means not asked before, so a denial is never asked again automatically. Once granted, each launch reads the location without asking.
   - Read one location with `getCurrentLocation(PRIORITY_BALANCED_POWER_ACCURACY)` and pass it to the store as a `GeoPoint`.
-  - Built in Step 4.7 with `play-services-location` 21.4.0 (June 2026; needs API 23, adds no permissions). A denial, a missing fix or a failure changes nothing and shows no error, so ranking stays volume-only. Tapping ⌖ again takes a fresh reading.
+  - Built in Step 4.7 with `play-services-location` 21.4.0 (June 2026; needs API 23, adds no permissions). A denial, a missing fix or a failure changes nothing and shows no error, so ranking stays volume-only and the deals come from every airport.
   - Testing: on the API 37 emulator, `adb emu geo fix` didn't reach the location providers. Android's test providers did: allow `android:mock_location` for `com.android.shell` with `appops`, then `cmd location providers add-test-provider`, `set-test-provider-enabled` and `set-test-provider-location` for `gps` and `network`. Remove them afterwards. The emulator's Extended controls › Location also works by hand.
 
 ## 10. Libraries
@@ -545,6 +550,7 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Map aggregation | Group results by destination | O(n). Measured at 1k, 10k and 100k flights on a Mac JVM: 0.22, 0.5–0.59 and 2.5–9.3 ms. On the iOS simulator's debug build: 0.58–0.65, 5–5.9 and 53–63 ms. One 64-segment route line takes about 0.04 ms on both. Android not measured yet | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
 | State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission. Measured at 1k, 10k and 100k flights, on a Mac JVM / the iOS simulator's debug build. `reduce` with no filters: 1.1–1.7, 4.4–5.4 and 17–34 ms / 10–11, 106–108 and 1,149–1,264 ms. With narrow filters: 0.6–0.8, 1.9–2.7 and 4.7–5.7 ms / 0.7–1, 7–7.7 and 74–79 ms. `index`, per data change: 0.7–1.4, 9.7–12 and 68–79 ms / 5–6, 87–90 and 1,300–1,353 ms. Android not measured yet | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
 | Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved). V5 is one statement, so a refresh's cost grows with saved flights, not with the response. A whole refresh of 100k flights on a Mac JVM took 240–284 ms with none saved, 248–268 ms with 1k saved and 264–269 ms with 10k saved. Not measured on iOS or Android | 10k+ | Paging in the Saved tab |
+| Landing page deals (B rules) | Built once per data change in `index()`: a rate per flight, a median per cabin, one sort, and the deals for every flight and for each origin. A location only looks up its nearest origin's deals | O(n log n) per data change, O(origins) per location. Measured on a Mac JVM in Step 6.3b: 0.59 ms at 1k, 6.2 ms at 10k and 147 ms at 100k; `reduce()` with a location 0.31, 2.9 and 54 ms, in line with `reduce()` without one | ~100k flights, off the main thread | One pass that keeps each program's and city's best flight instead of sorting every flight; the deck is already capped at 30 |
 | Memory | Dataset + indexes in memory | Flights as read from the cache: 4.9 MB at 10k and 50 MB at 100k (about 520 bytes per flight), plus `index()`: 0.9 MB at 10k, 6.4 MB at 100k with 32 airports and 17 MB with 1,000 (Step 6.2, JVM). An earlier, decoded-only measurement gave about 350 bytes per flight | ~100k flights | Keep rows in SQLite and hold only windows plus indexes in memory |
 
 **Measured in Step 6.2** (Mac JVM, JDK 25; median of 20 runs; where two runs differed, both medians). JVM numbers stand in for phones, which are slower:

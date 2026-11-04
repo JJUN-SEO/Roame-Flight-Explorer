@@ -70,6 +70,7 @@ fun AccountScreen(appearance: MutableState<Appearance>, onToast: (String) -> Uni
             Paragraph(stringResource(R.string.app_name_full), stringResource(R.string.info_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE))
             Paragraph(stringResource(R.string.info_about_title), stringResource(R.string.info_about_body))
             Paragraph(stringResource(R.string.info_credits_title), stringResource(R.string.info_credits_body_android))
+            Paragraph(stringResource(R.string.info_photos_title), stringResource(R.string.info_photos_body))
         }
     }
 }

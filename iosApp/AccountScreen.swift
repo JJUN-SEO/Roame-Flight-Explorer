@@ -45,7 +45,7 @@ struct AccountScreen: View {
             }
         case .privacy:
             Subpage(title: "Privacy", onBack: { page = nil }) {
-                Paragraph(title: "Your location", text: "Only your approximate location, and only if you allow it. It's used on this phone to put nearby airports first, and it's never sent anywhere.")
+                Paragraph(title: "Your location", text: "Only your approximate location, and only if you allow it. It's used on this phone to put nearby airports first and to show deals from the airport nearest you, and it's never sent anywhere.")
                 Paragraph(title: "Your flights", text: "The flights you last downloaded and the flights you save stay on this phone. There's no account and no tracking.")
                 Paragraph(title: "Maps", text: "Maps come from Apple Maps, under Apple's privacy policy.")
             }
@@ -54,6 +54,7 @@ struct AccountScreen: View {
                 Paragraph(title: "Flight Explorer", text: "Version \(Self.version)")
                 Paragraph(title: "About", text: "A take-home project inspired by Roame, built natively for Android and iOS on one Kotlin Multiplatform core. It isn't affiliated with Roame or with the loyalty programs shown.")
                 Paragraph(title: "Credits", text: "Icons: Material Symbols by Google (Apache 2.0). Font: Inter (SIL Open Font License 1.1). Program logos: Wikimedia Commons, public domain; trademarks of their owners. Map: Apple Maps.")
+                Paragraph(title: "Photo credits", text: Self.photoCredits)
             }
         }
     }
@@ -74,6 +75,36 @@ struct AccountScreen: View {
             }
         }
     }
+
+    /** D33: the same list as Android's `info_photos_body` and THIRD_PARTY_NOTICES. */
+    private static let photoCredits = """
+        From Wikimedia Commons, cropped and resized. Each keeps its own licence (CC0, CC BY or CC BY-SA, at creativecommons.org).
+
+        Amsterdam: Basile Morin, CC BY-SA 4.0
+        Athens: Jebulon, CC0
+        Auckland: DXR, CC BY-SA 4.0
+        Bangkok: Diego Delso, CC BY-SA 3.0
+        Barcelona: kallerna, CC BY-SA 4.0
+        Doha: Zairon, CC BY 4.0
+        Dubai: Tim Reckmann from Hamm, Deutschland, CC BY-SA 3.0
+        Dublin: Christian David, CC BY-SA 4.0
+        Frankfurt: Thomas Wolf (Der Wolf im Wald), CC BY-SA 3.0
+        Hong Kong: Diliff, CC BY 3.0
+        Johannesburg: Frankbel, CC BY-SA 4.0
+        Lisbon: Ingo Mehling, CC BY-SA 4.0
+        London: Diego Delso, CC BY-SA 4.0
+        Madrid: Carlos Delgado, CC BY-SA 3.0
+        Melbourne: DXR, CC BY-SA 4.0
+        Mexico City: Daniel Case, CC BY-SA 3.0
+        Paris: © Jorge Royan / http://www.royan.com.ar, CC BY-SA 3.0
+        Rome: Diliff, CC BY-SA 2.5
+        Sao Paulo: Marcosleal, CC BY-SA 3.0
+        Seoul: © Frank Schulenburg, CC BY-SA 4.0
+        Singapore: Basile Morin, CC BY-SA 4.0
+        Sydney: Diliff, CC BY-SA 3.0
+        Tokyo: David Kernan, CC BY 4.0
+        Tuscany (the banner): Ciorophotoproject, CC BY-SA 4.0
+        """
 
     private static var version: String {
         let info = Bundle.main.infoDictionary

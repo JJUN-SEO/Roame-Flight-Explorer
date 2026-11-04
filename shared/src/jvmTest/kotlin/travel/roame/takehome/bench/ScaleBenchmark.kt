@@ -7,6 +7,7 @@ import travel.roame.takehome.data.local.CachedFlightEntity
 import travel.roame.takehome.data.local.configure
 import travel.roame.takehome.data.local.toCachedEntity
 import travel.roame.takehome.data.local.toDomain
+import travel.roame.takehome.domain.DealIndex
 import travel.roame.takehome.domain.search.AIRPORT_PASSENGERS
 import travel.roame.takehome.domain.search.AirportRanking
 import travel.roame.takehome.domain.search.AirportSearchEngine
@@ -49,6 +50,7 @@ class ScaleBenchmark {
         search()
         cache()
         aggregation()
+        deals()
         memory()
 
         File("build/reports").mkdirs()
@@ -111,6 +113,21 @@ class ScaleBenchmark {
                 db.close()
                 deleteDatabaseFiles(path)
             }
+        }
+    }
+
+    /** B1–B8: the landing page's deals, built once per data change inside `index()`; a location only picks the home airport's. */
+    private fun deals() {
+        section("Landing page deals", "Flights × airports", "DealIndex.of()", "reduce(), with a location")
+        val ottawa = ExplorerInputs(userLocation = GeoPoint(45.42, -75.70))
+        for ((flightCount, airportCount) in listOf(1_000 to 32, 10_000 to 32, 100_000 to 32, 100_000 to 1_000)) {
+            val flights = readBack(SyntheticData.flights(flightCount, SyntheticData.airports(airportCount)))
+            val indexed = index(CacheSnapshot(flights, now))
+            row(
+                "${count(flightCount)} × ${count(airportCount)}",
+                time(warmups = 3) { DealIndex.of(flights) },
+                time { reduce(Snapshot(indexed, SyncStatus(), emptyList(), ottawa)) },
+            )
         }
     }
 

@@ -66,7 +66,7 @@ class ExplorerStore internal constructor(
 
     fun pickDestination(codes: List<String>) = inputs.update { it.copy(destinationPick = codes.takeIf(List<String>::isNotEmpty)) }
 
-    /** D16, D30: only call this once the user has allowed location. It ranks the origin field only (P5). */
+    /** D16, D32: only call this once the user has allowed location. It ranks the origin field (P5) and picks the home airport (B5). */
     fun setUserLocation(latitude: Double, longitude: Double) =
         inputs.update { it.copy(userLocation = GeoPoint(latitude, longitude)) }
 
@@ -92,6 +92,32 @@ class ExplorerStore internal constructor(
     fun resetAll() = inputs.update {
         it.copy(originQuery = "", destinationQuery = "", originPick = null, destinationPick = null, filters = FlightFilters())
     }
+
+    /**
+     * B9: a destination deal starts a new search: everything resets (C4), To picks the deal's airports, and From picks
+     * the home airport when there is one (B5). Pass a [DestinationDeal]'s `codes`.
+     */
+    fun openDestination(codes: List<String>) {
+        val home = state.value.landing.homeAirport
+        inputs.update { it.newSearch(originPick = home?.let { airport -> listOf(airport.code) }, destinationPick = codes) }
+    }
+
+    /** B9: an offer starts a new search for its route, with the offer selected. Pass a [ProgramOffer]'s flight id. */
+    fun openOffer(flightId: String) {
+        val flight = state.value.landing.offers.firstOrNull { it.flight.id == flightId }?.flight ?: return
+        inputs.update {
+            it.newSearch(originPick = listOf(flight.originCode), destinationPick = listOf(flight.destinationCode))
+                .copy(selectedFlightId = flight.id)
+        }
+    }
+
+    private fun ExplorerInputs.newSearch(originPick: List<String>?, destinationPick: List<String>) = copy(
+        originQuery = "",
+        destinationQuery = "",
+        originPick = originPick,
+        destinationPick = destinationPick.takeIf(List<String>::isNotEmpty),
+        filters = FlightFilters(),
+    )
 
     /** L1, L2: selecting the selected flight again, or passing null, deselects it. */
     fun select(flightId: String?) =

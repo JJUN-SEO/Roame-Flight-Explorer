@@ -41,6 +41,8 @@ data class ExplorerState(
     val destinationPick: AirportSuggestion?,
     /** D16: the user shared a location, so the ⌖ button is filled. */
     val isLocationShared: Boolean,
+    /** The landing page's deals (B5–B8). They ignore the search and filters, like Saved. */
+    val landing: Landing,
 ) {
     /** C1. */
     val resultCount: Int get() = results.size
@@ -68,9 +70,45 @@ data class ExplorerState(
             originPick = null,
             destinationPick = null,
             isLocationShared = false,
+            landing = Landing.Empty,
         )
     }
 }
+
+data class Landing(
+    /** B5: the origin airport nearest the user, when the location is known. The deals are all from it. */
+    val homeAirport: HomeAirport?,
+    /** B7: one per program, best value first. */
+    val offers: List<ProgramOffer>,
+    /** B8: one per destination city, best value first, at most 30. */
+    val destinations: List<DestinationDeal>,
+) {
+    companion object {
+        val Empty = Landing(homeAirport = null, offers = emptyList(), destinations = emptyList())
+    }
+}
+
+data class HomeAirport(val code: String, val city: String)
+
+data class ProgramOffer(
+    val program: String,
+    val flight: FlightItem,
+    /** B4: whole percent below the typical points per kilometre for its cabin; 0 when it isn't below. */
+    val percentBelowTypical: Int,
+    /** B6: an estimate in US dollars, or null when its cabin has no published value. */
+    val estimatedValueUsd: Int?,
+)
+
+data class DestinationDeal(
+    val city: String,
+    /** The city's airports, for `openDestination`. Two for Tokyo. */
+    val codes: List<String>,
+    val minPoints: Int,
+    /** B4, for the city's best-value flight. */
+    val percentBelowTypical: Int,
+    /** D33: each app's bundled photo has this name, such as `dest_sao_paulo`. A city without one gets a drawn card. */
+    val photoKey: String,
+)
 
 /** The offline rules (R6–R8). Whether a sync ever succeeded decides this, not how many flights are cached. */
 sealed class DataStatus {

@@ -13,16 +13,23 @@ Both platforms follow the same information architecture and copy. Since Step 6.3
 ```
 Tab bar
 ├── Explore                       ← discovery
-│   ├── Search header: From / To fields
-│   │     ├── Suggestions dropdown under the focused field, updated on every keystroke (S14)
-│   │     ├── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
-│   │     └── Location is asked for the first time From gets focus, with no button (D16, D30)
-│   ├── Filter bar: [Dates] [Cabin] [Points] [Programs]  ·  Reset
-│   ├── Summary line: "238 flights · 2 filters"
-│   ├── Segmented control: List | Map      (switching never changes the selection, L4)
-│   ├── Status banner (stale / refreshing), when relevant
-│   ├── Content: List  or  Map
-│   └── Selection card (overlay at the bottom, shared by List and Map)
+│   ├── Landing page (Step 6.3b, D36): where Explore opens; no flight list until a search
+│   │     ├── "Flight Explorer" in pink, and the search bar: "Where to?" or the current route, with dates · cabin
+│   │     ├── Status banner (stale / refreshing), when relevant
+│   │     ├── Banner: a landscape, "Fly further on your points", [I'm flexible] → every flight
+│   │     ├── Best deals by destination: a swipeable deck of photo cards (B8) → that city's flights
+│   │     └── Best offers by program: a program's logo over its best flight (B7) → that route, the flight selected
+│   │         Both sections say "From Toronto (YYZ), the airport nearest you" or "From every airport" (B5)
+│   └── Results (opened from the landing page; Back returns to it)
+│       ├── Search header: From / To fields
+│       │     ├── Suggestions dropdown under the focused field, updated on every keystroke (S14)
+│       │     └── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
+│       ├── Filter bar: [Dates] [Cabin] [Points] [Programs]  ·  Reset
+│       ├── Summary line: "238 flights · 2 filters"
+│       ├── Segmented control: List | Map      (switching never changes the selection, L4)
+│       ├── Status banner (stale / refreshing), when relevant
+│       ├── Content: List  or  Map
+│       └── Selection card (overlay at the bottom, shared by List and Map)
 ├── Saved (badge = count)         ← always reachable, ignores filters (V8)
 │   ├── Saved list
 │   └── Saved card (its own selection, L7)
@@ -33,9 +40,47 @@ Tab bar
     └── Log out                                        (a toast: there's no account)
 ```
 
-Steps 6.3b–6.3e replace Explore with Roame's landing page, a full-screen search page and map-first results (PLAN Step 6.3); this section and §2 change with them.
+Location is asked for when the app first opens (D32). Steps 6.3c–6.3e replace the results with a full-screen search page and map-first results (PLAN Step 6.3); this section and §2 change with them.
 
 ## 2. Wireframes
+
+### 2.0 Explore: landing page (Step 6.3b)
+
+```
+┌────────────────────────────────────────┐
+│ Flight Explorer                        │  pink, Display-weight 24
+│ ╭────────────────────────────────────╮ │
+│ │ 🔍  Where to?                      │ │  card-colour pill with a soft shadow
+│ │     Feb 1 – Apr 1 · Any cabin      │ │
+│ ╰────────────────────────────────────╯ │
+│ ┌────────────────────────────────────┐ │
+│ │      (landscape photo, 4:3)        │ │
+│ │     Fly further on your points     │ │  white, Display 28
+│ │         ( I'm flexible )           │ │  gradient pill, 48 tall
+│ └────────────────────────────────────┘ │
+│ Best deals by destination              │  Title large
+│ From Toronto (YYZ), the airport nearest you
+│ ┌──────────────┐ ┌──────────          │  260 × 173 photo cards, swipe sideways
+│ │[Up to 35% below typical]│           │  pink pill
+│ │ Johannesburg │ │ Singapore          │  white Title large over a dark fade
+│ │ from 39,000 pts                     │
+│ └──────────────┘ └──────────          │
+│ Best offers by program                 │
+│ (MileagePlus logo)                     │
+│ ┌────────────────────────────┐ ┌───   │  300-wide cards, swipe sideways
+│ │ Mon, Mar 22   ⌂ Premium Economy     │
+│ │ YYZ ───────✈─────── JNB    │        │
+│ │ Toronto → Johannesburg     │        │
+│ │ ──────────────────────────          │
+│ │ (35% below typical)  39,000 pts     │
+│ │                     ≈ $702 value    │
+│ └────────────────────────────┘        │
+├────────────────────────────────────────┤
+│   Explore        ♡ Saved (1)   Account │
+└────────────────────────────────────────┘
+```
+
+A city with no bundled photo gets a card in the avatar's gradient with a plane (D33). The data has no airlines, times or durations, so the offer cards show what it has.
 
 ### 2.1 Explore: List
 
@@ -131,10 +176,11 @@ Use the same copy on both platforms.
 
 | State | When (rule) | What the user sees |
 |---|---|---|
-| First load | `DataStatus.Loading` | 6–8 skeleton rows (List) or a centred spinner (Map), with the label "Finding flights…" |
+| First load | `DataStatus.Loading` | 6–8 skeleton rows (List) or a centred spinner (Map), with the label "Finding flights…". The landing page shows its header and search bar, then "Finding flights…" over grey shapes for the banner and a deck card |
 | Ready | `Ready`, has results | Results. No banner when the last refresh succeeded. |
 | Refreshing | `Ready.isRefreshing` | A thin progress bar. Content stays interactive. |
-| Stale / offline | `Ready.refreshError != null` (R6) | Banner: "Couldn't refresh · showing results from 3:42 PM". Results stay usable. No Retry (D29): the next launch refreshes. |
+| Stale / offline | `Ready.refreshError != null` (R6) | Banner: "Couldn't refresh · showing results from 3:42 PM". Results stay usable. No Retry (D29): the next launch refreshes. The landing page shows the same banner under its search bar, and its deals come from the cached data |
+| Landing page, unavailable or empty | `Unavailable` (R7), or `Ready` with an empty cache (R4) | Under the header and search bar, the same message as the results would show, with **Try again** where they have it |
 | Unavailable: offline | `Unavailable(Offline)` (R7) | Icon + "Can't reach Flight Explorer" + "Make sure the local API is running and you're connected, then try again." + **Try again** |
 | Unavailable: timeout | `Unavailable(Timeout)` | "The server took too long to respond." + **Try again** |
 | Unavailable: server | `Unavailable(Server(503))` | "The server had a problem (503)." + **Try again** |
@@ -255,6 +301,10 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - Row: "Boston to Paris, Monday February 1, Premium Economy, Avios, 25,000 points, saved."
   - Marker: "Paris, 12 flights, from 25,000 points."
   - Chips announce "Cabin: Business, active".
+  - Landing search bar: "Search flights. Where to?, Feb 1 – Apr 1 · Any cabin" (or the current route).
+  - Destination card: "Johannesburg, from 39,000 points, up to 35% below typical".
+  - Offer card: "MileagePlus best offer: Toronto to Johannesburg, Mon, Mar 22, Premium Economy, 39,000 points, 35% below typical, worth about $702".
+  - Section titles are headings, and each card is one button.
 - Colour is never the only signal. Selected rows also get a border and a checkmark or "Selected" accessibility trait.
 - Respect Reduce Motion: no camera fly-to animation and no cross-fade.
 
@@ -270,7 +320,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
-| Location for ranking (D16, D30) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked on the first focus of From. The dialog's reason (`NSLocationWhenInUseUsageDescription`): "Your approximate location puts nearby airports first when you choose where you're flying from." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on the first focus of From |
+| Location for ranking and deals (D16, D32) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked when the app first opens. The dialog's reason (`NSLocationWhenInUseUsageDescription`): "Your approximate location shows deals from the airport nearest you, and puts nearby airports first when you search." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked when the app first opens |
 
 ## 10. Scalability
 
@@ -286,3 +336,5 @@ The fixture fits on screen comfortably. These rules keep the UI usable when the 
 | Fuzzy hint | One or two airports | Never more than one line: the first two in ranked order, then "+N more" |
 | Search suggestions | Up to 5 ranked rows (S14) | Unchanged: the cap keeps the dropdown short, and ranking decides which airports appear |
 | Saved tab | Small list | Virtualised; grouped by month when long |
+| Destination deck | 23 photo cards | At most 30 cards (B8), best value first. Photos are bundled per city; a new city gets the drawn card |
+| Best offers | One card per program (5) | One per program, so it grows only with the number of programs; past about 10, add "See all" as Roame does |

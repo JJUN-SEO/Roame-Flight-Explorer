@@ -51,6 +51,10 @@ class ExplorerStoreIos internal constructor(
 
     fun resetAll() = store.resetAll()
 
+    fun openDestination(codes: List<String>) = store.openDestination(codes)
+
+    fun openOffer(flightId: String) = store.openOffer(flightId)
+
     fun select(flightId: String?) = store.select(flightId)
 
     fun selectSaved(flightId: String?) = store.selectSaved(flightId)

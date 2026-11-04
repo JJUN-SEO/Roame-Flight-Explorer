@@ -49,9 +49,9 @@ import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
 
-/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). [onOriginFocused] asks for location (D30). */
+/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). */
 @Composable
-fun SearchHeader(state: ExplorerState, store: ExplorerStore, onOriginFocused: () -> Unit, modifier: Modifier = Modifier) {
+fun SearchHeader(state: ExplorerState, store: ExplorerStore, modifier: Modifier = Modifier) {
     Column(modifier.padding(horizontal = 16.dp)) {
         SearchField(
             label = stringResource(R.string.search_from),
@@ -61,8 +61,6 @@ fun SearchHeader(state: ExplorerState, store: ExplorerStore, onOriginFocused: ()
             hint = state.originHint,
             onQueryChange = store::setOriginQuery,
             onPick = store::pickOrigin,
-            // P5: location only ranks origins, so only From asks for it.
-            onFocused = onOriginFocused,
         )
         SearchField(
             label = stringResource(R.string.search_to),
@@ -85,7 +83,6 @@ private fun SearchField(
     hint: List<AirportSuggestion>,
     onQueryChange: (String) -> Unit,
     onPick: (List<String>) -> Unit,
-    onFocused: () -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
@@ -116,10 +113,7 @@ private fun SearchField(
                 },
                 modifier = Modifier.weight(1f)
                     .semantics { contentDescription = label }
-                    .onFocusChanged {
-                        if (it.isFocused && !focused) onFocused()
-                        focused = it.isFocused
-                    },
+                    .onFocusChanged { focused = it.isFocused },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -186,7 +180,7 @@ private fun SuggestionList(suggestions: List<AirportSuggestion>, onTap: (Airport
 
 /** "Tokyo (HND)", or "Tokyo (all airports)" for a city row (S14). */
 @Composable
-private fun airportLabel(suggestion: AirportSuggestion): String =
+internal fun airportLabel(suggestion: AirportSuggestion): String =
     if (suggestion.isCityRow) stringResource(R.string.city_label, suggestion.city)
     else stringResource(R.string.airport_label, suggestion.city, suggestion.codes.single())
 

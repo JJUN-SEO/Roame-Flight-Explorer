@@ -57,7 +57,7 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 server/                Ktor JVM app: GET /flights (raw fixture bytes)
 shared/                KMP module → Android library + static Shared.framework (+ test-only jvm target)
   src/commonMain/kotlin/travel/roame/takehome/
-    domain/              filters, ordering, active filters, map grouping, route lines, points text: pure functions (DOMAIN_RULES §3–§6, §10)
+    domain/              filters, ordering, active filters, map grouping, route lines, points text, landing-page deals: pure functions (DOMAIN_RULES §3–§6b, §10)
     domain/search/       airport search engine: trie, fuzzy, ranking, suggestions, shipped passenger figures (DOMAIN_RULES §2, §2b)
     vendor/commonscodec/ DoubleMetaphone — THIRD-PARTY port (Apache-2.0), see THIRD_PARTY_NOTICES.md
     model/               Flight, Airport, FlightFilters, FilterOptions, ActiveFilter, FetchError
@@ -139,7 +139,7 @@ These were found in the starter and the fixture.
   - Creating the first `MapView` logs three StrictMode disk reads from inside MapLibre (moved to a background thread in Step 6.1).
   - Every `MapView` that's made, or detached from the window and attached again, leaks about 4–7 MB of native memory. So the app keeps one map and never detaches it (D31); don't put the map back inside a `Crossfade` or a tab that leaves composition.
 - **The owner's 8 GB Mac:** a build takes about 15 s with the emulator off and up to 8 minutes with it on, and the emulator has crashed under memory pressure. The owner's API server may run inside Android Studio's Gradle process, so never stop Gradle processes you didn't start. After an install, Android 17 can show an "Updating…" screen; press back and open the app again.
-- **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Ask for it the first time From gets focus, and never again automatically after a denial (D30). On the Android 37 emulator, `adb emu geo fix` didn't take effect; Android's test location providers did (ARCHITECTURE §9). On the iOS simulator, `xcrun simctl location` and `xcrun simctl privacy … reset location` work (ARCHITECTURE §8).
+- **Device location (D16):** Android's Fused Location Provider needs Google Play services, so use an emulator image with Google Play or Google APIs. iOS needs `NSLocationWhenInUseUsageDescription`. In both simulators, set a location by hand. Ask for it when the app first opens (D32, which replaced D30's first focus of From), and never again automatically after a denial. On the Android 37 emulator, `adb emu geo fix` didn't take effect; Android's test location providers did (ARCHITECTURE §9). On the iOS simulator, `xcrun simctl location` and `xcrun simctl privacy … reset location` work (ARCHITECTURE §8).
 - **Ktor failures (found in Step 2.1):**
   - Check timeouts before connectivity. On the JVM and Android, every timeout is also an `IOException`.
   - JSON errors arrive as `ContentConvertException`, not `SerializationException`.
@@ -159,6 +159,11 @@ These were found in the starter and the fixture.
   - Text colour: on iOS use `Color.text`, never `Color.primary` (the system's pure black) or `.foregroundStyle(.primary)` (inside a `Button` that's the tint, pink). A new sheet needs `.foregroundStyle(Color.text)`, because sheets don't inherit the root's. On Android, text outside a `Surface` takes the theme's `onBackground`; without that it was black on the dark background.
   - Icons are the same Material Symbols on both. Add one as `res/drawable/ms_<name>.xml` (with its source in a header) and as `iosApp/Assets.xcassets/ms_<name>.imageset` (the upstream web SVG, template rendering), and list it in THIRD_PARTY_NOTICES. iOS draws them with `MSIcon`, which is decorative, so give the control around it an accessibility label.
   - Fonts are Inter (`res/font/`, `iosApp/Fonts/` under `UIAppFonts`). Use the named styles; on iOS a size without a `relativeTo:` text style won't follow Dynamic Type.
+- **The landing page (Step 6.3b):**
+  - A Compose `LazyRow` keeps its first visible item in view when its items reorder, so when the location arrived the deck hid its new best deal off to the left. The rows are keyed by the home airport (Android `key(...)`, iOS `.id(...)`) so new deals start at the first card.
+  - A SwiftUI `ScrollView` draws its content under the status bar when scrolled; the landing page's is `.clipped()` to match Android.
+  - Destination photos are found by the shared photo key (`dest_sao_paulo`). Android maps each key to `R.drawable` explicitly, never by name at runtime. A new photo goes in both apps and in THIRD_PARTY_NOTICES and the Photo credits text, with its Commons licence and requested credit.
+  - Keep the results composed under the landing page (unplaced on Android, hidden on iOS), or the Android map is detached and leaks (D31).
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"
