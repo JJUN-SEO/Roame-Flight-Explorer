@@ -509,7 +509,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 
 ## 12. Scalability
 
-The fixture is small (1,000 flights, 32 airports), but every layer has a known cost and a known next step. **Current** is what we build. **Next step** is what changes when the limit is reached; it is not built unless needed. The limits are *estimates* until the Phase 6 benchmarks (TEST_PLAN §4.1) measure them; the measured numbers go in SUBMISSION_NOTES §6.
+The fixture is small (1,000 flights, 32 airports), but every layer has a known cost and a known next step. **Current** is what we build. **Next step** is what changes when the limit is reached; it is not built unless needed. The limits started as estimates. Step 6.2 measured them with the scale benchmarks (TEST_PLAN §4.1); the results are below the table and in SUBMISSION_NOTES §6.
 
 | Layer | Current design | Cost per operation | Comfortable up to (est.) | Next step beyond that |
 |---|---|---|---|---|
@@ -521,7 +521,27 @@ The fixture is small (1,000 flights, 32 airports), but every layer has a known c
 | Map aggregation | Group results by destination | O(n). Measured at 1k, 10k and 100k flights on a Mac JVM: 0.22, 0.5–0.59 and 2.5–9.3 ms. On the iOS simulator's debug build: 0.58–0.65, 5–5.9 and 53–63 ms. One 64-segment route line takes about 0.04 ms on both. Android not measured yet | ~200 markers render individually | Cluster markers by zoom level; aggregate with SQL `GROUP BY` |
 | State → UI | One immutable `ExplorerState` holding full lists | O(n) per emission. Measured at 1k, 10k and 100k flights, on a Mac JVM / the iOS simulator's debug build. `reduce` with no filters: 1.1–1.7, 4.4–5.4 and 17–34 ms / 10–11, 106–108 and 1,149–1,264 ms. With narrow filters: 0.6–0.8, 1.9–2.7 and 4.7–5.7 ms / 0.7–1, 7–7.7 and 74–79 ms. `index`, per data change: 0.7–1.4, 9.7–12 and 68–79 ms / 5–6, 87–90 and 1,300–1,353 ms. Android not measured yet | ~10k rows | Page or window the lists (Paging 3 / chunked windows); keep ids in state and load rows lazily |
 | Saved flights | Snapshot table, about 164 bytes per saved flight (measured with 1,000 saved). Each phone has its own database, so this doesn't grow with the number of users. | O(saved). V5 is one statement, so a refresh's cost grows with saved flights, not with the response. A whole refresh of 100k flights on a Mac JVM took 240–284 ms with none saved, 248–268 ms with 1k saved and 264–269 ms with 10k saved. Not measured on iOS or Android | 10k+ | Paging in the Saved tab |
-| Memory | Dataset + indexes in memory | Flights alone: 0.4 MB at 1k, 3.4 MB at 10k, 35 MB at 100k (measured on the JVM, about 350 bytes per flight) | ~100k flights | Keep rows in SQLite and hold only windows plus indexes in memory |
+| Memory | Dataset + indexes in memory | Flights as read from the cache: 4.9 MB at 10k and 50 MB at 100k (about 520 bytes per flight), plus `index()`: 0.9 MB at 10k, 6.4 MB at 100k with 32 airports and 17 MB with 1,000 (Step 6.2, JVM). An earlier, decoded-only measurement gave about 350 bytes per flight | ~100k flights | Keep rows in SQLite and hold only windows plus indexes in memory |
+
+**Measured in Step 6.2** (Mac JVM, JDK 25; median of 20 runs; where two runs differed, both medians). JVM numbers stand in for phones, which are slower:
+
+| Case (TEST_PLAN §4.1) | 1k flights | 10k flights | 100k flights | Target |
+|---|---|---|---|---|
+| `index()`, once per data change | 2.5 ms | 6.7–13 ms | 80–89 ms (108–114 ms with 1,000 airports) | — |
+| `reduce()`, no input | 1.0–1.2 ms | 3.2–5.7 ms | 41–49 ms (48–51 ms with 1,000 airports) | under 16 ms at 10k: **met** |
+| `reduce()`, typing 3 letters | 0.13–0.29 ms | 0.40–1.08 ms | 8.6–13 ms (9.0–12 ms with 1,000 airports) | under 16 ms at 10k: **met** |
+| `reduce()`, Business cabin | 0.17–0.40 ms | 0.70–0.78 ms | 7.1–7.3 ms (7.4–9.5 ms with 1,000 airports) | under 16 ms at 10k: **met** |
+| Cache `replaceAll()` / `read()` (Room, bundled SQLite, a file) | 2.9 / 1.3 ms | 21 / 10 ms | 270–284 / 121–123 ms | replace under 2 s at 100k: **met** |
+| Map aggregation | 0.05–0.06 ms | 0.52–0.58 ms | 2.6–4.2 ms (3.9–4.5 ms with 1,000 destinations) | under 16 ms at 100k: **met** |
+| Memory kept: flights + `index()` | — | 4.9 + 0.9 = 5.8 MB | 49.9 + 6.4 = 56 MB (67 MB with 1,000 airports) | recorded |
+
+| Airport search, one keystroke | 32 airports | 1,000 airports | 5,000 airports | Target |
+|---|---|---|---|---|
+| 1 letter | under 0.01 ms | 0.01–0.02 ms | 0.08–0.18 ms | under 1 ms at 5k: **met** |
+| 3 letters | under 0.01 ms | under 0.01 ms | under 0.01 ms | **met** |
+| A typo (the fuzzy tier) | 0.11–0.12 ms | 0.54–0.91 ms | 1.24–1.26 ms | under 1 ms at 5k: **just missed** |
+
+The one miss: a typo searched among 5,000 airports takes about 1.25 ms against a 1 ms target. The fuzzy tier only runs when no prefix matches. Its next step is to cap the candidates each trigram contributes, which bounds the comparisons however many airports share a trigram.
 
 Two principles make the "next step" column cheap to reach:
 

@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.2, in progress. Update this line at every review gate.
+> **Current step:** 6.2, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D31) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -397,6 +397,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Covers:** SCALE-1, SCALE-2, SCALE-3, SCALE-4, SCALE-5, SCALE-6, SCALE-7.
 - **Read:** TEST_PLAN §4.1; ARCHITECTURE §12.
 - **Done when:** the medians are in SUBMISSION_NOTES §6 and each SCALE row has a current status. JVM numbers are labelled as a stand-in for phones.
+- **Result (2026‑11‑04):** `ScaleBenchmark` runs on demand (TEST_PLAN §4.1). Every target is met except a typo searched among 5,000 airports (about 1.25 ms against 1 ms); the fuzzy tier's next step is in ARCHITECTURE §12. At 100k flights an unnarrowed change takes 41–51 ms, which runs off the main thread. SCALE-4 and SCALE-5 stay documented, not built.
 
 #### [ ] 6.3 Accessibility, dark mode and visual polish
 

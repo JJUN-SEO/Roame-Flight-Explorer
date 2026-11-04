@@ -85,6 +85,7 @@ docs/                  planning docs (see table above)
 | Run local API | `./gradlew :server:run` → `http://localhost:8080/flights` |
 | Shared tests, any OS | `./gradlew :shared:jvmTest` |
 | Shared tests on iOS sim (Mac) | `./gradlew :shared:iosSimulatorArm64Test` |
+| Scale benchmarks (on demand) | `./gradlew :shared:jvmTest -Pbench --tests "*ScaleBenchmark*"` → `shared/build/reports/scale-benchmarks.md` |
 | Android unit tests | `./gradlew :androidApp:testDebugUnitTest` |
 | Build Android | `./gradlew :androidApp:assembleDebug` |
 | Install on emulator | `./gradlew :androidApp:installDebug` |

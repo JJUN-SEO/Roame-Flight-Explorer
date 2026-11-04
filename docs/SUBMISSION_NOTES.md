@@ -358,7 +358,25 @@ How the design behaves as the data grows. The per-layer table, with each layer's
 - **Built for now:** in-memory filtering, a full cache replace, and individual map markers. All are well within budget at 1,000 flights.
 - **Search is built to scale:** it works on airports, not flights. Prefix lookup is O(m) in a trie. Fuzzy candidates come from inverted trigram and phonetic indexes rather than a full scan. Ranking priorities are precomputed (ARCHITECTURE §4.4, §12).
 - **Scaling paths documented, not built:** SQL-side filtering with indexes, incremental sync (ETag and deltas), marker clustering, and paged lists.
-- **Measured numbers:** *fill in from the Phase 6 benchmarks (TEST_PLAN §4.1).*
+- **Measured numbers (Step 6.2, 2026‑11‑04).** `ScaleBenchmark` on seeded synthetic data (TEST_PLAN §4.1), on a Mac JVM (JDK 25, Apple A18 Pro, 1 GB heap). Each cell is the median of 20 runs after warm-up. Where two full runs differed, the cell gives both medians. Flights are written to the cache and read back first, so each has its own objects, as in the app. **JVM numbers stand in for phones, which are slower**; Step 3's measurements of the same pipeline on the iOS simulator's debug build were 10 to 70 times slower than the JVM's (ARCHITECTURE §12).
+
+| Case (TEST_PLAN §4.1) | 1k flights | 10k flights | 100k flights | Target |
+|---|---|---|---|---|
+| `index()`, once per data change | 2.5 ms | 6.7–13 ms | 80–89 ms (108–114 ms with 1,000 airports) | — |
+| `reduce()`, no input | 1.0–1.2 ms | 3.2–5.7 ms | 41–49 ms (48–51 ms with 1,000 airports) | under 16 ms at 10k: **met** |
+| `reduce()`, typing 3 letters | 0.13–0.29 ms | 0.40–1.08 ms | 8.6–13 ms (9.0–12 ms with 1,000 airports) | under 16 ms at 10k: **met** |
+| `reduce()`, Business cabin | 0.17–0.40 ms | 0.70–0.78 ms | 7.1–7.3 ms (7.4–9.5 ms with 1,000 airports) | under 16 ms at 10k: **met** |
+| Cache `replaceAll()` / `read()` (Room, bundled SQLite, a file) | 2.9 / 1.3 ms | 21 / 10 ms | 270–284 / 121–123 ms | replace under 2 s at 100k: **met** |
+| Map aggregation | 0.05–0.06 ms | 0.52–0.58 ms | 2.6–4.2 ms (3.9–4.5 ms with 1,000 destinations) | under 16 ms at 100k: **met** |
+| Memory kept: flights + `index()` | — | 4.9 + 0.9 = 5.8 MB | 49.9 + 6.4 = 56 MB (67 MB with 1,000 airports) | recorded |
+
+| Airport search, one keystroke | 32 airports | 1,000 airports | 5,000 airports | Target |
+|---|---|---|---|---|
+| 1 letter | under 0.01 ms | 0.01–0.02 ms | 0.08–0.18 ms | under 1 ms at 5k: **met** |
+| 3 letters | under 0.01 ms | under 0.01 ms | under 0.01 ms | **met** |
+| A typo (the fuzzy tier) | 0.11–0.12 ms | 0.54–0.91 ms | 1.24–1.26 ms | under 1 ms at 5k: **just missed** |
+
+  What this means: at 10× the fixture, every keystroke and filter change fits in one frame with room to spare. At 100×, a change with no narrowing input takes 41–51 ms, so it runs off the main thread with the latest input winning (`mapLatest`, PERF-3), and the UI doesn't wait for it. A typo at 5,000 airports takes about 1.25 ms, just over the 1 ms target, because the fuzzy tier compares more candidates; it only runs when no prefix matches, and the next step (capping fuzzy candidates per trigram) is noted in ARCHITECTURE §12.
 
 ## 7. Checks performed
 
@@ -399,6 +417,7 @@ See [TEST_PLAN.md §5](TEST_PLAN.md#5-manual-qa-checklist) for the filled-in QA 
 - iOS location (Step 5.7, 2026‑11‑03, simulator): QA Q2c passes. No dialog at launch; the first tap on From shows it, with approximate location only. With Seattle set and the permission allowed, From `y` ranks Vancouver first; To `tokio` and the flight list don't change. A relaunch reads it again without asking. After a denial there's no error, no dialog on relaunch, and ranking is by volume again. The build has no warnings. **Not checked:** a real GPS without internet (the simulator's location is simulated), and "Allow Once", which iOS resets once the app is no longer in use, so the app asks again on a later first tap of From.
 - iOS QA pass (Step 5.8, 2026‑11‑03, simulator): every iOS row in TEST_PLAN §5 has an entry. New this step: Q21 (a minute in the background), Q23 (dark mode), Q22 (the largest text sizes; labels from idb, not VoiceOver itself), Q24 (rapid input, leaks with allocation stacks, memory, object counts) and Q8b (the map with the owner's Wi-Fi off). The search counts were rechecked on the final build. QA found and fixed a dark-mode accent too dark to read. **Not checked:** pinch zoom (idb sends one finger), blank never-loaded map tiles offline, scroll hitches and the Thread Performance Checker (not available on the simulator from the command line), and haptics.
 - Android performance (Step 6.1, 2026‑11‑03, the emulator with the Mac's GPU instead of software rendering): StrictMode found three disk reads on the main thread when the map opened, all inside MapLibre; they now run on a background thread first, and StrictMode reports nothing across 18 map opens. Frame timing on a debug build: 9.3% janky frames against 4.5% for Android's Settings app. A memory test found about 7 MB of native memory left behind per map open, also in the older build. After the owner chose D31 (2026‑11‑04), native memory stayed at about 53 MB across 18 map opens and 14 trips to Saved and back. A scripted pass then checked the map's sheet, selection, route, List and Map switching, the Saved tab, back, the keyboard and dark mode, with no StrictMode reports and no crashes. The full investigation is written up in [CASE_STUDY_MAP_LEAK.md](CASE_STUDY_MAP_LEAK.md). **Not checked:** a release build's frames (the Mac ran out of swap), and anything on a real phone.
+- Scale benchmarks (Step 6.2, 2026‑11‑04, Mac JVM): two full runs of `ScaleBenchmark`, results in §6. The first version shared airport objects between flights and under-counted memory about four times; the benchmark now reads its flights back from the cache, as the app does. The normal `jvmTest` run still has 333 tests and skips the benchmarks. **Not measured:** the same cases on a phone.
 
 ## 8. Third-party code: Double Metaphone
 
@@ -505,3 +524,4 @@ at code lengths 1, 4, 6 and 12, for primary and alternate codes. Every code must
 | 2026‑11‑03 | Step 6.1 | Found what MapLibre reads from disk by disassembling its library classes, moved those reads to a background thread, and measured frames and memory on the emulator with the Mac's GPU | StrictMode before and after; the same memory test on the build from before the change, to show the leak was older; a second test with a lighter garbage-collection trigger after heap dumps froze the overloaded emulator. Crashes in the log were checked and were the screen-reading tool timing out, not the app |
 | 2026‑11‑04 | D31 | Kept one Android map, then found by measuring that detaching it still leaked and kept it attached instead, with the Explore screen composed but unplaced under Saved | The same memory test after each version, plus Home round trips to separate the surface from the attachment. A scripted pass over the map's behaviours, accessibility tree, back, keyboard and dark mode, with screenshots checked |
 | 2026‑11‑04 | Case study | Wrote up the leak investigation for the owner's interviews, from the session's own measurements | Each number checked against the raw readings; three wording slips fixed (the Java heap in the first run, the thread count's timing, and a Saved-tab cost that was inferred, not measured) |
+| 2026‑11‑04 | Step 6.2 | Wrote the seeded synthetic data and `ScaleBenchmark`, gated behind `-Pbench`, and ran it twice | Spotted that the memory figures were far below an earlier measurement, traced it to shared airport objects, and switched to flights read back from the cache. Medians reported as ranges where the two runs differed |

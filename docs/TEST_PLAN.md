@@ -115,6 +115,9 @@ The second and third commands need a Mac. `allTests` runs every target that is a
 
 These measure the SCALE-* targets in REQUIREMENTS §11. Record the medians in SUBMISSION_NOTES §6.
 
+- **Run (since Step 6.2):** `./gradlew :shared:jvmTest -Pbench --tests "*ScaleBenchmark*"`. Without `-Pbench`, `jvmTest` skips them. The report is written to `shared/build/reports/scale-benchmarks.md`. The code is in `shared/src/jvmTest/.../bench/`.
+- **Realistic objects:** the benchmark writes the synthetic flights to the cache and reads them back, as `FlightRepository` does, so each flight has its own airport objects and strings. Generated flights share them, which made memory look about four times smaller in a first run.
+
 - **Synthetic data:** a seeded generator in `jvmTest` (`SyntheticData.flights(count, airports, seed)`) that keeps the fixture's shape: random routes, dates, cabins, programs and points.
 - **Cases**, each with warm-up runs and the median of 20 runs:
 

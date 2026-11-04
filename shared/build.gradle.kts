@@ -55,6 +55,17 @@ room { schemaDirectory("$projectDir/schemas") }
 // Silences a JDK 24+ warning when the JVM tests load the bundled SQLite library.
 tasks.withType<Test>().configureEach { jvmArgs("--enable-native-access=ALL-UNNAMED") }
 
+// TEST_PLAN §4.1: the scale benchmarks are slow, so they only run when asked:
+// ./gradlew :shared:jvmTest -Pbench --tests "*ScaleBenchmark*"
+tasks.named<Test>("jvmTest") {
+    if (providers.gradleProperty("bench").isPresent) {
+        maxHeapSize = "1g"
+        outputs.upToDateWhen { false }
+    } else {
+        exclude("**/bench/**")
+    }
+}
+
 // Room's code generator runs once per target (docs/ARCHITECTURE.md §5.4).
 dependencies {
     listOf("kspAndroid", "kspIosArm64", "kspIosSimulatorArm64", "kspIosX64", "kspJvm").forEach {

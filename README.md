@@ -15,6 +15,7 @@ A Roame-inspired award-flight explorer, built natively twice: **SwiftUI** on iOS
 | [Test plan](docs/TEST_PLAN.md) | Shared test matrix, manual QA checklist, demo script |
 | [Plan](docs/PLAN.md) | Build order: phases, steps, review gates, risks, priority tiers |
 | [Submission notes](docs/SUBMISSION_NOTES.md) | Approach, decision record, assumptions, tradeoffs, limitations, scalability, AI usage |
+| [Case study: the map leak](docs/CASE_STUDY_MAP_LEAK.md) | How the Android map's memory leak was found, narrowed down and fixed |
 | [CLAUDE.md](CLAUDE.md) | Working agreement for AI coding agents, including the review-before-push rule |
 
 ## Prerequisites
@@ -58,6 +59,12 @@ Shared tests on the iOS simulator (Mac only):
 
 ```bash
 ./gradlew :shared:iosSimulatorArm64Test
+```
+
+Scale benchmarks on synthetic data, on demand (the report goes to `shared/build/reports/scale-benchmarks.md`; results in [submission notes §6](docs/SUBMISSION_NOTES.md#6-scalability)):
+
+```bash
+./gradlew :shared:jvmTest -Pbench --tests "*ScaleBenchmark*"
 ```
 
 The manual QA results for both platforms are in [docs/TEST_PLAN.md](docs/TEST_PLAN.md#5-manual-qa-checklist).
