@@ -227,7 +227,7 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
   - The sheet updates live as filters change.
   - If the destination drops out of the results, the sheet closes.
 - **M6** If `results` is empty, there are no markers and an empty-state overlay is shown. The map stays interactive.
-- **M7** A selected flight draws a **great-circle** route connector from origin to destination. The origin is drawn as a small dot and the destination marker is highlighted.
+- **M7** A selected flight draws a **great-circle** route connector from origin to destination. The origin is drawn as a small dot and the destination marker is highlighted. The route is drawn above the other pills and under the destination's pill (owner's review of Step 6.3d).
   - A shared `GreatCircle.interpolate(from, to, segments = 64)` provides the points for map SDKs that can't draw geodesics.
   - It unwraps longitudes (adding or subtracting 360° to keep every point within 180° of the origin), so trans-Pacific routes don't wrap the long way around the world. A shortest path never spans more than 180° of longitude, so this also rules out any jump between consecutive points.
 - **M8** Camera behaviour:

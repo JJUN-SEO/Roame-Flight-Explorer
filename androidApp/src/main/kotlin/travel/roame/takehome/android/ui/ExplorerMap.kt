@@ -74,7 +74,9 @@ import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.storage.FileSource
+import org.maplibre.android.style.expressions.Expression.eq
 import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
@@ -104,6 +106,7 @@ private const val STYLE_TIMEOUT_MS = 10_000L
 
 private const val MARKERS = "markers"
 private const val PILLS = "marker-pills"
+private const val SELECTED_PILL = "selected-pill"
 private const val ROUTE = "route"
 private const val ROUTE_LINE = "route-line"
 private const val ORIGIN = "origin"
@@ -167,7 +170,7 @@ class MapHolder internal constructor() {
             }
             loadedMap.addOnCameraIdleListener { camera.value = loadedMap.cameraPosition.toArray() }
             loadedMap.addOnMapClickListener { point ->
-                val hit = loadedMap.queryRenderedFeatures(loadedMap.projection.toScreenLocation(point), PILLS)
+                val hit = loadedMap.queryRenderedFeatures(loadedMap.projection.toScreenLocation(point), PILLS, SELECTED_PILL)
                     .maxByOrNull { it.getNumberProperty("sort")?.toInt() ?: 0 }
                 hit?.getStringProperty("code")?.let { onMarkerTap(it) }
                 hit != null
@@ -464,7 +467,13 @@ private fun MapUnavailable(onRetry: () -> Unit) {
     }
 }
 
+/**
+ * Bottom to top, as on iOS: the other pills, the route and its origin, the selected destination's pill (M4), and the
+ * plane. The owner asked for the route's dots to cross the other pills (review of Step 6.3d).
+ */
 private fun Style.addOverlays(plane: Bitmap) {
+    addSource(GeoJsonSource(MARKERS))
+    addLayer(SymbolLayer(PILLS, MARKERS).withFilter(eq(get("sort"), literal(0))).withProperties(*pillProperties()))
     addSource(GeoJsonSource(ROUTE))
     addLayer(
         LineLayer(ROUTE_LINE, ROUTE).withProperties(
@@ -484,17 +493,8 @@ private fun Style.addOverlays(plane: Bitmap) {
             PropertyFactory.circleStrokeWidth(2f),
         ),
     )
-    addSource(GeoJsonSource(MARKERS))
-    addLayer(
-        SymbolLayer(PILLS, MARKERS).withProperties(
-            PropertyFactory.iconImage(get("image")),
-            PropertyFactory.iconAllowOverlap(true),
-            PropertyFactory.iconIgnorePlacement(true),
-            // M4: the selected destination is drawn on top of a nearby one, such as HND and NRT.
-            PropertyFactory.symbolSortKey(get("sort")),
-        ),
-    )
-    // M9: the plane, on top as iOS's, turned to the route's heading; it turns with the map, which doesn't rotate anyway.
+    addLayer(SymbolLayer(SELECTED_PILL, MARKERS).withFilter(eq(get("sort"), literal(1))).withProperties(*pillProperties()))
+    // M9: the plane, turned to the route's heading; it turns with the map, which doesn't rotate anyway.
     addImage(PLANE_IMAGE, plane)
     addSource(GeoJsonSource(PLANE))
     addLayer(
@@ -508,6 +508,12 @@ private fun Style.addOverlays(plane: Bitmap) {
         ),
     )
 }
+
+private fun pillProperties() = arrayOf(
+    PropertyFactory.iconImage(get("image")),
+    PropertyFactory.iconAllowOverlap(true),
+    PropertyFactory.iconIgnorePlacement(true),
+)
 
 /** The route's colour; the map style is always light, so one value works in both themes. */
 /** Roame's pink (Step 6.3). */

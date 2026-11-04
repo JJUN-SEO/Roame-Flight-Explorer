@@ -26,6 +26,8 @@ struct ExplorerMap: View {
     @State private var raised: String?
     /** M9: when the plane took off, so each new selection flies from the origin. */
     @State private var takeOff = Date.now
+    /** Counts the camera's moves, so the route drawn over the map follows it. Only `RouteOverlay` reads it. */
+    @State private var cameraMoves = CameraMoves()
 
     var body: some View {
         let state = model.state
@@ -41,44 +43,26 @@ struct ExplorerMap: View {
                     .annotationTitles(.hidden)
                     .tag(marker.code)
                 }
-                // M7: a geodesic route with a dot at the origin. MapKit draws the curve and handles the antimeridian.
-                if let selected {
-                    let origin = CLLocationCoordinate2D(latitude: selected.originLatitude, longitude: selected.originLongitude)
-                    let destination = CLLocationCoordinate2D(latitude: selected.destinationLatitude, longitude: selected.destinationLongitude)
-                    MapPolyline(coordinates: [origin, destination], contourStyle: .geodesic)
-                        .stroke(Color.brand, style: StrokeStyle(lineWidth: dotWidth, lineCap: .round, dash: [0, dotGap]))
-                    Annotation("", coordinate: origin) {
-                        Circle().fill(Color.brand).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2))
-                    }
-                    // Under Reduce Motion the plane rests halfway, so MapKit can hold it in place like any annotation.
-                    if reduceMotion {
-                        let plane = routePlane(selected, PlaneFlight.shared.resting)
-                        Annotation("", coordinate: CLLocationCoordinate2D(latitude: plane.latitude, longitude: plane.longitude)) {
-                            PlaneBadge(heading: plane.headingDegrees)
-                        }
-                        .annotationTitles(.hidden)
-                    }
-                }
             }
             // D27: a quiet, grey map, so the pills and route stand out. Apple's logo and Legal link must stay.
             .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
             .safeAreaPadding(.bottom, bottomInset)
-            // M9: the flying plane is drawn over the map and placed on it every frame, which also keeps it on the route
-            // while the map moves. Moved every frame as an annotation, MapKit placed it unevenly, and annotations that
-            // MapKit animated left the route (Step 6.3d). It flies only while the route shows on screen.
             .overlay {
-                if let selected, !reduceMotion {
-                    TimelineView(.animation(minimumInterval: 1.0 / 60, paused: !isActive)) { timeline in
-                        let frame = PlaneFlight.shared.at(elapsedMillis: Int64(timeline.date.timeIntervalSince(takeOff) * 1000))
-                        let plane = routePlane(selected, frame)
-                        if let point = proxy.convert(CLLocationCoordinate2D(latitude: plane.latitude, longitude: plane.longitude), to: .local) {
-                            PlaneBadge(heading: plane.headingDegrees).opacity(frame.opacity).position(point)
-                        }
-                    }
+                if let selected {
+                    RouteOverlay(
+                        flight: selected,
+                        destination: state.markers.first { $0.code == selected.destinationCode },
+                        proxy: proxy,
+                        cameraMoves: cameraMoves,
+                        takeOff: takeOff,
+                        flying: isActive && !reduceMotion
+                    )
                     .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 }
             }
         }
+        .onMapCameraChange(frequency: .continuous) { cameraMoves.count &+= 1 }
         // M8: the first display uses MapKit's automatic framing, which fits every marker. Recording that camera once
         // turns it into a fixed position, so later filter changes don't reframe the map; the user's own moves reach
         // `camera` through the binding. Recording every move instead caught MapKit mid-animation, while the first
@@ -108,17 +92,91 @@ struct ExplorerMap: View {
     }
 }
 
-private func routePlane(_ flight: FlightItem, _ frame: PlaneFrame) -> RoutePlane {
-    GreatCircle.shared.plane(
-        from: GeoPoint(latitude: flight.originLatitude, longitude: flight.originLongitude),
-        to: GeoPoint(latitude: flight.destinationLatitude, longitude: flight.destinationLongitude),
-        fraction: frame.fraction
-    )
+@Observable
+private final class CameraMoves {
+    var count = 0
 }
 
-/** M9: the route's dots, as Android's. MapKit draws a line's width and dashes about twice as large as asked (Step 6.3d). */
-private let dotWidth: CGFloat = 3
-private let dotGap: CGFloat = 8
+/**
+ * M7, M9: the selected route, drawn over the map: the dots, the origin's dot and the plane, under the destination's pill.
+ * MapKit always draws lines under annotations, and the owner asked for the dots to cross the other pills (review of
+ * Step 6.3d). Everything is placed with `convert` each time the map moves, and the plane every frame while it flies.
+ * Moved every frame as an annotation, MapKit placed the plane unevenly, and annotations that MapKit animated left the
+ * route.
+ */
+private struct RouteOverlay: View {
+    let flight: FlightItem
+    let destination: DestinationMarker?
+    let proxy: MapProxy
+    let cameraMoves: CameraMoves
+    let takeOff: Date
+    /** The plane flies only while the route shows on screen, and rests halfway under Reduce Motion. */
+    let flying: Bool
+
+    var body: some View {
+        // Read here, so the route is drawn again whenever the map moves. Only the plane is drawn every frame.
+        let _ = cameraMoves.count
+        ZStack {
+            route.stroke(Color.brand, style: StrokeStyle(lineWidth: dotWidth, lineCap: .round, dash: [0, dotGap]))
+            if let origin = point(flight.originLatitude, flight.originLongitude) {
+                Circle().fill(Color.brand).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2)).position(origin)
+            }
+            TimelineView(.animation(minimumInterval: 1.0 / 60, paused: !flying)) { timeline in
+                let frame = flying ? PlaneFlight.shared.at(elapsedMillis: Int64(timeline.date.timeIntervalSince(takeOff) * 1000)) : PlaneFlight.shared.resting
+                let plane = GreatCircle.shared.plane(from: from, to: to, fraction: frame.fraction)
+                if let at = point(plane.latitude, plane.longitude) {
+                    PlaneBadge(heading: plane.headingDegrees).opacity(frame.opacity).position(at)
+                }
+            }
+        }
+        // The destination's pill is cut out, so MapKit's own pill shows above the route. A copy drawn here instead
+        // trailed the map's pill by a frame while dragging, and showed twice.
+        .mask {
+            ZStack {
+                Rectangle()
+                if let destination, let at = point(destination.latitude, destination.longitude) {
+                    MarkerPill(marker: destination, isSelected: true).position(at).blendMode(.destinationOut)
+                }
+            }
+            .compositingGroup()
+        }
+        // Over the whole map, including the part the sheet and card cover, so the mask isn't limited to its safe area.
+        .ignoresSafeArea()
+    }
+
+    private var from: GeoPoint { GeoPoint(latitude: flight.originLatitude, longitude: flight.originLongitude) }
+    private var to: GeoPoint { GeoPoint(latitude: flight.destinationLatitude, longitude: flight.destinationLongitude) }
+
+    private func point(_ latitude: Double, _ longitude: Double) -> CGPoint? {
+        // Back into -180..180, which MapKit needs; it places the point on the copy of the world in view.
+        let normal = longitude - 360 * (longitude / 360).rounded()
+        return proxy.convert(CLLocationCoordinate2D(latitude: latitude, longitude: normal), to: .local)
+    }
+
+    /**
+     * The shared great-circle points. MapKit may place a point far from the view on another copy of the world, so a
+     * step longer than half the world's width starts a new piece of line rather than crossing the screen.
+     */
+    private var route: Path {
+        var path = Path()
+        guard let a = point(0, 0), let b = point(0, 1) else { return path }
+        let halfWorld = abs(b.x - a.x) * 180
+        var last: CGPoint?
+        for geo in GreatCircle.shared.interpolate(from: from, to: to, segments: 64) {
+            guard let next = point(geo.latitude, geo.longitude) else {
+                last = nil
+                continue
+            }
+            if let last, abs(next.x - last.x) < halfWorld { path.addLine(to: next) } else { path.move(to: next) }
+            last = next
+        }
+        return path
+    }
+}
+
+/** M9: the route's dots, 5.5 pt across and 16 pt apart, as Android's. */
+private let dotWidth: CGFloat = 5.5
+private let dotGap: CGFloat = 16
 
 /** M9: the plane in Roame's pink on a white disc, turned to the route's heading. The map doesn't rotate, so it stays true. */
 private struct PlaneBadge: View {
