@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.1, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 6.2, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D31) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -377,7 +377,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 
 ### Phase 6: Hardening
 
-#### [ ] 6.1 Performance and leaks
+#### [x] 6.1 Performance and leaks
 
 - **Goal:** prove the app stays smooth and leak-free with the full dataset.
 - **Covers:** PERF-1, PERF-2, PERF-3, PERF-4, UX-1. QA: Q24.
