@@ -2,8 +2,7 @@ import SwiftUI
 import Shared
 
 /**
- * One sheet per filter (UI_SPEC §2.4). Choices apply as they're made, so "Show N flights" shows the
- * real count and just closes the sheet.
+ * One sheet per filter (UI_SPEC §2.4). Choices apply as they're made, so "Show flights" just closes the sheet.
  */
 struct FilterSheet: View {
     @Environment(ExplorerModel.self) private var model
@@ -42,7 +41,7 @@ struct FilterSheet: View {
                     awaitingStart = nil
                 }
                 Spacer()
-                PrimaryButton(text: "Show \(flightCount(Int(state.resultCount)))") { dismiss() }
+                PrimaryButton(text: "Show flights") { dismiss() }
             }
             .padding(EdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 16))
         }
@@ -63,8 +62,8 @@ struct FilterSheet: View {
 
 /**
  * Every filter in one sheet (Step 6.3d, UI_SPEC §2.4), drawn the same as Android's FiltersSheet: the dates as a row that
- * opens the calendar inside the sheet, then the cabin, points and programs. Choices apply as they're made, so "Show N
- * flights" shows the real count and just closes the sheet; "Clear all" clears the filters and keeps the search.
+ * opens the calendar inside the sheet, then the cabin, points and programs. Choices apply as they're made, so "Show
+ * flights" just closes the sheet; "Clear all" clears the filters and keeps the search.
  */
 struct FiltersSheet: View {
     @Environment(ExplorerModel.self) private var model
@@ -112,7 +111,7 @@ struct FiltersSheet: View {
                         awaitingStart = nil
                     }
                     Spacer()
-                    PrimaryButton(text: "Show \(flightCount(Int(state.resultCount)))") { dismiss() }
+                    PrimaryButton(text: "Show flights") { dismiss() }
                 }
                 .padding(EdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 16))
             }

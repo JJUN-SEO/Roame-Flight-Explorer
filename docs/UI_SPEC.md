@@ -177,7 +177,7 @@ One sheet with every filter, opened by the Filters button or an active chip. Top
 | Points | Slider from min to max in steps of 500, with a live label "Up to 60,000 pts" or "Any" | The top end means no limit (F4) |
 | Programs | Option rows for every program, ✓ on each chosen one | Multi-select. Empty means all (F6) |
 
-At the bottom, "Clear all" (the filters only, keeping the search) and a live **"Show N flights"** button. Choices apply as they're made, so N is the real count and the button just closes the sheet. The sheet opens fully, so the button is always on screen. The search page's Cabin row still opens a cabin-only sheet.
+At the bottom, "Clear all" (the filters only, keeping the search) and a **"Show flights"** button, with no count (the owner's choice, 2026‑11‑04): the list's header already shows it. Choices apply as they're made, so the button just closes the sheet. The sheet opens fully, so the button is always on screen. The search page's Cabin row still opens a cabin-only sheet.
 
 ## 3. Components
 

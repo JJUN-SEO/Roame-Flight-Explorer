@@ -492,7 +492,7 @@ Only the owner cuts scope.
 
 1. The "Fail next DB write" debug toggle (Step 4.4). The store tests already cover V7.
 2. Animating the camera to fit the route on selection.
-3. The live "Show N flights" count inside filter sheets.
+3. ~~The live "Show N flights" count inside filter sheets.~~ Dropped by the owner (2026‑11‑04): the button reads "Show flights", and the list's header shows the count.
 
 **Could:**
 

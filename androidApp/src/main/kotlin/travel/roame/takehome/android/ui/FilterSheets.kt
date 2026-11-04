@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -53,13 +52,12 @@ import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
 
 /**
- * One sheet per filter (UI_SPEC §2.4). Choices apply as they're made, so "Show N flights" shows the
- * real count and just closes the sheet.
+ * One sheet per filter (UI_SPEC §2.4). Choices apply as they're made, so "Show flights" just closes the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSheet(kind: FilterKind, state: ExplorerState, store: ExplorerStore, onDismiss: () -> Unit) {
-    // Fully open, so "Show N flights" is on screen without dragging the sheet up.
+    // Fully open, so "Show flights" is on screen without dragging the sheet up.
     // K3: a start whose end hasn't been picked yet. "Any dates" clears it with the filter.
     val awaitingStart = rememberSaveable { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
@@ -88,7 +86,7 @@ fun FilterSheet(kind: FilterKind, state: ExplorerState, store: ExplorerStore, on
                     },
                 )
                 Spacer(Modifier.weight(1f))
-                PrimaryButton(pluralStringResource(R.plurals.show_flights, state.resultCount, groupedCount(state.resultCount)), onDismiss)
+                PrimaryButton(stringResource(R.string.show_flights), onDismiss)
             }
         }
     }
@@ -96,8 +94,8 @@ fun FilterSheet(kind: FilterKind, state: ExplorerState, store: ExplorerStore, on
 
 /**
  * Every filter in one sheet (Step 6.3d, UI_SPEC §2.4), drawn the same as iOS's FiltersSheet: the dates as a row that opens
- * the calendar inside the sheet, then the cabin, points and programs. Choices apply as they're made, so "Show N flights"
- * shows the real count and just closes the sheet; "Clear all" clears the filters and keeps the search.
+ * the calendar inside the sheet, then the cabin, points and programs. Choices apply as they're made, so "Show flights"
+ * just closes the sheet; "Clear all" clears the filters and keeps the search.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +133,7 @@ fun FiltersSheet(state: ExplorerState, store: ExplorerStore, onDismiss: () -> Un
                         awaitingStart.value = null
                     })
                     Spacer(Modifier.weight(1f))
-                    PrimaryButton(pluralStringResource(R.plurals.show_flights, state.resultCount, groupedCount(state.resultCount)), onDismiss)
+                    PrimaryButton(stringResource(R.string.show_flights), onDismiss)
                 }
             }
         }

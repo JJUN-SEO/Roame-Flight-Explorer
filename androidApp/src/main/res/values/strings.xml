@@ -49,10 +49,7 @@
     <string name="points_up_to">Up to %s</string>
     <string name="points_any">Any</string>
     <string name="clear">Clear</string>
-    <plurals name="show_flights">
-        <item quantity="one">Show %s flight</item>
-        <item quantity="other">Show %s flights</item>
-    </plurals>
+    <string name="show_flights">Show flights</string>
     <string name="clear_filter">Clear %s</string>
     <string name="chip_active">%1$s: %2$s, active</string>
 
