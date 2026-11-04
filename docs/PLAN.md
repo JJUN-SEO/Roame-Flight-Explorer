@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 5.7, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 5.8, in progress. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -364,7 +364,7 @@ Each step has the same goal, coverage, QA rows and "done when" as its Android st
 | [x] 5.4 Selection, card and saved flights | 4.4 | `.sensoryFeedback` for haptics and an overlay toast with Retry |
 | [x] 5.5 Map | 4.5 | MapKit: `Map`, `Annotation`, and `MapPolyline` with `contourStyle: .geodesic`. With airplane mode on and the map never opened, MapKit should still draw markers over empty tiles (D24). If it doesn't, stop and ask the owner |
 | [x] 5.6 Refresh and offline | 4.6 | The stale banner and the launch progress bar. No `.refreshable` (D29) |
-| [ ] 5.7 Use my location | 4.7 | Core Location, `NSLocationWhenInUseUsageDescription`, and a single `requestLocation()`. Ask on the first focus of From, with no button (D30) |
+| [x] 5.7 Use my location | 4.7 | Core Location, `NSLocationWhenInUseUsageDescription`, and a single `requestLocation()`. Ask on the first focus of From, with no button (D30) |
 | [ ] 5.8 iOS QA | 4.8 | All iOS rows in TEST_PLAN §5. Includes the offline map check left from Step 5.5 (Q8b): the simulator shares the Mac's network, so it needs the owner to turn Wi-Fi off briefly, or a real iPhone in airplane mode |
 
 Differences in behaviour between platforms aren't allowed without asking (§3). Any difference must be native styling only.
