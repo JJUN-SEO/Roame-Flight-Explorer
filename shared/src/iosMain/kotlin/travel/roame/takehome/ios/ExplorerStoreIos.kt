@@ -36,6 +36,8 @@ class ExplorerStoreIos internal constructor(
 
     fun pickDestination(codes: List<String>) = store.pickDestination(codes)
 
+    fun swapSides() = store.swapSides()
+
     fun setUserLocation(latitude: Double, longitude: Double) = store.setUserLocation(latitude, longitude)
 
     fun setDateRange(startIso: String?, endIso: String?) = store.setDateRange(startIso, endIso)

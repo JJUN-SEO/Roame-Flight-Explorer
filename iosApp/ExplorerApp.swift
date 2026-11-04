@@ -15,41 +15,58 @@ struct ExplorerApp: View {
     @State private var pendingBefore: Set<String> = []
     @State private var successes = 0
     @State private var location: UserLocation?
-    /** D36: Explore opens on the landing page; the search bar, the banner's button or a deal shows the results. */
-    @State private var showResults = false
+    /**
+     * D36: Explore opens on the landing page. The search bar and the banner open the search page, whose button shows the
+     * results; a deal shows its results straight away.
+     */
+    @State private var page = ExplorePage.landing
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                // The results stay alive behind the landing page and the other tabs, as on Android (D31), so the list,
-                // map and camera survive. The landing page stays too, so it keeps its scroll position.
-                let results = tab == .explore && showResults
+                // The results stay alive behind the other pages and tabs, as on Android (D31), so the list, map and
+                // camera survive. The landing page stays too, so it keeps its scroll position.
+                let results = tab == .explore && page == .results
                 VStack(spacing: 0) {
-                    SubpageTopBar(title: "Search flights") {
+                    SubpageTopBar(title: "Flights") {
                         dismissKeyboard()
-                        showResults = false
+                        page = .landing
                     }
                     ExploreScreen(isActive: results, onDebugLongPress: debugHook)
                 }
                 .opacity(results ? 1 : 0)
                 .allowsHitTesting(results)
                 .accessibilityHidden(!results)
-                let landing = tab == .explore && !showResults
+                let landing = tab == .explore && page == .landing
                 LandingScreen(
-                    onSearch: { showResults = true },
+                    onSearch: { page = .search },
                     onDestination: { deal in
                         model.store.openDestination(codes: deal.codes)
-                        showResults = true
+                        page = .results
                     },
                     onOffer: { offer in
                         model.store.openOffer(flightId: offer.flight.id)
-                        showResults = true
+                        page = .results
                     }
                 )
                 .background(Color.background)
                 .opacity(landing ? 1 : 0)
                 .allowsHitTesting(landing)
                 .accessibilityHidden(!landing)
+                // Made fresh each time, so it opens on its form.
+                if tab == .explore && page == .search {
+                    SearchScreen(
+                        onClose: {
+                            dismissKeyboard()
+                            page = .landing
+                        },
+                        onSearch: {
+                            dismissKeyboard()
+                            page = .results
+                        }
+                    )
+                    .background(Color.background)
+                }
                 switch tab {
                 case .saved: SavedScreen(onDebugLongPress: debugHook)
                 case .account: AccountScreen(onToast: { note = $0 })
@@ -389,6 +406,9 @@ private struct SavedScreen: View {
         }
     }
 }
+
+/** Explore's three pages (D36): the landing page, the search page and the results. */
+private enum ExplorePage { case landing, search, results }
 
 @MainActor private func dismissKeyboard() {
     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

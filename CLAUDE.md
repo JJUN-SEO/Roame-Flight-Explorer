@@ -64,7 +64,7 @@ shared/                KMP module → Android library + static Shared.framework 
     data/remote/         fetch, decode and classify failures (ARCHITECTURE §6.3)
     data/                FlightRepository (cache flow, sync status, refresh), SavedFlightsRepository, the "Fail next DB write" debug hook
     data/local/          Room database (ARCHITECTURE §5)
-    presentation/        ExplorerStore, ExplorerState, the reducer
+    presentation/        ExplorerStore, ExplorerState, the reducer, the date calendar (DOMAIN_RULES §3b)
     di/                  AppGraph, the single composition root
   shared/schemas/        Room's exported schema JSON
   src/commonTest/        rule tests (run on JVM and iOS)
@@ -131,7 +131,7 @@ These were found in the starter and the fixture.
   - "Mileage Plan" and "MileagePlus" are different programs.
   - Tokyo has two airports (HND and NRT).
   - 364 routes cross the antimeridian, so draw them as geodesics or unwrap longitudes.
-- **Date pickers:** Android's Material 3 date picker returns **UTC** midnight millis, so convert them with UTC.
+- **Dates in the UI (Step 6.3c, D41):** both apps use their own calendar, drawn from the shared `DateCalendar` (K1–K5). Don't bring back the system pickers: Material's returns UTC midnight millis and iOS's works in the device's calendar, and both look different from each other.
 - **Server working directory:** the Gradle `run` task's default working directory is the module dir. Set it to the repo root so `fixtures/` resolves.
 - **MapLibre (D8, D23, D24, D27):** PLAN Step 4.5 lists what Step 0.3 found. MapLibre adds `ACCESS_FINE_LOCATION`, which has to be removed because D16 allows approximate location only, and `LatLngBounds.from` needs unwrapped longitudes across the antimeridian. Found in Step 4.5:
   - Fit a selected route only after the selection card has been measured, or it lands under the card.
@@ -164,6 +164,7 @@ These were found in the starter and the fixture.
   - A SwiftUI `ScrollView` draws its content under the status bar when scrolled; the landing page's is `.clipped()` to match Android.
   - Destination photos are found by the shared photo key (`dest_sao_paulo`). Android maps each key to `R.drawable` explicitly, never by name at runtime. A new photo goes in both apps and in THIRD_PARTY_NOTICES and the Photo credits text, with its Commons licence and requested credit.
   - Keep the results composed under the landing page (unplaced on Android, hidden on iOS), or the Android map is detached and leaks (D31).
+- **Search fields (Step 6.3c):** a field keeps what's typed locally and ignores the store's late echoes of it, but must take any other text the store sets (a swap, a deal, Reset). Both apps' `SearchField` remember what they sent until the store shows the last of it; keep that, or a swap leaves the results page's fields showing the old text.
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
 ## Before you say "done"

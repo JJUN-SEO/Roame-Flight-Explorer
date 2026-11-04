@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copy from UI_SPEC §4. -->
 <resources>
-    <string name="app_name">Roame Starter</string>
+    <string name="app_name">Flight Explorer</string>
     <string name="tab_explore">Explore</string>
     <string name="tab_saved">Saved</string>
 
@@ -144,5 +144,15 @@
     <string name="landing_offer_description">%1$s best offer: %2$s to %3$s, %4$s, %5$s, %6$s points</string>
     <string name="landing_offer_below">, %1$d%% below typical</string>
     <string name="landing_offer_value">, worth about $%1$s</string>
-    <string name="results_title">Search flights</string>
+    <string name="results_title">Flights</string>
+    <!-- The search page (Step 6.3c, UI_SPEC §2.0b) -->
+    <string name="search_title">Search flights</string>
+    <string name="search_button">Search flights</string>
+    <string name="search_swap">Swap From and To</string>
+    <string name="search_field_description">%1$s, %2$s</string>
+    <string name="done">Done</string>
+    <string name="calendar_start">%1$s, start date</string>
+    <string name="calendar_end">%1$s, end date</string>
+    <string name="calendar_single">%1$s, selected</string>
+    <string name="calendar_between">%1$s, in range</string>
 </resources>

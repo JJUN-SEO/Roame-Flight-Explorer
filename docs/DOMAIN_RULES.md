@@ -155,6 +155,7 @@ The owner's hypothesis is that people mistype a place in four ways. Here is what
   - A pick counts as search text for Reset (C2, C4), and Reset clears it.
   - The store holds a pick as its city and codes, and each app writes the text ("Tokyo (HND)", "Tokyo (all airports)"), because copy lives in the apps. A pick of codes that aren't on that side is ignored. If a refresh removes a picked airport, the field goes back to searching its text, for good. *(assumption)*
   - The S13 hint stays, because it still explains fuzzy results after the dropdown closes. A pick shows no hint.
+- **S15 Swap** (Step 6.3c, the search page's ⇅ button). `swapSides()` trades From and To: each field's text and pick move to the other field. A pick goes with its airports when the other side has them. Where it doesn't, that field searches the pick's city name instead, so the swap still reads as the same two places ("From Tokyo, To Toronto"), and S14 drops the pick. Swapping twice gives the same route back, by city name if a pick was dropped. Filters don't change. *(assumption: in the fixture no airport is both an origin and a destination, so a swapped route of picks always finds no flights, and the filtered-empty state says so)*
 
 ## 2b. Prioritisation (P)
 
@@ -190,6 +191,16 @@ Implemented in `AirportRanking`. Priority **orders** matched airports. It never 
 - **F6** Programs are a multi-select set, and an empty set means all programs. A flight matches when its program is in the set (exact string compare against the option values). The options come from the data and are sorted alphabetically.
 - **F7** All filters and both search fields combine with **AND**.
 - **F8** Filter options (date bounds, points bounds, cabins, programs) come from the **cached dataset**, not from the current results, so options don't disappear while the user filters. After a refresh, selected values that no longer exist in the dataset are dropped from the selection. A date or points limit at or past the dataset's own limit also returns to its default, because it filters nothing. *(assumption)*
+
+## 3b. Date calendar (K)
+
+Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once in shared code, so both apps' calendars behave the same). Each app keeps a `DateSelection` while its calendar is open, applies each tap with `setDateRange` straight away (like the other filters), and draws the months it's given. The apps write the month names and weekday letters.
+
+- **K1** The calendar shows every month from the data's first date to its last (F8), in order. Each month is weeks of seven days, **Sunday first**; the days before the 1st and after the last day are the neighbouring months' days, marked as outside the month, and the apps leave those cells empty. *(assumption: weeks start on Sunday, as in en-US, the only locale the app formats for, T1)*
+- **K2** Only the data's dates can be picked. A tap on any other day changes nothing.
+- **K3** Tapping: with a start whose end is awaited, a day on or after the start ends the range (the same day gives a one-day range). Any other tap starts a new range at that day and awaits its end. While the end is awaited, the filter is that day onward (F2: no end bound).
+- **K4** Marks: while the end is awaited, only the start is marked. Otherwise the range runs from the start, or the data's first date, to the end, or the data's last date (F2), so with no date filter the whole range is marked. Its first day is `Start`, its last `End`, one day alone `Single`, and the days between `Between`. Days outside the month are never marked.
+- **K5** The calendar opens on the current filter with no end awaited, so the first tap always starts a new range. "Any dates" clears the date filter (C3) and the awaited start.
 
 ## 4. Ordering (O)
 

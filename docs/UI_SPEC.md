@@ -6,7 +6,7 @@ Roame is a *functional* reference, not a pixel spec. The goal is a calm, fast, i
 - The route is instantly scannable.
 - Every state is explained.
 
-Both platforms follow the same information architecture and copy. Since Step 6.3a they also look the same (D38): one font (Inter, D40), the same Material Symbols icons (D37), and the app's own tab bar, segmented control, chips, buttons, toasts and empty states, drawn the same way in SwiftUI and Compose (§6). Only what the platforms can't share stays native: the maps (MapKit and MapLibre), sheets, the system date picker and slider until Step 6.3c, haptics and permission dialogs.
+Both platforms follow the same information architecture and copy. Since Step 6.3a they also look the same (D38): one font (Inter, D40), the same Material Symbols icons (D37), and the app's own tab bar, segmented control, chips, buttons, toasts and empty states, drawn the same way in SwiftUI and Compose (§6). Only what the platforms can't share stays native: the maps (MapKit and MapLibre), sheets, the points slider until Step 6.3d, haptics and permission dialogs.
 
 ## 1. Information architecture
 
@@ -20,7 +20,13 @@ Tab bar
 │   │     ├── Best deals by destination: a swipeable deck of photo cards (B8) → that city's flights
 │   │     └── Best offers by program: a program's logo over its best flight (B7) → that route, the flight selected
 │   │         With a location, every deal leaves the nearest airport (B5); the cards' routes show it, with no subtitle (owner's choice)
-│   └── Results (opened from the landing page; Back returns to it)
+│   ├── Search page (Step 6.3c), from the search bar or the banner; ✕ returns to the landing page
+│   │     ├── One card: From, To (with ⇅ on the line between them, S15), Dates, Cabin ▾
+│   │     ├── From / To → a picker page: the field, focused, with suggestions (S14) and the hint (S13)
+│   │     ├── Dates → the calendar (K1–K5), with Any dates and Done
+│   │     ├── Cabin → the cabin sheet
+│   │     └── [Search flights] → the results
+│   └── Results (from the search page or a deal; Back returns to the landing page)
 │       ├── Search header: From / To fields
 │       │     ├── Suggestions dropdown under the focused field, updated on every keystroke (S14)
 │       │     └── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
@@ -40,7 +46,7 @@ Tab bar
     └── Log out                                        (a toast: there's no account)
 ```
 
-Location is asked for when the app first opens (D32). Steps 6.3c–6.3e replace the results with a full-screen search page and map-first results (PLAN Step 6.3); this section and §2 change with them.
+Location is asked for when the app first opens (D32). Step 6.3d replaces the results with map-first results and a search summary (PLAN Step 6.3); this section and §2 change with it.
 
 ## 2. Wireframes
 
@@ -80,6 +86,31 @@ Location is asked for when the app first opens (D32). Steps 6.3c–6.3e replace 
 ```
 
 A city with no bundled photo gets a card in the avatar's gradient with a plane (D33). The data has no airlines, times or durations, so the offer cards show what it has.
+
+### 2.0b Explore: search page (Step 6.3c)
+
+```
+┌────────────────────────────────────────┐
+│ ✕          Search flights              │
+├────────────────────────────────────────┤
+│ ┌────────────────────────────────────┐ │  one card, 16 radius, thin border
+│ │ ✈↗  From                           │ │  label: Label small, grey
+│ │     Toronto (YYZ)                  │ │  value: Body large, or "City or airport" in grey
+│ ├──────────────────────────────(⇅)──┤ │  swap: a 40 pt grey circle on the line
+│ │ ✈↘  To                             │ │
+│ │     Tokyo (all airports)           │ │
+│ ├────────────────────────────────────┤ │
+│ │ 📅  Dates                          │ │
+│ │     Feb 10 – Feb 20                │ │
+│ ├────────────────────────────────────┤ │
+│ │ 💺  Cabin                        ▾ │ │
+│ │     Any cabin                      │ │
+│ └────────────────────────────────────┘ │
+│ (          Search flights            ) │  full-width primary button
+└────────────────────────────────────────┘
+```
+
+The calendar page: a bar with Back and "Dates", the weekday letters S M T W T F S, then each month ("February 2027") as rows of 44 pt day cells. The range's ends are pink 40 pt circles with white numbers, the days between sit on a light pink band, and days outside the data are faint and can't be tapped. "Any dates" and "Done" sit at the bottom. The data has no travellers or trip type, so the page shows neither.
 
 ### 2.1 Explore: List
 
@@ -146,7 +177,7 @@ In the Saved view, add "No longer listed" when the flight isn't in the latest re
 
 | Filter | Control | Notes |
 |---|---|---|
-| Dates | Two date pickers (Start and End), limited to the dataset bounds and to each other | Shows "Feb 1 – Apr 1" by default. "Any dates" resets to the defaults. |
+| Dates | The app's own calendar (K1–K5, §2.0b), the same on both apps (D41) | Shows "Feb 1 – Apr 1" by default, the whole range marked. The first tap starts a range, the second ends it. "Any dates" resets to the default |
 | Cabin | Segmented or radio: Any · Economy · Premium Economy · Business | Single choice (F5) |
 | Points | Slider from min to max in steps of 500, with a live label "Up to 60,000 pts" or "Any" | The top end means no limit (F4) |
 | Programs | Checklist of every program, with "Clear" | Multi-select. Empty means all (F6). |
@@ -208,6 +239,9 @@ Use the same copy on both platforms.
 - **Hearts:** each row has a ♡ that saves or removes the flight, the same as the card's button. While its write runs, it shows a spinner and ignores taps (V7).
 - **No manual refresh** (D29, owner): no pull to refresh and no ⟳ button. The app refreshes when it opens, showing a thin progress bar over the data, and the first-load error has Try again (R7). The stale banner sits under the List | Map switch; on the "No flights available" screen it sits above the message.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
+- **The search page** applies each choice as it's made (like the filter sheets), so ✕ keeps them and "Search flights" only opens the results. Picking a suggestion, or the keyboard's Search key, returns from a picker to the form. Back leaves a picker or the calendar first, then the page.
+- **The calendar** (K3): the first tap marks a start and waits for the end; a day on or after it ends the range; an earlier day starts again. The results follow each tap.
+- **⇅** swaps From and To (S15).
 - **Map:**
   - Marker tap → sheet.
   - Sheet row tap → select.
@@ -285,8 +319,10 @@ Use the same tokens on both platforms, mapped to native APIs.
 | `EmptyState` | A 32 pt icon in a 72 pt light-pink circle, a Title, a line of Body, an optional button | No results, no saved flights, unavailable, no flights |
 | `PageTitle`, `SubpageTopBar` | A Display title; or a 56 pt bar with Back and a centred Title over a hairline | Account and its pages |
 | `ListRow`, `OptionRow` | 56 pt rows: an icon, Body large text, a chevron; or 52 pt rows with a pink check when chosen | Account's menu; sheet options |
+| `DateRangeCalendar` | Weekday letters, then months of 44 pt day cells; pink 40 pt circles on the ends, a light pink band between | The search page's dates; the Dates sheet |
+| `SubpageTopBar(closes:)` | As above, with ✕ instead of Back | The search page |
 
-Search fields are pills in the card colour with a magnifying glass. Sheets, the date range picker and the points slider stay native until Step 6.3c and 6.3d redraw them.
+Search fields are pills in the card colour with a magnifying glass, and a pink border while focused. Their suggestions are a card with a soft shadow. Sheets stay native containers; the points slider stays native until Step 6.3d.
 
 ## 7. Formatting
 
@@ -304,6 +340,8 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - Destination card: "Johannesburg, from 39,000 points, up to 35% below typical".
   - Offer card: "MileagePlus best offer: Toronto to Johannesburg, Mon, Mar 22, Premium Economy, 39,000 points, 35% below typical, worth about $702".
   - Section titles are headings, and each card is one button.
+  - Search page rows: "From, Toronto (YYZ)", "Dates, Feb 10 – Feb 20"; the swap button: "Swap From and To".
+  - Calendar days: "Wed, Feb 10, 2027, start date" (or "end date", "selected", "in range"); month names are headings; the weekday letters are hidden.
 - Colour is never the only signal. Selected rows also get a border and a checkmark or "Selected" accessibility trait.
 - Respect Reduce Motion: no camera fly-to animation and no cross-fade.
 
@@ -317,7 +355,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5) | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
 | Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
 | Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
-| Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
+| Date picker | `DateRangeCalendar` (`Calendar.swift`), drawing the shared `DateCalendar` (D41). Dates stay ISO strings throughout | `DateRangeCalendar` (`Calendar.kt`), the same. Material's `DateRangePicker` and its UTC millis are no longer used |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
 | Location for ranking and deals (D16, D32) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked when the app first opens. The dialog's reason (`NSLocationWhenInUseUsageDescription`), short and conventional at the owner's request: "Your location is used to show flights from airports near you." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked when the app first opens. Android's dialog is the system's own: apps can't add a reason or restyle it, and its colours follow the phone's theme |
 

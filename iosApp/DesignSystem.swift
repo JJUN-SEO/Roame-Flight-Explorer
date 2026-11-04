@@ -156,17 +156,18 @@ struct AppChip: View {
 struct PrimaryButton<Leading: View>: View {
     let text: String
     var isEnabled = true
+    var fillsWidth = false
     let action: () -> Void
     @ViewBuilder var leading: () -> Leading
 
     var body: some View {
-        PillButton(text: text, isEnabled: isEnabled, background: .accent, content: .onAccent, action: action, leading: leading)
+        PillButton(text: text, isEnabled: isEnabled, fillsWidth: fillsWidth, background: .accent, content: .onAccent, action: action, leading: leading)
     }
 }
 
 extension PrimaryButton where Leading == EmptyView {
-    init(text: String, isEnabled: Bool = true, action: @escaping () -> Void) {
-        self.init(text: text, isEnabled: isEnabled, action: action) { EmptyView() }
+    init(text: String, isEnabled: Bool = true, fillsWidth: Bool = false, action: @escaping () -> Void) {
+        self.init(text: text, isEnabled: isEnabled, fillsWidth: fillsWidth, action: action) { EmptyView() }
     }
 }
 
@@ -178,13 +179,14 @@ struct TintedButton<Leading: View>: View {
     @ViewBuilder var leading: () -> Leading
 
     var body: some View {
-        PillButton(text: text, isEnabled: isEnabled, background: .selectedCard, content: .accent, action: action, leading: leading)
+        PillButton(text: text, isEnabled: isEnabled, fillsWidth: false, background: .selectedCard, content: .accent, action: action, leading: leading)
     }
 }
 
 private struct PillButton<Leading: View>: View {
     let text: String
     let isEnabled: Bool
+    let fillsWidth: Bool
     let background: Color
     let content: Color
     let action: () -> Void
@@ -198,7 +200,7 @@ private struct PillButton<Leading: View>: View {
             }
             .foregroundStyle(content)
             .padding(.horizontal, 18)
-            .frame(minHeight: 44)
+            .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 44)
             .background(background.opacity(isEnabled ? 1 : 0.6), in: .capsule)
             .contentShape(.capsule)
         }
@@ -288,17 +290,18 @@ struct PageTitle: View {
     }
 }
 
-/** A pushed page's header: back on the left, the title centred. */
+/** A pushed page's header: back on the left, or ✕ for a page that closes, and the title centred. */
 struct SubpageTopBar: View {
     let title: String
+    var closes = false
     let onBack: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button(action: onBack) { MSIcon(name: "ms_arrow_back").frame(width: 48, height: 48).contentShape(.rect) }
+                Button(action: onBack) { MSIcon(name: closes ? "ms_close" : "ms_arrow_back").frame(width: 48, height: 48).contentShape(.rect) }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Back")
+                    .accessibilityLabel(closes ? "Close" : "Back")
                 Text(title).font(.appTitle).frame(maxWidth: .infinity)
                 Color.clear.frame(width: 48, height: 48)
             }

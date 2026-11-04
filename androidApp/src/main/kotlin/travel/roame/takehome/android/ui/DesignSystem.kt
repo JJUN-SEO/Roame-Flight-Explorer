@@ -270,12 +270,12 @@ fun PageTitle(text: String, modifier: Modifier = Modifier) {
     Text(text, modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp), style = MaterialTheme.typography.headlineLarge)
 }
 
-/** A pushed page's header: back on the left, the title centred. */
+/** A pushed page's header: back on the left, or ✕ for a page that closes, and the title centred. */
 @Composable
-fun SubpageTopBar(title: String, onBack: () -> Unit) {
-    val back = stringResource(R.string.back)
+fun SubpageTopBar(title: String, onBack: () -> Unit, closes: Boolean = false) {
+    val back = stringResource(if (closes) R.string.close else R.string.back)
     Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ms_arrow_back), contentDescription = back) }
+        IconButton(onClick = onBack) { Icon(painterResource(if (closes) R.drawable.ms_close else R.drawable.ms_arrow_back), contentDescription = back) }
         Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Spacer(Modifier.size(48.dp))
     }

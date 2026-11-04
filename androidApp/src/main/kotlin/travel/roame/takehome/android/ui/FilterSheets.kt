@@ -11,22 +11,21 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,12 +48,14 @@ import travel.roame.takehome.presentation.ExplorerStore
 @Composable
 fun FilterSheet(kind: FilterKind, state: ExplorerState, store: ExplorerStore, onDismiss: () -> Unit) {
     // Fully open, so "Show N flights" is on screen without dragging the sheet up.
+    // K3: a start whose end hasn't been picked yet. "Any dates" clears it with the filter.
+    val awaitingStart = rememberSaveable { mutableStateOf<String?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(bottom = 16.dp)) {
             // The same header as iOS's sheets: the filter's name, centred (D38).
             Text(kindName(kind), Modifier.fillMaxWidth().padding(bottom = 12.dp), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             when (kind) {
-                FilterKind.Dates -> DatesBody(state, store)
+                FilterKind.Dates -> DateRangeCalendar(state, store, awaitingStart, Modifier.height(440.dp))
                 FilterKind.Cabin -> CabinBody(state, store)
                 FilterKind.MaxPoints -> PointsBody(state, store)
                 FilterKind.Programs -> ProgramsBody(state, store)
@@ -69,38 +70,16 @@ fun FilterSheet(kind: FilterKind, state: ExplorerState, store: ExplorerStore, on
                             FilterKind.Programs -> R.string.clear
                         },
                     ),
-                    onClick = { store.clearFilter(kind) },
+                    onClick = {
+                        store.clearFilter(kind)
+                        awaitingStart.value = null
+                    },
                 )
                 Spacer(Modifier.weight(1f))
                 PrimaryButton(pluralStringResource(R.plurals.show_flights, state.resultCount, groupedCount(state.resultCount)), onDismiss)
             }
         }
     }
-}
-
-/** Limited to the data's dates; the range picker keeps start before end. Converted with UTC (CLAUDE.md). */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DatesBody(state: ExplorerState, store: ExplorerStore) {
-    val min = state.options.minDate ?: return
-    val max = state.options.maxDate ?: return
-    val minMillis = isoToUtcMillis(min)
-    val maxMillis = isoToUtcMillis(max)
-    val picker = rememberDateRangePickerState(
-        initialSelectedStartDateMillis = state.filters.dateStart?.let(::isoToUtcMillis),
-        initialSelectedEndDateMillis = state.filters.dateEnd?.let(::isoToUtcMillis),
-        initialDisplayedMonthMillis = state.filters.dateStart?.let(::isoToUtcMillis) ?: minMillis,
-        yearRange = min.take(4).toInt()..max.take(4).toInt(),
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis in minMillis..maxMillis
-        },
-    )
-    val start = picker.selectedStartDateMillis
-    val end = picker.selectedEndDateMillis
-    LaunchedEffect(start, end) {
-        if (start != null) store.setDateRange(utcMillisToIso(start), end?.let(::utcMillisToIso))
-    }
-    DateRangePicker(state = picker, modifier = Modifier.height(460.dp).padding(horizontal = 16.dp), title = null)
 }
 
 /** Single choice (F5), in rank order from the data. */

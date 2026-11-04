@@ -9,6 +9,8 @@ struct FilterSheet: View {
     @Environment(ExplorerModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let kind: FilterKind
+    /** K3: a start whose end hasn't been picked yet. "Any dates" clears it with the filter. */
+    @State private var awaitingStart: String?
 
     var body: some View {
         let state = model.state
@@ -20,18 +22,25 @@ struct FilterSheet: View {
                 .padding(.top, 20)
                 .padding(.bottom, 12)
                 .accessibilityAddTraits(.isHeader)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    switch kind {
-                    case .dates: DatesBody(state: state, store: model.store)
-                    case .cabin: CabinBody(state: state, store: model.store)
-                    case .maxpoints: PointsBody(state: state, store: model.store)
-                    default: ProgramsBody(state: state, store: model.store)
+            if kind == .dates {
+                // The calendar scrolls by itself.
+                DateRangeCalendar(awaitingStart: $awaitingStart)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        switch kind {
+                        case .cabin: CabinBody(state: state, store: model.store)
+                        case .maxpoints: PointsBody(state: state, store: model.store)
+                        default: ProgramsBody(state: state, store: model.store)
+                        }
                     }
                 }
             }
             HStack {
-                TextLink(text: clearLabel) { model.store.clearFilter(kind: kind) }
+                TextLink(text: clearLabel) {
+                    model.store.clearFilter(kind: kind)
+                    awaitingStart = nil
+                }
                 Spacer()
                 PrimaryButton(text: "Show \(flightCount(Int(state.resultCount)))") { dismiss() }
             }
@@ -48,33 +57,6 @@ struct FilterSheet: View {
         case .dates: "Any dates"
         case .cabin, .maxpoints: "Any"
         default: "Clear"
-        }
-    }
-}
-
-/**
- * Start and end pickers, limited to the data's dates and to each other. A picked day goes to the store as
- * year, month and day (UI_SPEC §9), so it can't move to another day.
- */
-private struct DatesBody: View {
-    let state: ExplorerState
-    let store: ExplorerStoreIos
-
-    var body: some View {
-        if let minIso = state.options.minDate, let maxIso = state.options.maxDate,
-           let min = Format.localDate(minIso), let max = Format.localDate(maxIso) {
-            let start = Format.localDate(state.filters.dateStart ?? minIso) ?? min
-            let end = Format.localDate(state.filters.dateEnd ?? maxIso) ?? max
-            VStack(spacing: 12) {
-                DatePicker("Start", selection: Binding(get: { start }, set: { picked in
-                    store.setDateRange(startIso: Format.iso(picked), endIso: state.filters.dateEnd)
-                }), in: min...end, displayedComponents: .date)
-                DatePicker("End", selection: Binding(get: { end }, set: { picked in
-                    store.setDateRange(startIso: state.filters.dateStart, endIso: Format.iso(picked))
-                }), in: start...max, displayedComponents: .date)
-            }
-            .font(.appBodyLarge)
-            .padding(.horizontal, 16)
         }
     }
 }

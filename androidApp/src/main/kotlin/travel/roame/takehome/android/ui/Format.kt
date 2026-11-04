@@ -4,7 +4,6 @@ import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -21,10 +20,10 @@ fun cardDate(isoDate: String): String = LocalDate.parse(isoDate).format(cardDate
 /** "Feb 10", for the dates chip. */
 fun chipDate(isoDate: String): String = LocalDate.parse(isoDate).format(chipDate)
 
-/** Material's date pickers use UTC midnight, so convert with UTC; the device's zone would shift the day. */
-fun utcMillisToIso(millis: Long): String = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+private val monthTitle = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.US)
 
-fun isoToUtcMillis(isoDate: String): Long = LocalDate.parse(isoDate).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+/** "February 2027", above each month of the calendar. */
+fun monthTitle(year: Int, month: Int): String = LocalDate.of(year, month, 1).format(monthTitle)
 
 private val syncTime = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
 private val syncDayAndTime = DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.US)

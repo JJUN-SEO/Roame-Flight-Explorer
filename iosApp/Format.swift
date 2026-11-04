@@ -43,15 +43,12 @@ enum Format {
         return chip.string(from: date)
     }
 
-    /** For `DatePicker`, which works in the device's calendar: local midnight of that day. */
-    static func localDate(_ iso: String) -> Date? {
-        calendarDate(iso, in: .current)
-    }
+    private static let month = formatter("MMMM yyyy")
 
-    /** Back from `DatePicker`: the day's year, month and day in the same calendar (UI_SPEC §9). */
-    static func iso(_ localDate: Date) -> String {
-        let parts = Calendar.current.dateComponents([.year, .month, .day], from: localDate)
-        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    /** "February 2027", above each month of the calendar. */
+    static func monthTitle(year: Int, month: Int) -> String {
+        guard let date = calendar.date(from: DateComponents(year: year, month: month, day: 1)) else { return "\(year)-\(month)" }
+        return self.month.string(from: date)
     }
 
     /**

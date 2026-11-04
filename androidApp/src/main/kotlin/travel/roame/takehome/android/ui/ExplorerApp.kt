@@ -111,40 +111,47 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
     ScrollToTopOnNewSearch(state, view.listState)
     // D32: asked when the app opens. Here, above the tabs, so switching tabs doesn't read the location again.
     UserLocation(store::setUserLocation)
-    // D36: Explore opens on the landing page; the search bar, the banner's button or a deal shows the results.
-    var showResults by rememberSaveable { mutableStateOf(false) }
+    // D36: Explore opens on the landing page. The search bar and the banner open the search page, whose button shows
+    // the results; a deal shows its results straight away.
+    var page by rememberSaveable { mutableStateOf(ExplorePage.Landing) }
     val landingScroll = rememberScrollState()
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
-                // D31: the results stay composed under the landing page and the other tabs, so the map is never
-                // detached from the window. The landing page stays too, so it keeps its scroll position.
+                // D31: the results stay composed under the other pages and tabs, so the map is never detached from the
+                // window. The landing page stays too, so it keeps its scroll position.
                 val exploring = tab == AppTab.Explore
-                Box(Modifier.fillMaxSize().notPlacedUnless(exploring && showResults)) {
+                Box(Modifier.fillMaxSize().notPlacedUnless(exploring && page == ExplorePage.Results)) {
                     Column {
-                        SubpageTopBar(stringResource(R.string.results_title), onBack = { showResults = false })
-                        ExploreScreen(state, store, view, exploring && showResults, onDebugLongPress)
+                        SubpageTopBar(stringResource(R.string.results_title), onBack = { page = ExplorePage.Landing })
+                        ExploreScreen(state, store, view, exploring && page == ExplorePage.Results, onDebugLongPress)
                     }
                 }
-                Box(Modifier.fillMaxSize().notPlacedUnless(exploring && !showResults)) {
+                Box(Modifier.fillMaxSize().notPlacedUnless(exploring && page == ExplorePage.Landing)) {
                     LandingScreen(
                         state,
                         landingScroll,
-                        onSearch = { showResults = true },
+                        onSearch = { page = ExplorePage.Search },
                         onDestination = { deal ->
                             store.openDestination(deal.codes)
-                            showResults = true
+                            page = ExplorePage.Results
                         },
                         onOffer = { offer ->
                             store.openOffer(offer.flight.id)
-                            showResults = true
+                            page = ExplorePage.Results
                         },
                         onRetry = store::refresh,
                     )
                 }
+                // Made fresh each time, so it opens on its form.
+                if (exploring && page == ExplorePage.Search) {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                        SearchScreen(state, store, onClose = { page = ExplorePage.Landing }, onSearch = { page = ExplorePage.Results })
+                    }
+                }
                 // After a selection's back (ExploreScreen), back returns to the landing page.
-                BackHandler(enabled = exploring && showResults && state.selected == null) { showResults = false }
+                BackHandler(enabled = exploring && page == ExplorePage.Results && state.selected == null) { page = ExplorePage.Landing }
                 when (tab) {
                     AppTab.Saved -> SavedScreen(state, store, onDebugLongPress)
                     AppTab.Account -> AccountScreen(appearance, onToast = { note = it })
@@ -156,6 +163,9 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
         Toasts(state, store, note, onNoteShown = { note = null })
     }
 }
+
+/** Explore's three pages (D36): the landing page, the search page and the results. */
+private enum class ExplorePage { Landing, Search, Results }
 
 /**
  * At the top of the screen, as on iOS, where they can't cover the card's Save or Remove button. V7: each failed write

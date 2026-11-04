@@ -34,6 +34,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
@@ -74,8 +76,9 @@ fun SearchHeader(state: ExplorerState, store: ExplorerStore, modifier: Modifier 
     }
 }
 
+/** One search field with its hint and suggestions. [onSubmit] runs on the keyboard's Search key, after the field lets go. */
 @Composable
-private fun SearchField(
+internal fun SearchField(
     label: String,
     query: String,
     pick: AirportSuggestion?,
@@ -83,13 +86,19 @@ private fun SearchField(
     hint: List<AirportSuggestion>,
     onQueryChange: (String) -> Unit,
     onPick: (List<String>) -> Unit,
+    onSubmit: () -> Unit = {},
+    autoFocus: Boolean = false,
 ) {
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
-    // What the user typed. The store's copy arrives a moment later, so the field doesn't read it back while
-    // typing; it only follows the store when the store empties it (Reset).
+    // What the user typed. The store's copy arrives a moment later, so the field doesn't read back its own echoes,
+    // or a fast typist would lose letters. A text it didn't send is a change from elsewhere (Reset, a deal, a swap),
+    // and the field takes it.
     var text by rememberSaveable { mutableStateOf(query) }
-    LaunchedEffect(query) { if (query.isEmpty()) text = "" }
+    val echoes = remember { Echoes() }
+    LaunchedEffect(query) { echoes.arrived(query)?.let { text = it } }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { if (autoFocus) focusRequester.requestFocus() }
 
     val shown = pick?.let { airportLabel(it) } ?: text
     Column(Modifier.padding(top = 8.dp)) {
@@ -109,16 +118,21 @@ private fun SearchField(
                 value = shown,
                 onValueChange = {
                     text = it
+                    echoes.sent(it)
                     onQueryChange(it)
                 },
                 modifier = Modifier.weight(1f)
+                    .focusRequester(focusRequester)
                     .semantics { contentDescription = label }
                     .onFocusChanged { focused = it.isFocused },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                keyboardActions = KeyboardActions(onSearch = {
+                    focusManager.clearFocus()
+                    onSubmit()
+                }),
                 decorationBox = { field ->
                     Box(contentAlignment = Alignment.CenterStart) {
                         if (shown.isEmpty()) {
@@ -132,6 +146,7 @@ private fun SearchField(
                 val clear = stringResource(R.string.clear_field, label)
                 IconButton(onClick = {
                     text = ""
+                    echoes.sent("")
                     onQueryChange("")
                 }) { Icon(painterResource(R.drawable.ms_close), contentDescription = clear, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
@@ -155,18 +170,46 @@ private fun SearchField(
     }
 }
 
+/**
+ * Tells the store's echoes of what the field typed from changes made elsewhere. Echoes arrive late and in order, so
+ * until the store shows the last text sent, any earlier text sent is an echo; anything else is an outside change.
+ */
+private class Echoes {
+    private val pending = mutableSetOf<String>()
+    private var last: String? = null
+
+    fun sent(text: String) {
+        pending += text
+        last = text
+    }
+
+    /** The store's text, or null when it's only an echo the field already shows. */
+    fun arrived(query: String): String? {
+        if (query == last) {
+            pending.clear()
+            last = null
+            return null
+        }
+        if (query in pending) return null
+        pending.clear()
+        last = null
+        return query
+    }
+}
+
 /** At most 5 rows; the store has already capped and ranked them (S14). */
 @Composable
 private fun SuggestionList(suggestions: List<AirportSuggestion>, onTap: (AirportSuggestion) -> Unit) {
     Surface(
         Modifier.fillMaxWidth().padding(top = 4.dp),
         shape = RoundedCornerShape(16.dp),
-        tonalElevation = 3.dp,
+        // The card colour with a shadow, as on iOS; Material's tonal elevation would tint it pink.
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 3.dp,
     ) {
         Column {
             suggestions.forEachIndexed { index, suggestion ->
-                if (index > 0) HorizontalDivider()
+                if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Text(
                     airportLabel(suggestion),
                     Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onTap(suggestion) }

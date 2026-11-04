@@ -5,7 +5,7 @@
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
     <key>NSLocationDefaultAccuracyReduced</key><true/>
     <key>NSLocationWhenInUseUsageDescription</key><string>Your location is used to show flights from airports near you.</string>
-    <key>CFBundleDisplayName</key><string>Roame Starter</string>
+    <key>CFBundleDisplayName</key><string>Flight Explorer</string>
     <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
