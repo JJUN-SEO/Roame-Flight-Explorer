@@ -1,37 +1,6 @@
 import SwiftUI
 import Shared
 
-/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). */
-struct SearchHeader: View {
-    @Environment(ExplorerModel.self) private var model
-
-    var body: some View {
-        let state = model.state
-        VStack(spacing: 8) {
-            SearchField(
-                label: "From",
-                query: state.originQuery,
-                pick: state.originPick,
-                suggestions: state.originSuggestions,
-                hint: state.originHint,
-                onQueryChange: { model.store.setOriginQuery(text: $0) },
-                onPick: { model.store.pickOrigin(codes: $0) }
-            )
-            SearchField(
-                label: "To",
-                query: state.destinationQuery,
-                pick: state.destinationPick,
-                suggestions: state.destinationSuggestions,
-                hint: state.destinationHint,
-                onQueryChange: { model.store.setDestinationQuery(text: $0) },
-                onPick: { model.store.pickDestination(codes: $0) }
-            )
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-    }
-}
-
 /** One search field with its hint and suggestions. `onSubmit` runs on the keyboard's Search key, after the field lets go. */
 struct SearchField: View {
     let label: String
@@ -207,12 +176,12 @@ struct FilteredEmpty: View {
     @Environment(ExplorerModel.self) private var model
 
     var body: some View {
-        ContentUnavailableView {
-            Label("No flights match your search", systemImage: "magnifyingglass")
-        } description: {
-            ActiveFilterList(state: model.state)
-        } actions: {
-            Button("Reset filters") { model.store.resetAll() }
+        // The shared empty state, as on Android (D38).
+        EmptyState(icon: "ms_search_off", title: "No flights match your search", message: nil) {
+            VStack(spacing: 16) {
+                ActiveFilterList(state: model.state).font(.appBody).foregroundStyle(Color.secondaryText)
+                PrimaryButton(text: "Reset filters") { model.store.resetAll() }
+            }
         }
     }
 }

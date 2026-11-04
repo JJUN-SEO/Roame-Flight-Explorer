@@ -61,6 +61,110 @@ struct FilterSheet: View {
     }
 }
 
+/**
+ * Every filter in one sheet (Step 6.3d, UI_SPEC §2.4), drawn the same as Android's FiltersSheet: the dates as a row that
+ * opens the calendar inside the sheet, then the cabin, points and programs. Choices apply as they're made, so "Show N
+ * flights" shows the real count and just closes the sheet; "Clear all" clears the filters and keeps the search.
+ */
+struct FiltersSheet: View {
+    @Environment(ExplorerModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var datesOpen = false
+    /** K3: a start whose end hasn't been picked yet. "Any dates" clears it with the filter. */
+    @State private var awaitingStart: String?
+
+    var body: some View {
+        let state = model.state
+        VStack(spacing: 0) {
+            if datesOpen {
+                SubpageTopBar(title: "Dates") { datesOpen = false }
+                DateRangeCalendar(awaitingStart: $awaitingStart)
+                HStack {
+                    TextLink(text: "Any dates") {
+                        model.store.clearFilter(kind: .dates)
+                        awaitingStart = nil
+                    }
+                    Spacer()
+                    PrimaryButton(text: "Done") { datesOpen = false }
+                }
+                .padding(EdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 16))
+            } else {
+                Text("Filters")
+                    .font(.appTitle)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 20)
+                    .padding(.bottom, 12)
+                    .accessibilityAddTraits(.isHeader)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        DatesRow(state: state) { datesOpen = true }
+                        SectionLabel(text: "Cabin")
+                        CabinBody(state: state, store: model.store)
+                        SectionLabel(text: "Points")
+                        PointsBody(state: state, store: model.store)
+                        SectionLabel(text: "Programs")
+                        ProgramsBody(state: state, store: model.store)
+                    }
+                }
+                HStack {
+                    TextLink(text: "Clear all") {
+                        for filter in state.activeFilters { model.store.clearFilter(kind: filter.kind) }
+                        awaitingStart = nil
+                    }
+                    Spacer()
+                    PrimaryButton(text: "Show \(flightCount(Int(state.resultCount)))") { dismiss() }
+                }
+                .padding(EdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 16))
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.background)
+        .foregroundStyle(Color.text)
+    }
+}
+
+/** The dates in one row, the data's range by default (F2); tapping it opens the calendar. */
+private struct DatesRow: View {
+    let state: ExplorerState
+    let action: () -> Void
+
+    var body: some View {
+        let start = state.filters.dateStart ?? state.options.minDate
+        let end = state.filters.dateEnd ?? state.options.maxDate
+        let value = if let start, let end { "\(Format.chipDate(start)) – \(Format.chipDate(end))" } else { "Dates" }
+        VStack(spacing: 0) {
+            Button(action: action) {
+                HStack {
+                    Text("Dates").font(.appBodyLarge).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(value).font(.appBodyLarge).foregroundStyle(Color.secondaryText)
+                    MSIcon(name: "ms_chevron_right").foregroundStyle(Color.secondaryText)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 52)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Dates, \(value)")
+            .accessibilityAddTraits(.isButton)
+            Rectangle().fill(Color.cardBorder).frame(height: 1).padding(.leading, 16)
+        }
+    }
+}
+
+private struct SectionLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.appTitleSmall)
+            .foregroundStyle(Color.secondaryText)
+            .padding(EdgeInsets(top: 20, leading: 16, bottom: 4, trailing: 16))
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
 /** Single choice (F5), in rank order from the data. */
 private struct CabinBody: View {
     let state: ExplorerState

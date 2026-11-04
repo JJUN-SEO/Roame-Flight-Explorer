@@ -24,7 +24,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,32 +48,6 @@ import androidx.compose.ui.unit.dp
 import travel.roame.takehome.android.R
 import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.presentation.ExplorerState
-import travel.roame.takehome.presentation.ExplorerStore
-
-/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). */
-@Composable
-fun SearchHeader(state: ExplorerState, store: ExplorerStore, modifier: Modifier = Modifier) {
-    Column(modifier.padding(horizontal = 16.dp)) {
-        SearchField(
-            label = stringResource(R.string.search_from),
-            query = state.originQuery,
-            pick = state.originPick,
-            suggestions = state.originSuggestions,
-            hint = state.originHint,
-            onQueryChange = store::setOriginQuery,
-            onPick = store::pickOrigin,
-        )
-        SearchField(
-            label = stringResource(R.string.search_to),
-            query = state.destinationQuery,
-            pick = state.destinationPick,
-            suggestions = state.destinationSuggestions,
-            hint = state.destinationHint,
-            onQueryChange = store::setDestinationQuery,
-            onPick = store::pickDestination,
-        )
-    }
-}
 
 /** One search field with its hint and suggestions. [onSubmit] runs on the keyboard's Search key, after the field lets go. */
 @Composable

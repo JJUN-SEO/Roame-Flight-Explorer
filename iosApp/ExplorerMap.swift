@@ -3,64 +3,105 @@ import MapKit
 import Shared
 
 /**
- * The results as destination pills, with the selected flight's great-circle route (UI_SPEC §2.2, M1–M8).
- * `camera` lives in the Explore screen, so switching to the list and back keeps the view (M8).
+ * The results as destination pills, with the selected flight's great-circle route as moving dots and a plane
+ * (UI_SPEC §2.1, M1–M9). `camera` lives in the results screen, so it survives leaving and coming back (M8).
+ * `bottomInset` is how much of the map the results sheet and the selection card cover: it's the map's bottom safe
+ * area, so Apple's Legal link stays visible and routes are framed above them.
  */
 struct ExplorerMap: View {
     @Environment(ExplorerModel.self) private var model
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var camera: MapCameraPosition?
+    let isActive: Bool
+    let bottomInset: CGFloat
+    /** The selected flight once the sheet has dropped and the card has been measured, so its route is fitted above them. */
+    let routeToFit: String?
     let onMarkerTap: (String) -> Void
+    /** M8: each selection is framed once; the card hiding and showing again doesn't move the camera. */
+    @State private var fitted: String?
 
     var body: some View {
         let state = model.state
         let selected = state.selected
-        Map(position: Binding(get: { camera ?? .automatic }, set: { camera = $0 })) {
-            // M4: the selected destination comes last, so it's drawn on top of a nearby one, such as HND and NRT.
-            ForEach(markersSelectedLast(state.markers, selected?.destinationCode), id: \.code) { marker in
-                Annotation(marker.city, coordinate: CLLocationCoordinate2D(latitude: marker.latitude, longitude: marker.longitude)) {
-                    MarkerPill(marker: marker, isSelected: marker.code == selected?.destinationCode)
-                        .onTapGesture { onMarkerTap(marker.code) }
+        // M9: the dots march only while a route shows on screen, and stand still under Reduce Motion.
+        TimelineView(.animation(minimumInterval: 0.06, paused: selected == nil || !isActive || reduceMotion)) { timeline in
+            Map(position: Binding(get: { camera ?? .automatic }, set: { camera = $0 }), interactionModes: [.pan, .zoom]) {
+                // M4: the selected destination comes last, so it's drawn on top of a nearby one, such as HND and NRT.
+                ForEach(markersSelectedLast(state.markers, selected?.destinationCode), id: \.code) { marker in
+                    Annotation(marker.city, coordinate: CLLocationCoordinate2D(latitude: marker.latitude, longitude: marker.longitude)) {
+                        MarkerPill(marker: marker, isSelected: marker.code == selected?.destinationCode)
+                            .onTapGesture { onMarkerTap(marker.code) }
+                    }
+                    .annotationTitles(.hidden)
                 }
-                .annotationTitles(.hidden)
-            }
-            // M7: a geodesic route with a dot at the origin. MapKit draws the curve and handles the antimeridian.
-            if let selected {
-                let origin = CLLocationCoordinate2D(latitude: selected.originLatitude, longitude: selected.originLongitude)
-                let destination = CLLocationCoordinate2D(latitude: selected.destinationLatitude, longitude: selected.destinationLongitude)
-                MapPolyline(coordinates: [origin, destination], contourStyle: .geodesic)
-                    .stroke(Color.brand, lineWidth: 3)
-                Annotation("", coordinate: origin) {
-                    Circle().fill(Color.brand).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2))
+                // M7: a geodesic route with a dot at the origin. MapKit draws the curve and handles the antimeridian.
+                if let selected {
+                    let origin = CLLocationCoordinate2D(latitude: selected.originLatitude, longitude: selected.originLongitude)
+                    let destination = CLLocationCoordinate2D(latitude: selected.destinationLatitude, longitude: selected.destinationLongitude)
+                    // MapKit redraws a line only when its points change, not when only its dash phase does. So each step
+                    // repeats the destination a different number of times: the same line, drawn afresh with the new phase.
+                    let step = dotStep(timeline.date)
+                    MapPolyline(coordinates: [origin] + Array(repeating: destination, count: step + 1), contourStyle: .geodesic)
+                        .stroke(Color.brand, style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [0, dotGap], dashPhase: dotGap - CGFloat(step)))
+                    Annotation("", coordinate: origin) {
+                        Circle().fill(Color.brand).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2))
+                    }
+                    let plane = GreatCircle.shared.plane(
+                        from: GeoPoint(latitude: selected.originLatitude, longitude: selected.originLongitude),
+                        to: GeoPoint(latitude: selected.destinationLatitude, longitude: selected.destinationLongitude),
+                        segments: 64
+                    )
+                    Annotation("", coordinate: CLLocationCoordinate2D(latitude: plane.latitude, longitude: plane.longitude)) {
+                        PlaneBadge(heading: plane.headingDegrees)
+                    }
+                    .annotationTitles(.hidden)
                 }
             }
+            // D27: a quiet, grey map, so the pills and route stand out. Apple's logo and Legal link must stay.
+            .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
+            .safeAreaPadding(.bottom, bottomInset)
         }
-        // D27: a quiet, grey map, so the pills and route stand out. Apple's logo and Legal link must stay.
-        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
-        // M8: the first display uses MapKit's automatic framing, which fits every marker. Recording the camera
-        // after each move turns that into a fixed position, so later filter changes don't reframe the map.
+        // M8: the first display uses MapKit's automatic framing, which fits every marker. Recording that camera once
+        // turns it into a fixed position, so later filter changes don't reframe the map; the user's own moves reach
+        // `camera` through the binding. Recording every move instead caught MapKit mid-animation, because the moving
+        // dots redraw the map, and froze a route's framing halfway (found in Step 6.3d).
         .onMapCameraChange(frequency: .onEnd) { context in
-            camera = .camera(context.camera)
+            if camera == nil { camera = .camera(context.camera) }
         }
         // M8: the camera moves on an explicit selection, never because filters changed.
-        .onChange(of: selected?.id) { _, id in
-            guard id != nil, let flight = model.state.selected else { return }
+        .onChange(of: routeToFit) { _, id in
+            guard let id, id != fitted, let flight = model.state.selected, flight.id == id else { return }
+            fitted = id
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.8)) { camera = routeCamera(flight) }
         }
-        .overlay(alignment: .top) {
-            // M6: no markers, but the map stays usable around the message.
-            if state.results.isEmpty {
-                VStack(spacing: 4) {
-                    Text("No flights match").font(.appTitle)
-                    TextLink(text: "Reset filters") { model.store.resetAll() }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.card, in: .rect(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
-                .padding(16)
-            }
-        }
+        .onChange(of: selected?.id) { _, id in if id == nil { fitted = nil } }
+    }
+
+    /**
+     * As Android's: the dots move a quarter of the line's width (1 pt) every 60 ms, in ten steps per gap. A falling
+     * phase moves them forward.
+     */
+    private func dotStep(_ date: Date) -> Int {
+        if reduceMotion { return 0 }
+        return Int(date.timeIntervalSinceReferenceDate / 0.06) % 10
+    }
+}
+
+/** M9: dots the line's width across (4 pt), 2.5 widths apart, as on Android. */
+private let dotGap: CGFloat = 10
+
+/** M9: the plane in Roame's pink on a white disc, turned to the route's heading. The map doesn't rotate, so it stays true. */
+private struct PlaneBadge: View {
+    let heading: Double
+
+    var body: some View {
+        MSIcon(name: "ms_flight", size: 20)
+            .foregroundStyle(Color.brand)
+            .rotationEffect(.degrees(heading))
+            .frame(width: 32, height: 32)
+            .background(.white, in: .circle)
+            .overlay(Circle().stroke(.black.opacity(0.2), lineWidth: 1))
+            .accessibilityHidden(true)
     }
 }
 
@@ -132,8 +173,9 @@ private func markersSelectedLast(_ markers: [DestinationMarker], _ selectedCode:
 }
 
 /**
- * Fits the route. The shared `GreatCircle` unwraps longitudes, so a route across the antimeridian gives
- * a narrow span around it rather than the long way round the world.
+ * Fits the route: a map rectangle around the shared `GreatCircle` points, with room around it. The points' longitudes are
+ * unwrapped, so a route across the antimeridian gives one rectangle running past the world's edge, which MapKit
+ * accepts, rather than the long way round the world. MapKit fits a rectangle exactly, where it shortened regions here.
  */
 private func routeCamera(_ flight: FlightItem) -> MapCameraPosition {
     let points = GreatCircle.shared.interpolate(
@@ -141,17 +183,12 @@ private func routeCamera(_ flight: FlightItem) -> MapCameraPosition {
         to: GeoPoint(latitude: flight.destinationLatitude, longitude: flight.destinationLongitude),
         segments: 64
     )
-    return region(lats: points.map(\.latitude), lons: points.map(\.longitude)) ?? .automatic
-}
-
-private func region(lats: [Double], lons: [Double]) -> MapCameraPosition? {
-    guard let minLat = lats.min(), let maxLat = lats.max(), let minLon = lons.min(), let maxLon = lons.max() else { return nil }
-    var centerLon = (minLon + maxLon) / 2
-    while centerLon > 180 { centerLon -= 360 }
-    while centerLon < -180 { centerLon += 360 }
-    let span = MKCoordinateSpan(
-        latitudeDelta: min(max((maxLat - minLat) * 1.4, 8), 150),
-        longitudeDelta: min(max((maxLon - minLon) * 1.3, 8), 350)
-    )
-    return .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2, longitude: centerLon), span: span))
+    let world = MKMapSize.world
+    let xs = points.map { ($0.longitude + 180) / 360 * world.width }
+    let ys = points.map { MKMapPoint(CLLocationCoordinate2D(latitude: $0.latitude, longitude: 0)).y }
+    guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return .automatic }
+    var rect = MKMapRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    rect = rect.insetBy(dx: -max(rect.width * 0.15, world.width * 0.01), dy: -max(rect.height * 0.25, world.height * 0.01))
+    if rect.minX < 0 { rect.origin.x += world.width }
+    return .rect(rect)
 }

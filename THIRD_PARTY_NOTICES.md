@@ -31,10 +31,10 @@ The algorithm is Lawrence Philips' Double Metaphone ("The Double Metaphone Searc
 
 | | |
 |---|---|
-| Component | 26 icons from Google's Material Symbols, Rounded style, 24 px: `search`, `search_off`, `tune`, `crown`, `airline_seat_recline_extra`, `airline_seat_recline_normal`, `auto_awesome`, `flight`, `calendar_month`, `arrow_back`, `close`, `check`, `chevron_right`, `cloud_off`, `favorite` (outline and filled), `near_me`, `person`, `settings`, `lock`, `info`, `logout`, and since Step 6.3c `flight_takeoff`, `flight_land`, `swap_vert`, `keyboard_arrow_down` (ours: `ms_arrow_down`) |
+| Component | 27 icons from Google's Material Symbols, Rounded style, 24 px: `search`, `search_off`, `tune`, `crown`, `airline_seat_recline_extra`, `airline_seat_recline_normal`, `auto_awesome`, `flight`, `calendar_month`, `arrow_back`, `close`, `check`, `chevron_right`, `cloud_off`, `favorite` (outline and filled), `near_me`, `person`, `settings`, `lock`, `info`, `logout`, and since Step 6.3c `flight_takeoff`, `flight_land`, `swap_vert`, `keyboard_arrow_down` (ours: `ms_arrow_down`), and since Step 6.3d `map` |
 | Source | https://github.com/google/material-design-icons at commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7`: `symbols/android/<icon>/materialsymbolsrounded/` for Android, and `symbols/web/<icon>/materialsymbolsrounded/` for iOS |
 | License | Apache License 2.0 (full text in [`LICENSE`](LICENSE)). Copyright Google LLC. The repository has no NOTICE file |
-| Our files | Android: `androidApp/src/main/res/drawable/ms_*.xml`, each with a header naming its source file. iOS: `iosApp/Assets.xcassets/ms_*.imageset/ms_*.svg`, the same 26 icons under the same names |
+| Our files | Android: `androidApp/src/main/res/drawable/ms_*.xml`, each with a header naming its source file. iOS: `iosApp/Assets.xcassets/ms_*.imageset/ms_*.svg`, the same 27 icons under the same names |
 | How it's used | Every icon in both apps, so the two look the same (D37, D38) |
 | Modifications | Android: renamed with an `ms_` prefix, and `android:tint="?attr/colorControlNormal"` removed so the app can tint them. iOS: renamed with an `ms_` prefix; the SVGs are byte-for-byte the upstream files, set to render as templates so the app can tint them |
 | Verification | Each iOS SVG was compared byte for byte with the upstream file at the commit above (2026‑11‑04) |

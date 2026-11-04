@@ -27,13 +27,12 @@ struct ExplorerApp: View {
                 // The results stay alive behind the other pages and tabs, as on Android (D31), so the list, map and
                 // camera survive. The landing page stays too, so it keeps its scroll position.
                 let results = tab == .explore && page == .results
-                VStack(spacing: 0) {
-                    SubpageTopBar(title: "Flights") {
-                        dismissKeyboard()
-                        page = .landing
-                    }
-                    ExploreScreen(isActive: results, onDebugLongPress: debugHook)
-                }
+                ResultsScreen(
+                    isActive: results,
+                    onBack: { page = .landing },
+                    onEditSearch: { page = .search },
+                    onDebugLongPress: debugHook
+                )
                 .opacity(results ? 1 : 0)
                 .allowsHitTesting(results)
                 .accessibilityHidden(!results)
@@ -142,75 +141,6 @@ struct ExplorerApp: View {
     }
 }
 
-private struct ExploreScreen: View {
-    @Environment(ExplorerModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var openSheet: FilterKind?
-    @State private var openMarker: String?
-    // Kept here, so switching between List and Map, or tabs, keeps the view and the map's camera (M8).
-    @State private var showMap = false
-    @State private var camera: MapCameraPosition?
-    /** False while another tab is shown on top; this screen stays alive underneath (D31, as on Android). */
-    let isActive: Bool
-    let onDebugLongPress: (() -> Void)?
-
-    var body: some View {
-        let state = model.state
-        switch state.data {
-        case let unavailable as DataStatus.Unavailable:
-            UnavailableMessage(error: unavailable.error) { model.store.refresh() }
-        case let data as DataStatus.Ready:
-            if state.options.isEmpty {
-                // UI_SPEC §4: a successful empty response is not an error (R4).
-                VStack(spacing: 0) {
-                    StaleBanner(data: data)
-                    RefreshProgress(data: data)
-                    EmptyState(icon: "ms_flight", title: "No flights available right now", message: "The server returned no flights.")
-                }
-            } else {
-                VStack(spacing: 0) {
-                    SearchHeader()
-                    FilterBar { openSheet = $0 }
-                    ResultSummary()
-                    // L4: switching changes only the view; the selection and filters stay in the store.
-                    SegmentedControl(options: ["List", "Map"], selectedIndex: showMap ? 1 : 0) { showMap = $0 == 1 }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
-                        .padding(.bottom, 4)
-                    StaleBanner(data: data)
-                    RefreshProgress(data: data)
-                    Group {
-                        if showMap {
-                            ExplorerMap(camera: $camera) { openMarker = $0 }
-                                .safeAreaInset(edge: .bottom) { SelectionCard(onDebugLongPress: onDebugLongPress) }
-                                .sheet(isPresented: Binding(get: { openMarker != nil }, set: { if !$0 { openMarker = nil } })) {
-                                    if let code = openMarker { MarkerSheet(code: code) }
-                                }
-                        } else if state.results.isEmpty {
-                            FilteredEmpty()
-                        } else {
-                            ResultsList(onDebugLongPress: onDebugLongPress)
-                        }
-                    }
-                    // UI_SPEC §5: List and Map cross-fade, unless Reduce Motion is on.
-                    .animation(reduceMotion ? nil : .default, value: showMap)
-                }
-                // M5: the sheet closes when its destination drops out of the results.
-                .onChange(of: state.markers.map(\.code)) { _, codes in
-                    if let code = openMarker, !codes.contains(code) { openMarker = nil }
-                }
-                .background(Color.background)
-                .sheet(isPresented: Binding(get: { openSheet != nil }, set: { if !$0 { openSheet = nil } })) {
-                    if let kind = openSheet { FilterSheet(kind: kind) }
-                }
-            }
-        default:
-            // DataStatus.Loading, the only other case.
-            LoadingList()
-        }
-    }
-}
-
 /**
  * R11: the refresh on launch shows a thin bar over the data, never a full-screen loader. On iOS, SwiftUI's
  * linear `ProgressView` with no value is a still grey line, so this slides a short bar along a track, as
@@ -265,60 +195,7 @@ struct StaleBanner: View {
     }
 }
 
-private struct ResultsList: View {
-    @Environment(ExplorerModel.self) private var model
-    let onDebugLongPress: (() -> Void)?
-
-    var body: some View {
-        let state = model.state
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                ForEach(state.results, id: \.id) { flight in
-                    FlightRow(
-                        flight: flight,
-                        isSelected: flight.id == state.selected?.id,
-                        isPending: state.pendingWriteIds.contains(flight.id),
-                        onTap: {
-                            dismissKeyboard()
-                            model.store.select(flightId: flight.id)
-                        },
-                        onToggleSave: { model.store.toggleSave(flightId: flight.id) }
-                    )
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-        // UI_SPEC §5: scrolling the list dismisses the keyboard.
-        .scrollDismissesKeyboard(.immediately)
-        // L6: the card sits over the bottom of the list, which scrolls its last rows clear of it.
-        .safeAreaInset(edge: .bottom) { SelectionCard(onDebugLongPress: onDebugLongPress) }
-    }
-}
-
-/** The discovery selection's card, the same over the list and the map (L1, L6). */
-private struct SelectionCard: View {
-    @Environment(ExplorerModel.self) private var model
-    let onDebugLongPress: (() -> Void)?
-
-    var body: some View {
-        let state = model.state
-        if let selected = state.selected {
-            FlightCard(
-                flight: selected,
-                isPending: state.pendingWriteIds.contains(selected.id),
-                onClose: { model.store.select(flightId: nil) },
-                onToggleSave: { model.store.toggleSave(flightId: selected.id) },
-                onDebugLongPress: onDebugLongPress
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-        }
-    }
-}
-
-/** UI_SPEC §4 first load: skeleton rows with a label. */
-private struct LoadingList: View {
+struct LoadingList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Finding flights…")

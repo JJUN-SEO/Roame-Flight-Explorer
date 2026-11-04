@@ -76,7 +76,7 @@ struct LandingScreen: View {
 }
 
 /** Roame's search bar: the current search, or "Where to?", and its dates and cabin. Tapping it opens the search. */
-private struct SearchPill: View {
+struct SearchPill: View {
     let state: ExplorerState
     let action: () -> Void
 

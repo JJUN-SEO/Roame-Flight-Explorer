@@ -17,14 +17,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -102,7 +101,16 @@ private const val STYLE_TIMEOUT_MS = 10_000L
 private const val MARKERS = "markers"
 private const val PILLS = "marker-pills"
 private const val ROUTE = "route"
+private const val ROUTE_LINE = "route-line"
 private const val ORIGIN = "origin"
+private const val PLANE = "plane"
+private const val PLANE_IMAGE = "plane-image"
+
+/**
+ * M9: the route as dots one line width across and 2.5 widths apart. Each pattern moves the dots a quarter of a width
+ * towards the destination (a zero-length dash with round caps is a dot), so stepping through them marches the dots along.
+ */
+private val DOT_STEPS: List<Array<Float>> = List(10) { i -> arrayOf(0f, i * 0.25f, 0f, 2.5f - i * 0.25f) }
 
 /** Room around fitted markers and routes, so no pill is clipped at the edge. 80 px clipped one in Step 0.3. */
 private val FitPadding = 56.dp
@@ -128,6 +136,8 @@ class MapHolder internal constructor() {
     // The map's listeners are added once, so they read the latest screen from here.
     internal var onMarkerTap: (code: String) -> Unit = {}
     internal var markers: List<DestinationMarker> = emptyList()
+    /** How much of the map's bottom the results sheet covers, so the first fit leaves the markers above it. */
+    internal var coveredBottom: Int = 0
 
     private var started = false
     private var resumed = false
@@ -138,12 +148,15 @@ class MapHolder internal constructor() {
         created.getMapAsync { loadedMap ->
             // D27: MapLibre's BSD licence doesn't require its logo. The ⓘ credit stays.
             loadedMap.uiSettings.isLogoEnabled = false
+            // North stays up and the map stays flat, as on iOS, so the plane's heading stays true (M9).
+            loadedMap.uiSettings.isRotateGesturesEnabled = false
+            loadedMap.uiSettings.isTiltGesturesEnabled = false
             val saved = camera.value
             if (saved != null) {
                 loadedMap.cameraPosition = saved.toCameraPosition()
             } else {
                 // M8: on first display, fit every marker. Wait for layout, which fitting needs.
-                created.post { markersCamera(markers, fitPadding)?.let(loadedMap::moveCamera) }
+                created.post { markersCamera(markers, fitPadding, fitPadding + coveredBottom)?.let(loadedMap::moveCamera) }
             }
             loadedMap.addOnCameraIdleListener { camera.value = loadedMap.cameraPosition.toArray() }
             loadedMap.addOnMapClickListener { point ->
@@ -199,9 +212,11 @@ fun rememberMapHolder(): MapHolder {
 }
 
 /**
- * The results as destination pills, with the selected flight's great-circle route (UI_SPEC §2.2, M1–M8).
- * [camera] outlives the map, so it's kept even when the activity is recreated (M8). While not [visible], the map
- * stays in place but hidden, paused, and out of reach of taps and TalkBack (D31).
+ * The results as destination pills, with the selected flight's great-circle route as moving dots and a plane
+ * (UI_SPEC §2.1, M1–M9). [camera] outlives the map, so it's kept even when the activity is recreated (M8). While not
+ * [visible], the map stays in place but hidden, paused, and out of reach of taps and TalkBack (D31). [bottomInset] is
+ * how much of the map the results sheet and the selection card cover; a selected route is fitted above it once
+ * [insetReady], which waits for the card to be measured.
  */
 @Composable
 fun ExplorerMap(
@@ -210,19 +225,21 @@ fun ExplorerMap(
     visible: Boolean,
     camera: MutableState<DoubleArray?>,
     bottomInset: Dp,
+    insetReady: Boolean,
     onMarkerTap: (code: String) -> Unit,
-    onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
     SideEffect {
         holder.onMarkerTap = onMarkerTap
         holder.markers = state.markers
+        holder.coveredBottom = with(density) { bottomInset.roundToPx() }
     }
     val mapView = holder.view ?: rememberNewMapView(holder, camera)
     if (mapView == null) {
         Box(modifier)
     } else {
-        MapContent(mapView, holder, visible, state, bottomInset, onReset, modifier)
+        MapContent(mapView, holder, visible, state, bottomInset, insetReady, modifier)
     }
 }
 
@@ -253,9 +270,10 @@ private fun MapContent(
     visible: Boolean,
     state: ExplorerState,
     bottomInset: Dp,
-    onReset: () -> Unit,
+    insetReady: Boolean,
     modifier: Modifier,
 ) {
+    val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val density = LocalDensity.current
     val reduceMotion = rememberReduceMotion()
@@ -297,7 +315,7 @@ private fun MapContent(
         if (holder.style != null) return@LaunchedEffect
         holder.timedOut = false
         loadedMap.setStyle(Style.Builder().fromUri(STYLE_URL)) { loaded ->
-            loaded.addOverlays()
+            loaded.addOverlays(planeBitmap(context, density.density))
             holder.style = loaded
             holder.timedOut = false
         }
@@ -311,8 +329,22 @@ private fun MapContent(
         loaded.showRoute(state.selected)
     }
 
+    // M9: the dots march from the origin to the destination while the route shows, and stand still under Reduce Motion.
+    LaunchedEffect(style, state.selected?.id, visible, reduceMotion) {
+        val line = style?.getLayerAs<LineLayer>(ROUTE_LINE) ?: return@LaunchedEffect
+        line.setProperties(PropertyFactory.lineDasharray(DOT_STEPS[0]))
+        if (state.selected == null || !visible || reduceMotion) return@LaunchedEffect
+        var step = 0
+        while (true) {
+            delay(60)
+            step = (step + 1) % DOT_STEPS.size
+            line.setProperties(PropertyFactory.lineDasharray(DOT_STEPS[step]))
+        }
+    }
+
     // M8: the camera moves on an explicit selection, never because filters changed.
     val inset by rememberUpdatedState(bottomInset)
+    val ready by rememberUpdatedState(insetReady)
     var shownSelection by remember { mutableStateOf(state.selected?.id) }
     LaunchedEffect(map, state.selected?.id, visible) {
         val loadedMap = map ?: return@LaunchedEffect
@@ -322,8 +354,9 @@ private fun MapContent(
         // A flight chosen in the list while the map is hidden doesn't move it, as before D31 and as on iOS.
         if (!visible) return@LaunchedEffect
         if (selected != null && isNew) {
-            // The card appears with the selection. Wait for its height, or the route is fitted underneath it.
-            val cardInset = withTimeoutOrNull(1_000) { snapshotFlow { inset }.first { it > 0.dp } } ?: inset
+            // The card appears with the selection and the sheet drops. Wait for both, or the route is fitted underneath.
+            withTimeoutOrNull(1_000) { snapshotFlow { ready }.first { it } }
+            val cardInset = inset
             val sides = with(density) { FitPadding.roundToPx() }
             val top = with(density) { FitPaddingVertical.roundToPx() }
             val bottom = with(density) { (FitPaddingVertical + cardInset).roundToPx() }
@@ -352,12 +385,8 @@ private fun MapContent(
             // the background, but the view stays attached: detaching it is what leaks (Step 6.1).
             update = { it.visibility = if (visible) View.VISIBLE else View.INVISIBLE },
         )
-        when {
-            !visible -> Unit
-            style == null && holder.timedOut -> MapUnavailable(onRetry = { holder.attempt++ })
-            // M6: no markers, but the map stays usable around the message.
-            style != null && state.results.isEmpty() -> MapEmpty(onReset, Modifier.align(Alignment.TopCenter).padding(16.dp))
-        }
+        // M6: with no results the map shows no markers, and the results sheet says why.
+        if (visible && style == null && holder.timedOut) MapUnavailable(onRetry = { holder.attempt++ })
     }
 }
 
@@ -421,25 +450,15 @@ private fun MapUnavailable(onRetry: () -> Unit) {
     }
 }
 
-/** UI_SPEC §4 map empty: a floating card, so the map stays visible. */
-@Composable
-private fun MapEmpty(onReset: () -> Unit, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.map_empty), style = MaterialTheme.typography.titleMedium)
-            TextLink(stringResource(R.string.reset_filters), onReset)
-        }
-    }
-}
-
-private fun Style.addOverlays() {
+private fun Style.addOverlays(plane: Bitmap) {
     addSource(GeoJsonSource(ROUTE))
     addLayer(
-        LineLayer("route-line", ROUTE).withProperties(
+        LineLayer(ROUTE_LINE, ROUTE).withProperties(
             PropertyFactory.lineColor(ROUTE_COLOR),
-            PropertyFactory.lineWidth(3f),
+            PropertyFactory.lineWidth(4f),
             PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+            PropertyFactory.lineDasharray(DOT_STEPS[0]),
         ),
     )
     addSource(GeoJsonSource(ORIGIN))
@@ -459,6 +478,18 @@ private fun Style.addOverlays() {
             PropertyFactory.iconIgnorePlacement(true),
             // M4: the selected destination is drawn on top of a nearby one, such as HND and NRT.
             PropertyFactory.symbolSortKey(get("sort")),
+        ),
+    )
+    // M9: the plane, on top, turned to the route's heading; it turns with the map, which doesn't rotate anyway.
+    addImage(PLANE_IMAGE, plane)
+    addSource(GeoJsonSource(PLANE))
+    addLayer(
+        SymbolLayer("plane-icon", PLANE).withProperties(
+            PropertyFactory.iconImage(PLANE_IMAGE),
+            PropertyFactory.iconRotate(get("heading")),
+            PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+            PropertyFactory.iconAllowOverlap(true),
+            PropertyFactory.iconIgnorePlacement(true),
         ),
     )
 }
@@ -485,13 +516,42 @@ private fun Style.showMarkers(markers: List<DestinationMarker>, selectedCode: St
     getSourceAs<GeoJsonSource>(MARKERS)?.setGeoJson(FeatureCollection.fromFeatures(features))
 }
 
-/** M7: the great-circle line from the shared `GreatCircle`, with a dot at the origin. */
+/** M7, M9: the great-circle line from the shared `GreatCircle`, with a dot at the origin and the plane halfway. */
 private fun Style.showRoute(selected: FlightItem?) {
     val route = selected?.let(::routePoints)
     val line = route?.let { Feature.fromGeometry(LineString.fromLngLats(it)) }
     val origin = route?.first()?.let { Feature.fromGeometry(it) }
+    val plane = selected?.let {
+        val at = GreatCircle.plane(GeoPoint(it.originLatitude, it.originLongitude), GeoPoint(it.destinationLatitude, it.destinationLongitude))
+        Feature.fromGeometry(Point.fromLngLat(at.longitude, at.latitude)).apply { addNumberProperty("heading", at.headingDegrees) }
+    }
     getSourceAs<GeoJsonSource>(ROUTE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(line)))
     getSourceAs<GeoJsonSource>(ORIGIN)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(origin)))
+    getSourceAs<GeoJsonSource>(PLANE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(plane)))
+}
+
+/** M9: the plane in Roame's pink on a white disc, pointing north, so `iconRotate` turns it to the heading. */
+private fun planeBitmap(context: Context, density: Float): Bitmap {
+    val size = (32 * density).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val radius = size / 2f - density
+    canvas.drawCircle(size / 2f, size / 2f, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE })
+    canvas.drawCircle(
+        size / 2f, size / 2f, radius,
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0x33000000
+            style = Paint.Style.STROKE
+            strokeWidth = density
+        },
+    )
+    val inset = (6 * density).toInt()
+    ContextCompat.getDrawable(context, R.drawable.ms_flight)?.mutate()?.apply {
+        setTint(ROUTE_COLOR)
+        setBounds(inset, inset, size - inset, size - inset)
+        draw(canvas)
+    }
+    return bitmap
 }
 
 private fun routePoints(flight: FlightItem): List<Point> =
@@ -507,12 +567,12 @@ private fun routeCamera(flight: FlightItem, sides: Int, top: Int, bottom: Int): 
     return CameraUpdateFactory.newLatLngBounds(bounds, sides, top, sides, bottom)
 }
 
-private fun markersCamera(markers: List<DestinationMarker>, padding: Int): CameraUpdate? = when (markers.size) {
+private fun markersCamera(markers: List<DestinationMarker>, padding: Int, bottom: Int): CameraUpdate? = when (markers.size) {
     0 -> null
     1 -> CameraUpdateFactory.newLatLngZoom(LatLng(markers[0].latitude, markers[0].longitude), 4.0)
     else -> CameraUpdateFactory.newLatLngBounds(
         LatLngBounds.from(markers.maxOf { it.latitude }, markers.maxOf { it.longitude }, markers.minOf { it.latitude }, markers.minOf { it.longitude }),
-        padding,
+        padding, padding, padding, bottom,
     )
 }
 

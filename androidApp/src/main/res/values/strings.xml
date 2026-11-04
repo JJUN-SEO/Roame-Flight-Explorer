@@ -36,10 +36,6 @@
     <string name="reset_filters">Reset filters</string>
 
     <string name="route_cities">%1$s → %2$s</string>
-    <plurals name="filter_count">
-        <item quantity="one">%d filter</item>
-        <item quantity="other">%d filters</item>
-    </plurals>
     <string name="reset">Reset</string>
     <string name="filter_dates">Dates</string>
     <string name="filter_cabin">Cabin</string>
@@ -73,15 +69,12 @@
     <string name="remove_failed">Couldn\'t remove flight.</string>
     <string name="retry">Retry</string>
 
-    <string name="view_list">List</string>
-    <string name="view_map">Map</string>
     <plurals name="marker_sheet_title">
         <item quantity="one">%1$s · %2$s — %3$s flight from %4$s</item>
         <item quantity="other">%1$s · %2$s — %3$s flights from %4$s</item>
     </plurals>
     <string name="map_unavailable_title">Can\'t load the map</string>
     <string name="map_unavailable_body">It needs internet the first time. Your flights are still in the list.</string>
-    <string name="map_empty">No flights match</string>
     <string name="stale_banner">Couldn\'t refresh · showing results from %s</string>
 
     <!-- Debug builds only (TEST_PLAN §6). -->
@@ -144,7 +137,6 @@
     <string name="landing_offer_description">%1$s best offer: %2$s to %3$s, %4$s, %5$s, %6$s points</string>
     <string name="landing_offer_below">, %1$d%% below typical</string>
     <string name="landing_offer_value">, worth about $%1$s</string>
-    <string name="results_title">Flights</string>
     <!-- The search page (Step 6.3c, UI_SPEC §2.0b) -->
     <string name="search_title">Search flights</string>
     <string name="search_button">Search flights</string>
@@ -155,4 +147,14 @@
     <string name="calendar_end">%1$s, end date</string>
     <string name="calendar_single">%1$s, selected</string>
     <string name="calendar_between">%1$s, in range</string>
+    <!-- The results (Step 6.3d, UI_SPEC §2.1) -->
+    <string name="clear_all">Clear all</string>
+    <string name="filters_title">Filters</string>
+    <plurals name="filters_button">
+        <item quantity="one">Filters, %d active</item>
+        <item quantity="other">Filters, %d active</item>
+    </plurals>
+    <string name="filters_button_none">Filters</string>
+    <string name="show_map">Map</string>
+    <string name="results_sheet_handle">Flight list. Drag to show more or less of the map</string>
 </resources>

@@ -234,6 +234,7 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
   - On first display, fit all markers.
   - **Never** move the camera automatically when filters change, so the user's pan and zoom are respected.
   - On an explicit selection, animate to fit the route.
+- **M9** The selected route is drawn as dots moving from the origin to the destination (Step 6.3d, owner's design), with a plane at its midpoint, the middle of `GreatCircle.interpolate`'s points. `GreatCircle.plane()` gives the plane's position, its longitude back in -180..180, and its heading: the angle of the line between the points either side of it as a north-up Web Mercator map draws it, in degrees clockwise from north. Both maps stay north-up and flat, so the heading holds. Under Reduce Motion the dots stand still.
 
 ## 6b. Landing page deals (B)
 
@@ -254,7 +255,7 @@ Implemented in `domain/Deals.kt` (`DealIndex`), built once per data change in `i
 - **L1** The shared store holds a single discovery selection, `selectedFlightId`. The list and the map both read it.
 - **L2** The user selects a flight by tapping a list row or a flight in a marker sheet. Tapping the selected row again, or the card's close button, deselects it. The store does this, so both apps behave the same: selecting the selected flight again deselects it.
 - **L3** Every time the results are recomputed, a selected id that is no longer in the results is cleared. The clearing is permanent: the selection does not come back when the filter is undone. *(assumption)*
-- **L4** Switching between List and Map never changes the selection.
+- **L4** Switching between List and Map never changes the selection. Since Step 6.3d there is no switch: the list is a sheet over the map, and moving it (more list, more map) never changes the selection either.
 - **L5** The selection is not persisted across launches.
 - **L6** The selection card shows:
   - the origin (code + city) and destination (code + city), joined by a route connector graphic,

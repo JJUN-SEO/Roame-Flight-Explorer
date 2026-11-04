@@ -2,9 +2,6 @@ package travel.roame.takehome.android.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -15,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,47 +23,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,7 +52,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import travel.roame.takehome.android.R
 import travel.roame.takehome.model.FetchError
-import travel.roame.takehome.model.FilterKind
 import travel.roame.takehome.presentation.DataStatus
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
@@ -102,8 +78,8 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
     SuccessHaptics(state)
     // Kept here, outside the tabs, so List or Map, the list's position, the map's camera and the map itself (D31)
     // survive tab switches.
-    val view = ExploreView(
-        showMap = rememberSaveable { mutableStateOf(false) },
+    val view = ResultsView(
+        sheet = rememberSaveable { mutableStateOf(SheetStop.Half) },
         listState = rememberLazyListState(),
         mapCamera = rememberSaveable { mutableStateOf<DoubleArray?>(null) },
         map = rememberMapHolder(),
@@ -123,10 +99,15 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
                 // window. The landing page stays too, so it keeps its scroll position.
                 val exploring = tab == AppTab.Explore
                 Box(Modifier.fillMaxSize().notPlacedUnless(exploring && page == ExplorePage.Results)) {
-                    Column {
-                        SubpageTopBar(stringResource(R.string.results_title), onBack = { page = ExplorePage.Landing })
-                        ExploreScreen(state, store, view, exploring && page == ExplorePage.Results, onDebugLongPress)
-                    }
+                    ResultsScreen(
+                        state,
+                        store,
+                        view,
+                        active = exploring && page == ExplorePage.Results,
+                        onBack = { page = ExplorePage.Landing },
+                        onEditSearch = { page = ExplorePage.Search },
+                        onDebugLongPress = onDebugLongPress,
+                    )
                 }
                 Box(Modifier.fillMaxSize().notPlacedUnless(exploring && page == ExplorePage.Landing)) {
                     LandingScreen(
@@ -150,8 +131,6 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
                         SearchScreen(state, store, onClose = { page = ExplorePage.Landing }, onSearch = { page = ExplorePage.Results })
                     }
                 }
-                // After a selection's back (ExploreScreen), back returns to the landing page.
-                BackHandler(enabled = exploring && page == ExplorePage.Results && state.selected == null) { page = ExplorePage.Landing }
                 when (tab) {
                     AppTab.Saved -> SavedScreen(state, store, onDebugLongPress)
                     AppTab.Account -> AccountScreen(appearance, onToast = { note = it })
@@ -220,17 +199,6 @@ private fun <T : Any> rememberLast(value: T?): T? {
 }
 
 /**
- * What Explore shows and where, kept across tab switches and rotation. The map itself is kept across tab switches,
- * but made again when the activity is recreated, because it holds the activity (D31).
- */
-private class ExploreView(
-    val showMap: MutableState<Boolean>,
-    val listState: LazyListState,
-    val mapCamera: MutableState<DoubleArray?>,
-    val map: MapHolder,
-)
-
-/**
  * UI_SPEC §5: a new search or filter starts the list from the top. Otherwise the list keeps the old top flight in view,
  * and after Reset the first rows are hidden above it. A save or a refresh keeps the position, and so does rotation,
  * because the first value is only remembered.
@@ -273,97 +241,6 @@ private fun Modifier.notPlacedUnless(placed: Boolean): Modifier = if (placed) {
     }
 }
 
-@Composable
-private fun ExploreScreen(
-    state: ExplorerState,
-    store: ExplorerStore,
-    view: ExploreView,
-    active: Boolean,
-    onDebugLongPress: (() -> Unit)?,
-) {
-    // UI_SPEC §5: back closes a sheet first (the sheet handles that), then deselects, then exits.
-    BackHandler(enabled = active && state.selected != null) { store.select(null) }
-    // Leaving the tab used to remove its fields, which hid the keyboard. Now they stay, so let go of the focus.
-    val focusManager = LocalFocusManager.current
-    LaunchedEffect(active) { if (!active) focusManager.clearFocus() }
-    when (val data = state.data) {
-        DataStatus.Loading -> LoadingList()
-        is DataStatus.Unavailable -> UnavailableMessage(data.error, store::refresh)
-        is DataStatus.Ready -> when {
-            // UI_SPEC §4: a successful empty response is not an error (R4).
-            state.options.isEmpty -> Column {
-                StaleBanner(data)
-                RefreshProgress(data)
-                EmptyState(R.drawable.ms_flight, stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
-            }
-            else -> Column {
-                var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
-                var openMarker by rememberSaveable { mutableStateOf<String?>(null) }
-                var showMap by view.showMap
-                SearchHeader(state, store)
-                FilterBar(state, store, onOpen = { openSheet = it })
-                ResultSummary(state, onReset = store::resetAll)
-                // L4: switching changes only the view; the selection and filters stay in the store.
-                ViewSwitch(showMap, onChange = { showMap = it })
-                StaleBanner(data)
-                RefreshProgress(data)
-                val selected = state.selected
-                WithSelectionCard(
-                    card = selected?.let { flight ->
-                        {
-                            FlightCard(
-                                flight,
-                                isPending = flight.id in state.pendingWriteIds,
-                                onClose = { store.select(null) },
-                                onToggleSave = { store.toggleSave(flight.id) },
-                                onDebugLongPress = onDebugLongPress,
-                            )
-                        }
-                    },
-                ) { bottomInset ->
-                    val reduceMotion = rememberReduceMotion()
-                    Box(Modifier.fillMaxSize()) {
-                        // D31: once made, the map stays in place under the list, hidden, so switching back doesn't
-                        // detach it from the window. MapLibre leaks memory each time its view is attached again (Step 6.1).
-                        if (showMap || view.map.view != null) {
-                            ExplorerMap(
-                                state,
-                                holder = view.map,
-                                visible = showMap && active,
-                                camera = view.mapCamera,
-                                bottomInset = bottomInset,
-                                onMarkerTap = { openMarker = it },
-                                onReset = store::resetAll,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                        Crossfade(showMap, animationSpec = if (reduceMotion) snap() else tween(200), label = "List or Map") { map ->
-                            if (!map) {
-                                // Opaque, so the hidden map can't show through.
-                                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                                    if (state.results.isEmpty()) {
-                                        FilteredEmpty(state, onReset = store::resetAll)
-                                    } else {
-                                        ResultsList(state, store, view.listState, bottomInset)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                openSheet?.let { kind -> FilterSheet(kind, state, store, onDismiss = { openSheet = null }) }
-                // M5: the sheet follows the results live, and closes when its destination drops out.
-                val marker = state.markers.firstOrNull { it.code == openMarker }
-                if (showMap && marker != null) {
-                    MarkerSheet(marker, state, store, onDismiss = { openMarker = null })
-                } else if (openMarker != null) {
-                    LaunchedEffect(Unit) { openMarker = null }
-                }
-            }
-        }
-    }
-}
-
 /** R11: the refresh on launch shows a thin bar over the data, never a full-screen loader. */
 @Composable
 internal fun RefreshProgress(data: DataStatus.Ready) {
@@ -384,42 +261,6 @@ internal fun StaleBanner(data: DataStatus.Ready) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onTertiaryContainer,
         )
-    }
-}
-
-/** UI_SPEC §1: List | Map, on the shared segmented control (D38). */
-@Composable
-private fun ViewSwitch(showMap: Boolean, onChange: (Boolean) -> Unit) {
-    SegmentedControl(
-        listOf(stringResource(R.string.view_list), stringResource(R.string.view_map)),
-        selectedIndex = if (showMap) 1 else 0,
-        onSelect = { onChange(it == 1) },
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    )
-}
-
-@Composable
-private fun ResultsList(state: ExplorerState, store: ExplorerStore, listState: LazyListState, bottomInset: Dp) {
-    val focusManager = LocalFocusManager.current
-    // UI_SPEC §5: scrolling the list dismisses the keyboard.
-    LaunchedEffect(listState.isScrollInProgress) { if (listState.isScrollInProgress) focusManager.clearFocus() }
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp + bottomInset),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(state.results, key = { it.id }) { flight ->
-            FlightRow(
-                flight,
-                isSelected = flight.id == state.selected?.id,
-                isPending = flight.id in state.pendingWriteIds,
-                onClick = {
-                    focusManager.clearFocus()
-                    store.select(flight.id)
-                },
-                onToggleSave = { store.toggleSave(flight.id) },
-            )
-        }
     }
 }
 
@@ -480,7 +321,7 @@ private fun WithSelectionCard(card: (@Composable () -> Unit)?, content: @Composa
 
 /** UI_SPEC §4 first load: skeleton rows with a label. */
 @Composable
-private fun LoadingList() {
+internal fun LoadingList() {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.loading), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         repeat(7) {

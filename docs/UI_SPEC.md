@@ -26,16 +26,17 @@ Tab bar
 │   │     ├── Dates → the calendar (K1–K5), with Any dates and Done
 │   │     ├── Cabin → the cabin sheet
 │   │     └── [Search flights] → the results
-│   └── Results (from the search page or a deal; Back returns to the landing page)
-│       ├── Search header: From / To fields
-│       │     ├── Suggestions dropdown under the focused field, updated on every keystroke (S14)
-│       │     └── "Showing Sydney (SYD)" hint under a field when fuzzy matching was used (S13)
-│       ├── Filter bar: [Dates] [Cabin] [Points] [Programs]  ·  Reset
-│       ├── Summary line: "238 flights · 2 filters"
-│       ├── Segmented control: List | Map      (switching never changes the selection, L4)
+│   └── Results (Step 6.3d, like Airbnb's; from the search page or a deal; ← and back return to the landing page)
+│       ├── Header: ← · the search summary (tap → the search page) · Filters (badge = active count) → the Filters sheet
+│       ├── Active filters as chips, each with ✕ (C3), then "Clear all" (clears filters, keeps the search)
 │       ├── Status banner (stale / refreshing), when relevant
-│       ├── Content: List  or  Map
-│       └── Selection card (overlay at the bottom, shared by List and Map)
+│       ├── The map, filling the rest: pills (M1–M6); a selected route as moving dots with a plane (M7, M9)
+│       │     └── Tap a pill → the destination's flights (M5) → tap one → selected
+│       ├── The list, as a sheet over the map: peek (handle + "238 flights"), half (the start), or full
+│       │     ├── Drag it anywhere while it isn't full; when full, the list scrolls and only its header drags
+│       │     └── When full, a "Map" button drops it to the peek
+│       └── Selecting a flight drops the sheet to the peek and shows the selection card above it; the map frames
+│           the route above the card (M8). Moving the sheet never changes the selection (L4)
 ├── Saved (badge = count)         ← always reachable, ignores filters (V8)
 │   ├── Saved list
 │   └── Saved card (its own selection, L7)
@@ -46,7 +47,7 @@ Tab bar
     └── Log out                                        (a toast: there's no account)
 ```
 
-Location is asked for when the app first opens (D32). Step 6.3d replaces the results with map-first results and a search summary (PLAN Step 6.3); this section and §2 change with it.
+Location is asked for when the app first opens (D32).
 
 ## 2. Wireframes
 
@@ -112,50 +113,40 @@ A city with no bundled photo gets a card in the avatar's gradient with a plane (
 
 The calendar page: a bar with Back and "Dates", the weekday letters S M T W T F S, then each month ("February 2027") as rows of 44 pt day cells. The range's ends are pink 40 pt circles with white numbers, the days between sit on a light pink band, and days outside the data are faint and can't be tapped. "Any dates" and "Done" sit at the bottom. The data has no travellers or trip type, so the page shows neither.
 
-### 2.1 Explore: List
+### 2.1 Explore: results, the list at half (Step 6.3d)
 
 ```
 ┌────────────────────────────────────────┐
-│ Explore                                │
-│ ┌────────────────────────────────────┐ │
-│ │ ✈︎ From   city or airport        ⓧ │ │
-│ ├────────────────────────────────────┤ │
-│ │ ⚑ To     city or airport        ⓧ │ │
-│ └────────────────────────────────────┘ │
-│ (Feb 1 – Apr 1)(Business ✓)(≤ 60k ✓)(Programs ▾)  Reset │
-│ 238 flights · 2 filters                │
-│ ┌──────── List ────────┬──── Map ────┐ │
-│ ⚠ Couldn't refresh · results from 3:42 PM │
-│ ┌────────────────────────────────────┐ │
-│ │ BOS ───────✈─────── CDG  25,000 pts│ │
-│ │ Boston → Paris          Prem. Econ.│ │
-│ │ Mon, Feb 1 · Avios              ♡  │ │
-│ └────────────────────────────────────┘ │
-│   … rows (selected row = tinted + accent border) …
-│ ┌────────── selection card ──────────┐ │
-│ └────────────────────────────────────┘ │
+│ ←  ╭ 🔍 Toronto → Tokyo             ╮ (⚙)²│  the search summary; Filters with its badge
+│    ╰    Feb 10 – Feb 20 · Business  ╯    │
+│ (Feb 10 – Feb 20 ✕)(Business ✕)  Clear all │
+│ ⚠ Couldn't refresh · results from 3:42 PM │  only when the last refresh failed
+│      MAP  (CDG 12·25k)  (NRT 55·19k)   │
+│ Maps · Legal                           │  Apple's (iOS) or the ⓘ credit (Android), above the sheet
+│╭──────────────────────────────────────╮│
+││                 ───                  ││  handle
+││              238 flights             ││  peek height: 64
+││ ┌──────────────────────────────────┐ ││
+││ │ YYZ ──────✈────── NRT 86,000 pts │ ││  the same rows as before
+││ └──────────────────────────────────┘ ││
 ├────────────────────────────────────────┤
-│   ◉ Explore             ♡ Saved (3)    │
+│   Explore        ♡ Saved (3)   Account │
 └────────────────────────────────────────┘
 ```
 
-### 2.2 Explore: Map
+Fully open, the sheet covers the map up to the header, the list scrolls, and a dark "Map" pill floats at its bottom. At the peek only the handle and the count show.
+
+### 2.2 Explore: results, a flight selected
 
 ```
-┌────────────────────────────────────────┐
-│ (same header, filter bar, summary, segmented control)
-│                                        │
-│        ╭─────────────╮                 │
-│        │ CDG  12·25k │   ╭───────────╮ │
-│        ╰──────▾──────╯   │ NRT 55·19k│ │
-│   •BOS ⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒⌒▶ (highlighted)  │
-│                                        │
-│ ┌────────── selection card ──────────┐ │
-└────────────────────────────────────────┘
-Tap a marker → sheet (half height):
-  "Paris · CDG — 12 flights from 25,000 pts"
-  rows ordered by points (O2); tap a row → select, collapse the sheet, draw the route, fit the camera (M8)
+│      •YYZ ·  ·  · ✈ ·  ·  ·  ·(NRT)    │  dots move from origin to destination; the plane
+│                                        │  sits halfway, pointing along the line (M9)
+│ ┌────────── selection card ──────────┐ │  above the sheet, as before (§2.3)
+│ └────────────────────────────────────┘ │
+│╭──────────────── 238 flights ─────────╮│  the sheet, dropped to its peek
 ```
+
+Tap a pill → a sheet with that destination's flights: "Paris · CDG — 12 flights from 25,000 pts", ordered by points (O2). Tapping a row selects it and closes that sheet; the results sheet drops and the camera frames the route above the card (M8).
 
 ### 2.3 Selection card (the same component in List, Map and Saved)
 
@@ -173,16 +164,18 @@ Tap a marker → sheet (half height):
 In the Saved view, add "No longer listed" when the flight isn't in the latest results (V4).
 ```
 
-### 2.4 Filter sheets
+### 2.4 The Filters sheet (Step 6.3d)
 
-| Filter | Control | Notes |
+One sheet with every filter, opened by the Filters button or an active chip. Top to bottom:
+
+| Section | Control | Notes |
 |---|---|---|
-| Dates | The app's own calendar (K1–K5, §2.0b), the same on both apps (D41) | Shows "Feb 1 – Apr 1" by default, the whole range marked. The first tap starts a range, the second ends it. "Any dates" resets to the default |
-| Cabin | Segmented or radio: Any · Economy · Premium Economy · Business | Single choice (F5) |
+| Dates | A row with the range and ›, which opens the calendar (K1–K5, §2.0b) inside the sheet, with Back, "Any dates" and Done | Shows "Feb 1 – Apr 1" by default (F2) |
+| Cabin | Option rows: Any · Economy · Premium Economy · Business, a pink ✓ on the choice | Single choice (F5) |
 | Points | Slider from min to max in steps of 500, with a live label "Up to 60,000 pts" or "Any" | The top end means no limit (F4) |
-| Programs | Checklist of every program, with "Clear" | Multi-select. Empty means all (F6). |
+| Programs | Option rows for every program, ✓ on each chosen one | Multi-select. Empty means all (F6) |
 
-Each sheet shows a live **"Show N flights"** button. Choices apply as they're made, so N is the real count and the button just closes the sheet. Sheets open fully, so the button is always on screen.
+At the bottom, "Clear all" (the filters only, keeping the search) and a live **"Show N flights"** button. Choices apply as they're made, so N is the real count and the button just closes the sheet. The sheet opens fully, so the button is always on screen. The search page's Cabin row still opens a cabin-only sheet.
 
 ## 3. Components
 
@@ -206,7 +199,7 @@ Use the same copy on both platforms.
 
 | State | When (rule) | What the user sees |
 |---|---|---|
-| First load | `DataStatus.Loading` | 6–8 skeleton rows (List) or a centred spinner (Map), with the label "Finding flights…". The landing page shows its header and search bar, then "Finding flights…" over grey shapes for the banner and a deck card |
+| First load | `DataStatus.Loading` | Under the results' header, 6–8 skeleton rows with the label "Finding flights…". The landing page shows its header and search bar, then "Finding flights…" over grey shapes for the banner and a deck card |
 | Ready | `Ready`, has results | Results. No banner when the last refresh succeeded. |
 | Refreshing | `Ready.isRefreshing` | A thin progress bar. Content stays interactive. |
 | Stale / offline | `Ready.refreshError != null` (R6) | Banner: "Couldn't refresh · showing results from 3:42 PM". Results stay usable. No Retry (D29): the next launch refreshes. The landing page shows the same banner under its search bar, and its deals come from the cached data |
@@ -217,13 +210,12 @@ Use the same copy on both platforms.
 | Unavailable: bad data | `Unavailable(InvalidData)` | "We received flight data we couldn't read." + **Try again** |
 | Unavailable: other | `Unavailable(Unknown)` | "Something went wrong while loading flights." + **Try again** |
 | Synced empty | `Ready` and the cache is empty (R4) | "No flights available right now" + "The server returned no flights." No error styling. |
-| Filtered empty | `Ready`, cache not empty, `results` empty | "No flights match your search" + the list of active filters + **Reset filters** |
-| Location not shared | From hasn't had focus yet, or the permission was denied (D16, D30) | Nothing extra is shown and there is no error. Ranking uses airport volume only. A denial isn't asked again by the app. |
+| Filtered empty | `Ready`, cache not empty, `results` empty | The sheet's header reads "No flights match your search", and the sheet shows the active filters + **Reset filters** (C4). The map shows no pills (M6) |
+| Location not shared | The permission wasn't asked yet, or was denied (D16, D32) | Nothing extra is shown and there is no error. Ranking uses airport volume only. A denial isn't asked again by the app. |
 | Location shared | Permission granted and a location received | Nothing extra is shown. In the From field, matched airports near the user rank higher in the hint and suggestions. The To field doesn't use location. |
 | Fuzzy match hint | A field's search tier is `Fuzzy` (S13) | A secondary caption under that field: "Showing Sydney (SYD)". Two airports: "Showing Tokyo (HND), Tokyo (NRT)". More than two: "Showing Sydney (SYD), Seoul (ICN) +2 more". Not shown for prefix matches. |
 | Search suggestions | A field has focus and its query has matches (S14) | A dropdown under the field with up to 5 rows, such as "Tokyo (all airports)" and "Tokyo (HND)". Hidden for a blank query or no match. |
-| Map empty | Same as filtered empty, in Map mode | The map stays visible with a floating card: "No flights match · Reset filters" |
-| Map can't load (Android only, D24) | The map's style hasn't loaded after 10 seconds (A15) | The map area shows "Can't load the map" + "It needs internet the first time. Your flights are still in the list." + **Retry**. It disappears as soon as the map loads. |
+| Map can't load (Android only, D24) | The map's style hasn't loaded after 10 seconds (A15) | The map area, behind the sheet, shows "Can't load the map" + "It needs internet the first time. Your flights are still in the list." + **Retry**. It disappears as soon as the map loads. |
 | Saved empty | `saved` is empty | "No saved flights yet" + "Tap ♡ on any flight to keep it here — even offline." |
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
 | Save or remove failed | A `UserMessage` arrives (V7) | Toast: "Couldn't save flight." / "Couldn't remove flight." + **Retry**. The heart stays in its previous state. |
@@ -234,21 +226,21 @@ Use the same copy on both platforms.
 - **Typing** updates results live, without a submit button. The keyboard's Search or Done key dismisses the keyboard. Scrolling the list also dismisses the keyboard.
 - **A new search or filter** scrolls the list back to the top, so the best results are in view. A save or a background refresh keeps the scroll position. (Found in Step 4.4: Compose keeps the old top flight in view, so after Reset the first rows were hidden above it.)
 - **Tapping a suggestion** picks what it names, closes the dropdown and shows "Tokyo (HND)" or "Tokyo (all airports)" in the field. Editing the text clears the pick.
-- **Tapping a row** selects it, highlights it and shows the card. Tapping the selected row again, or ✕, deselects it.
+- **Tapping a row** selects it and highlights it; the sheet drops to its peek and the card shows above it, over the map, which frames the route. Tapping the selected row again, or ✕, deselects it.
 - **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the toast with no haptic. A write succeeded when its id leaves `pendingWriteIds` with no `UserMessage` for it, because the store has no success event.
 - **Hearts:** each row has a ♡ that saves or removes the flight, the same as the card's button. While its write runs, it shows a spinner and ignores taps (V7).
-- **No manual refresh** (D29, owner): no pull to refresh and no ⟳ button. The app refreshes when it opens, showing a thin progress bar over the data, and the first-load error has Try again (R7). The stale banner sits under the List | Map switch; on the "No flights available" screen it sits above the message.
+- **No manual refresh** (D29, owner): no pull to refresh and no ⟳ button. The app refreshes when it opens, showing a thin progress bar over the data, and the first-load error has Try again (R7). The stale banner sits under the results' header and the landing page's search bar; on the "No flights available" screen it sits above the message.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
 - **The search page** applies each choice as it's made (like the filter sheets), so ✕ keeps them and "Search flights" only opens the results. Picking a suggestion, or the keyboard's Search key, returns from a picker to the form. Back leaves a picker or the calendar first, then the page.
 - **The calendar** (K3): the first tap marks a start and waits for the end; a day on or after it ends the range; an earlier day starts again. The results follow each tap.
 - **⇅** swaps From and To (S15).
 - **Map:**
-  - Marker tap → sheet.
-  - Sheet row tap → select.
+  - Marker tap → the destination's sheet. Row tap there → select.
   - Tapping empty map does nothing; it does *not* deselect, to avoid surprise.
-  - The camera only moves on the first display and on explicit selection (M8).
-- **List ↔ Map** uses a cross-fade. The selection and filters are untouched. The list's scroll position is kept while the list is in the composition or view tree.
-- **Back / swipe-to-dismiss** closes sheets. Android's back gesture closes a sheet first, then deselects, then exits.
+  - The camera only moves on the first display and on explicit selection (M8). It doesn't rotate or tilt, on either app, so the plane's heading stays true (M9).
+- **The results sheet** (the same rules on both apps): it rests at the peek (64 pt: the handle and the count), half the map (where it starts), or full. While it isn't full, a drag anywhere on it moves it and the list doesn't scroll; when full, the list scrolls and only its header drags it. A release goes to the nearest rest, or one rest on in the direction of a flick. When full, a dark "Map" pill drops it to the peek. Moving it never changes the selection or the filters (L4), and the list keeps its scroll position.
+- **"Clear all"** clears every active filter (C3 on each) and keeps the search; the filtered-empty state's **Reset filters** resets the search too (C4).
+- **Back / swipe-to-dismiss** closes sheets. Android's back gesture closes a sheet first, then deselects, then leaves the results for the landing page.
 
 ## 6. Design tokens
 
@@ -321,6 +313,10 @@ Use the same tokens on both platforms, mapped to native APIs.
 | `ListRow`, `OptionRow` | 56 pt rows: an icon, Body large text, a chevron; or 52 pt rows with a pink check when chosen | Account's menu; sheet options |
 | `DateRangeCalendar` | Weekday letters, then months of 44 pt day cells; pink 40 pt circles on the ends, a light pink band between | The search page's dates; the Dates sheet |
 | `SubpageTopBar(closes:)` | As above, with ✕ instead of Back | The search page |
+| Results sheet | The background colour, with 20 pt top corners and a shadow; a 36 × 4 handle and the count | The results (§2.1) |
+| `FiltersButton` | A 48 pt outlined circle with ⚙ (tune) and a count badge | The results' header |
+| Map button | A dark (#2B2B2B) 44 pt pill with a map icon and "Map" in white | Over the full results sheet |
+| Plane | Roame's pink plane on a white 32 pt disc with a faint ring, turned to the route's heading (M9) | The selected route |
 
 Search fields are pills in the card colour with a magnifying glass, and a pink border while focused. Their suggestions are a card with a soft shadow. Sheets stay native containers; the points slider stays native until Step 6.3d.
 
@@ -343,16 +339,16 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - Search page rows: "From, Toronto (YYZ)", "Dates, Feb 10 – Feb 20"; the swap button: "Swap From and To".
   - Calendar days: "Wed, Feb 10, 2027, start date" (or "end date", "selected", "in range"); month names are headings; the weekday letters are hidden.
 - Colour is never the only signal. Selected rows also get a border and a checkmark or "Selected" accessibility trait.
-- Respect Reduce Motion: no camera fly-to animation and no cross-fade.
+- Respect Reduce Motion: no camera fly-to animation, and the route's dots stand still (M9).
 
 ## 9. Platform notes
 
 | | iOS (SwiftUI, iOS 17) | Android (Compose, M3) |
 |---|---|---|
 | Shell | A `VStack` of the content and `AppTabBar` (§6). Explore stays alive, hidden, under the other tabs. Portrait only (D28) | A `Column` of the content and `AppTabBar` (§6). Explore stays composed but unplaced under the other tabs, so the map is never detached (D31). Portrait only (D28) |
-| Sheets | `.sheet` + `.presentationDetents([.medium, .large])` | `ModalBottomSheet` |
+| Sheets | `.sheet` + `.presentationDetents` for the Filters, cabin and marker sheets. The results sheet is the app's own (`ResultsScreen.swift`) | `ModalBottomSheet` for the same three. The results sheet is the app's own (`ResultsScreen.kt`) |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
-| Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5) | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
+| Map | `Map(position:, interactionModes: [.pan, .zoom])` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5). The route's dots step with a `TimelineView`; the plane is an `Annotation`. Its bottom safe area is what the sheet and card cover | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route, its dash pattern stepped to move the dots, and a symbol layer for the plane. Rotation and tilt off. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the sheet and card (D27) |
 | Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
 | Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
 | Date picker | `DateRangeCalendar` (`Calendar.swift`), drawing the shared `DateCalendar` (D41). Dates stay ISO strings throughout | `DateRangeCalendar` (`Calendar.kt`), the same. Material's `DateRangePicker` and its UTC millis are no longer used |

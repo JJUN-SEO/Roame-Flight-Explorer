@@ -116,4 +116,38 @@ class GreatCircleTest {
         assertTrue(points.all { !it.latitude.isNaN() && !it.longitude.isNaN() })
         assertTrue(points.all { it.latitude in -90.0..90.0 })
     }
+
+    // The plane (M9)
+
+    @Test
+    fun m9_thePlaneSitsHalfwayAlongTheRoute() {
+        val plane = GreatCircle.plane(GeoPoint(0.0, 0.0), GeoPoint(0.0, 40.0))
+        assertEquals(0.0, plane.latitude, 1e-9)
+        assertEquals(20.0, plane.longitude, 1e-9)
+    }
+
+    @Test
+    fun m9_thePlanePointsTheWayTheRouteGoes() {
+        assertEquals(90.0, GreatCircle.plane(GeoPoint(0.0, 0.0), GeoPoint(0.0, 40.0)).headingDegrees, 1e-6, "east")
+        assertEquals(270.0, GreatCircle.plane(GeoPoint(0.0, 40.0), GeoPoint(0.0, 0.0)).headingDegrees, 1e-6, "west")
+        assertEquals(0.0, GreatCircle.plane(GeoPoint(10.0, 5.0), GeoPoint(50.0, 5.0)).headingDegrees, 1e-6, "north")
+        assertEquals(180.0, GreatCircle.plane(GeoPoint(50.0, 5.0), GeoPoint(10.0, 5.0)).headingDegrees, 1e-6, "south")
+    }
+
+    @Test
+    fun m9_theHeadingIsAsTheMapDrawsTheLine_notTheCompassBearing() {
+        // On Mercator a north-east line at high latitude looks steeper than its compass bearing.
+        val plane = GreatCircle.plane(GeoPoint(59.0, 0.0), GeoPoint(61.0, 2.0))
+        assertTrue(plane.headingDegrees in 25.0..35.0, "about 30°, where the compass bearing is about 45°: ${plane.headingDegrees}")
+    }
+
+    @Test
+    fun m9_acrossTheAntimeridianThePlaneStillPointsEast_andItsLongitudeIsNormal() {
+        val tokyoToSeattle = GreatCircle.plane(GeoPoint(35.77, 140.39), GeoPoint(47.45, -122.31))
+        assertTrue(tokyoToSeattle.headingDegrees in 30.0..150.0, "eastward: ${tokyoToSeattle.headingDegrees}")
+        assertTrue(tokyoToSeattle.longitude in -180.0..180.0, "${tokyoToSeattle.longitude}")
+        val middle = GreatCircle.interpolate(GeoPoint(35.77, 140.39), GeoPoint(47.45, -122.31))[32]
+        assertEquals(middle.latitude, tokyoToSeattle.latitude, 1e-9)
+        assertEquals((middle.longitude - tokyoToSeattle.longitude + 720.0) % 360.0, 0.0, 1e-9)
+    }
 }

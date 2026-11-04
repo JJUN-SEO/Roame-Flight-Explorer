@@ -111,7 +111,7 @@ fun LandingScreen(
 
 /** Roame's search bar: the current search, or "Where to?", and its dates and cabin. Tapping it opens the search. */
 @Composable
-private fun SearchPill(state: ExplorerState, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun SearchPill(state: ExplorerState, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val origin = state.originPick?.let { airportLabel(it) } ?: state.originQuery.takeIf { it.isNotBlank() }
     val destination = state.destinationPick?.let { airportLabel(it) } ?: state.destinationQuery.takeIf { it.isNotBlank() }
     val anywhere = stringResource(R.string.landing_anywhere)

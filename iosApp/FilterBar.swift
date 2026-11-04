@@ -1,55 +1,39 @@
 import SwiftUI
 import Shared
 
-/** The chips, in the order C2 gives them. Kotlin/Native lowercases the whole enum name: `MaxPoints` is `maxpoints`. */
-var filterKinds: [FilterKind] { [.dates, .cabin, .maxpoints, .programs] }
-
-/** One chip per filter, filled when active, with ✕ to clear it on its own (C2, C3, UI_SPEC §1). */
-struct FilterBar: View {
+/**
+ * The active filters as chips, each with ✕ to clear it on its own (C2, C3), then "Clear all", which clears the filters
+ * but keeps the search; the same as Android's. Tapping a chip opens the Filters sheet. Nothing shows while no filter
+ * is active.
+ */
+struct ActiveFilterBar: View {
     @Environment(ExplorerModel.self) private var model
-    let onOpen: (FilterKind) -> Void
+    let onOpen: () -> Void
 
     var body: some View {
         let state = model.state
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(filterKinds, id: \.self) { kind in
-                    let active = state.activeFilters.first { $0.kind == kind }
-                    let name = kindName(kind)
-                    let label = active.map { chipValue($0, state) } ?? defaultChipLabel(kind, state)
-                    AppChip(
-                        label: label,
-                        isActive: active != nil,
-                        description: active != nil ? "\(name): \(label), active" : name,
-                        onTap: { onOpen(kind) },
-                        onClear: { model.store.clearFilter(kind: kind) },
-                        clearDescription: "Clear \(name)"
-                    )
+        if !state.activeFilters.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(state.activeFilters, id: \.self) { filter in
+                        let name = kindName(filter.kind)
+                        let label = chipValue(filter, state)
+                        AppChip(
+                            label: label,
+                            isActive: true,
+                            description: "\(name): \(label), active",
+                            onTap: onOpen,
+                            onClear: { model.store.clearFilter(kind: filter.kind) },
+                            clearDescription: "Clear \(name)"
+                        )
+                    }
+                    TextLink(text: "Clear all") {
+                        for filter in state.activeFilters { model.store.clearFilter(kind: filter.kind) }
+                    }
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-    }
-}
-
-/** "238 flights · 2 filters" and Reset, which is hidden when there's nothing to reset (C1, C2, C4). */
-struct ResultSummary: View {
-    @Environment(ExplorerModel.self) private var model
-
-    var body: some View {
-        let state = model.state
-        let filters = state.activeFilters.count
-        HStack {
-            Text(filters == 0 ? flightCount(Int(state.resultCount)) : "\(flightCount(Int(state.resultCount))) · \(filters) \(filters == 1 ? "filter" : "filters")")
-                .font(.appTitle)
-            Spacer()
-            if state.hasAnythingToReset {
-                TextLink(text: "Reset") { model.store.resetAll() }
+                .padding(EdgeInsets(top: 4, leading: 16, bottom: 8, trailing: 8))
             }
         }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 36)
     }
 }
 
@@ -89,11 +73,6 @@ private func chipValue(_ filter: ActiveFilter, _ state: ExplorerState) -> String
     default:
         ""
     }
-}
-
-/** Dates show the data's range by default, so the starting state is visible (F2, FILT-10). */
-private func defaultChipLabel(_ kind: FilterKind, _ state: ExplorerState) -> String {
-    kind == .dates ? dateRange(state.options.minDate, state.options.maxDate) : kindName(kind)
 }
 
 private func dateRange(_ start: String?, _ end: String?) -> String {
