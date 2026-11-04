@@ -30,6 +30,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -49,10 +50,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.maplibre.android.LibraryLoader
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdate
@@ -60,8 +64,10 @@ import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.storage.FileSource
 import org.maplibre.android.style.expressions.Expression.get
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
@@ -112,13 +118,37 @@ fun ExplorerMap(
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // PLAN 6.1: starting MapLibre reads the disk to load its native library, to find its cache folder and to find
+    // the app's files folder for its default options. MapLibre keeps each result, so doing them here on a
+    // background thread first means the main thread never reads the disk.
+    val appContext = LocalContext.current.applicationContext
+    val options by produceState<MapLibreMapOptions?>(null) {
+        value = withContext(Dispatchers.IO) {
+            LibraryLoader.load()
+            FileSource.getResourcesCachePath(appContext)
+            MapLibreMapOptions.createFromAttributes(appContext)
+        }
+    }
+    options?.let { MapContent(it, state, camera, bottomInset, onMarkerTap, onReset, modifier) } ?: Box(modifier)
+}
+
+@Composable
+private fun MapContent(
+    options: MapLibreMapOptions,
+    state: ExplorerState,
+    camera: MutableState<DoubleArray?>,
+    bottomInset: Dp,
+    onMarkerTap: (code: String) -> Unit,
+    onReset: () -> Unit,
+    modifier: Modifier,
+) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val density = LocalDensity.current
     val reduceMotion = rememberReduceMotion()
     val mapView = remember {
         MapLibre.getInstance(context.applicationContext)
-        MapView(context).apply { onCreate(null) }
+        MapView(context, options).apply { onCreate(null) }
     }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
@@ -146,6 +176,10 @@ fun ExplorerMap(
         lifecycle.addObserver(observer)
         onDispose {
             lifecycle.removeObserver(observer)
+            // The map usually leaves while the screen stays resumed (List was chosen). MapLibre expects onPause
+            // and onStop before onDestroy, so that it stops its renderer and connectivity listener.
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) mapView.onPause()
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) mapView.onStop()
             mapView.onDestroy()
         }
     }

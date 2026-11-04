@@ -78,10 +78,10 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| PERF-1 | Scrolling, searching, filtering and map interaction stay responsive with the full dataset | No visible jank while scrolling 1,000 rows or typing quickly. The map stays smooth while results change. | — | 🟨 typing quickly and the map changing results checked on both; scroll smoothness needs a real device (Step 6.1) |
-| PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | 🟨 Android: only MapLibre's own reads (Step 4.8). iOS: the Thread Performance Checker only runs from Xcode (Step 6.1) |
+| PERF-1 | Scrolling, searching, filtering and map interaction stay responsive with the full dataset | No visible jank while scrolling 1,000 rows or typing quickly. The map stays smooth while results change. | — | 🟨 typing quickly and the map changing results checked on both. Android scrolling with the Mac's GPU: 9.3% janky frames on a debug build, against 4.5% for Android's Settings app (Step 6.1); a release build and an iPhone are still to measure |
+| PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | 🟨 Android: StrictMode reports nothing, including opening the map (Step 6.1). iOS: the Thread Performance Checker only runs from Xcode |
 | PERF-3 | Results always reflect the user's latest search and filter choices | A test sends rapid query changes and sees only the final query's results. A slow, stale computation can never overwrite a newer one (`mapLatest`). | — | ✅ 2026‑11‑02 |
-| PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | ✅ 2026‑11‑03: Android LeakCanary 0 leaks (Step 4.8). iOS: the `leaks` tool (the Leaks instrument's engine) finds none from app code after the scripted loops; its 40 small leaks are all inside Apple's frameworks (Step 5.8). No crashes during QA |
+| PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | 🟨 iOS: no leaks from app code (Step 5.8). Android: LeakCanary finds none, but about 7 MB of MapLibre's native memory stays behind each time the map opens (Step 6.1); fix waiting for the owner. No crashes during QA |
 
 ## 7. Offline & error handling
 

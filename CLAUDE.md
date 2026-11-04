@@ -149,6 +149,7 @@ These were found in the starter and the fixture.
 - **`#if DEBUG` in Swift (Step 5.4):** the hand-written Xcode project didn't define `DEBUG`, so `#if DEBUG` code compiled away even in Debug builds. The Debug configuration now sets `SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG`.
 - **SwiftUI progress (Step 5.6):** a linear `ProgressView` with no value is a still grey line on iOS, so the refresh bar is drawn by hand.
 - **A hanging API for QA (Step 5.6):** macOS's `nc -l 8080` closes the connection once its input ends, so in the background it gives a quick failure. Use `sleep 45 | nc -l 8080` to hold a request open (TEST_PLAN §6).
+- **Android performance checks (Step 6.1):** a headless emulator (`-no-window`) renders in software (`lavapipe`), so measure frames with a window and `-gpu host`. Under memory pressure, `am dumpheap` can freeze the app; to force a garbage collection, use `adb shell run-as <package> kill -10 <pid>` instead.
 - **iOS performance checks (Step 5.8):** Instruments' Animation Hitches doesn't run on the simulator, and the Thread Performance Checker only runs from Xcode. `leaks`, `heap` and `footprint` work on the simulator app's process; pick the `travel.roame.takehome.ios` one, because the owner's own `.eric` build may be running too.
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 
