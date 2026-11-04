@@ -65,7 +65,6 @@ fun LandingScreen(
     state: ExplorerState,
     scrollState: ScrollState,
     onSearch: () -> Unit,
-    onFlexible: () -> Unit,
     onDestination: (DestinationDeal) -> Unit,
     onOffer: (ProgramOffer) -> Unit,
     onRetry: () -> Unit,
@@ -91,17 +90,15 @@ fun LandingScreen(
                         EmptyState(R.drawable.ms_flight, stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
                     }
                 } else {
-                    HeroCard(onFlexible, Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp))
-                    val home = state.landing.homeAirport
-                    val from = if (home != null) stringResource(R.string.landing_from_home, home.city, home.code) else stringResource(R.string.landing_from_everywhere)
+                    HeroCard(onSearch, Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp))
                     // New deals start from their first card. Otherwise, when the location arrives and reorders them, the
                     // rows keep the old first card in view and the new best deal is hidden off to the left.
-                    key(home?.code) {
-                        SectionHeader(stringResource(R.string.landing_destinations_title), from)
+                    key(state.landing.homeAirport?.code) {
+                        SectionHeader(stringResource(R.string.landing_destinations_title))
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.landing.destinations, key = { it.city }) { deal -> DestinationCard(deal) { onDestination(deal) } }
                         }
-                        SectionHeader(stringResource(R.string.landing_offers_title), from)
+                        SectionHeader(stringResource(R.string.landing_offers_title))
                         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(state.landing.offers, key = { it.program }) { offer -> OfferCard(offer) { onOffer(offer) } }
                         }
@@ -148,9 +145,9 @@ private fun SearchPill(state: ExplorerState, onClick: () -> Unit, modifier: Modi
     }
 }
 
-/** Roame's banner: a landscape with a line of copy and "I'm flexible", which shows every flight. */
+/** Roame's banner: a landscape, a line of copy and "Find a flight", which opens the search like the search bar. */
 @Composable
-private fun HeroCard(onFlexible: () -> Unit, modifier: Modifier = Modifier) {
+private fun HeroCard(onFindFlight: () -> Unit, modifier: Modifier = Modifier) {
     val extras = LocalExtraColors.current
     Box(modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
         Image(painterResource(R.drawable.hero_landscape), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -168,7 +165,7 @@ private fun HeroCard(onFlexible: () -> Unit, modifier: Modifier = Modifier) {
                 Modifier.heightIn(min = 48.dp)
                     .clip(CircleShape)
                     .background(Brush.horizontalGradient(listOf(extras.gradientStart, extras.gradientEnd)))
-                    .clickable(role = Role.Button, onClick = onFlexible)
+                    .clickable(role = Role.Button, onClick = onFindFlight)
                     .padding(horizontal = 32.dp, vertical = 14.dp),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
@@ -179,11 +176,12 @@ private fun HeroCard(onFlexible: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SectionHeader(title: String, subtitle: String) {
-    Column(Modifier.padding(start = 16.dp, top = 28.dp, end = 16.dp, bottom = 12.dp)) {
-        Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
-        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+private fun SectionHeader(title: String) {
+    Text(
+        title,
+        Modifier.padding(start = 16.dp, top = 28.dp, end = 16.dp, bottom = 12.dp).semantics { heading() },
+        style = MaterialTheme.typography.titleLarge,
+    )
 }
 
 /** B8: a photo of the city (D33), its lowest points, and how far its best flight is below typical. */

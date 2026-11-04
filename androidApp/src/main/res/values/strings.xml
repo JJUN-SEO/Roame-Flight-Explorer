@@ -131,12 +131,10 @@
     <string name="landing_search_route">%1$s → %2$s</string>
     <string name="landing_search_details">%1$s · %2$s</string>
     <string name="landing_search_description">Search flights. %1$s, %2$s</string>
-    <string name="landing_hero_title">Fly further on your points</string>
-    <string name="landing_hero_button">I\'m flexible</string>
+    <string name="landing_hero_title">See where your points can take you</string>
+    <string name="landing_hero_button">Find a flight</string>
     <string name="landing_destinations_title">Best deals by destination</string>
     <string name="landing_offers_title">Best offers by program</string>
-    <string name="landing_from_home">From %1$s (%2$s), the airport nearest you</string>
-    <string name="landing_from_everywhere">From every airport, best value first</string>
     <string name="landing_from_points">from %1$s</string>
     <string name="landing_up_to_below">Up to %1$d%% below typical</string>
     <string name="landing_below_typical">%1$d%% below typical</string>

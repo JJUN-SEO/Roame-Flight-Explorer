@@ -15,7 +15,7 @@ struct ExplorerApp: View {
     @State private var pendingBefore: Set<String> = []
     @State private var successes = 0
     @State private var location: UserLocation?
-    /** D36: Explore opens on the landing page; a search, a deal or "I'm flexible" shows the results. */
+    /** D36: Explore opens on the landing page; the search bar, the banner's button or a deal shows the results. */
     @State private var showResults = false
 
     var body: some View {
@@ -37,10 +37,6 @@ struct ExplorerApp: View {
                 let landing = tab == .explore && !showResults
                 LandingScreen(
                     onSearch: { showResults = true },
-                    onFlexible: {
-                        model.store.resetAll()
-                        showResults = true
-                    },
                     onDestination: { deal in
                         model.store.openDestination(codes: deal.codes)
                         showResults = true

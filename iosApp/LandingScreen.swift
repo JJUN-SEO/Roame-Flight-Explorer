@@ -8,7 +8,6 @@ import Shared
 struct LandingScreen: View {
     @Environment(ExplorerModel.self) private var model
     let onSearch: () -> Void
-    let onFlexible: () -> Void
     let onDestination: (DestinationDeal) -> Void
     let onOffer: (ProgramOffer) -> Void
 
@@ -48,13 +47,11 @@ struct LandingScreen: View {
             EmptyState(icon: "ms_flight", title: "No flights available right now", message: "The server returned no flights.")
                 .frame(minHeight: 400)
         } else {
-            HeroCard(action: onFlexible).padding(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
-            let from = state.landing.homeAirport.map { "From \($0.city) (\($0.code)), the airport nearest you" }
-                ?? "From every airport, best value first"
+            HeroCard(action: onSearch).padding(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
             // New deals start from their first card. Otherwise, when the location arrives and reorders them, the
             // rows keep the old first card in view and the new best deal is hidden off to the left.
             Group {
-                SectionHeader(title: "Best deals by destination", subtitle: from)
+                SectionHeader(title: "Best deals by destination")
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 12) {
                         ForEach(state.landing.destinations, id: \.city) { deal in
@@ -63,7 +60,7 @@ struct LandingScreen: View {
                     }
                     .padding(.horizontal, 16)
                 }
-                SectionHeader(title: "Best offers by program", subtitle: from)
+                SectionHeader(title: "Best offers by program")
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: 12) {
                         ForEach(state.landing.offers, id: \.program) { offer in
@@ -113,7 +110,7 @@ private struct SearchPill: View {
     }
 }
 
-/** Roame's banner: a landscape with a line of copy and "I'm flexible", which shows every flight. */
+/** Roame's banner: a landscape, a line of copy and "Find a flight", which opens the search like the search bar. */
 private struct HeroCard: View {
     let action: () -> Void
 
@@ -126,12 +123,12 @@ private struct HeroCard: View {
             .overlay { Color.black.opacity(0.25) }
             .overlay {
                 VStack(spacing: 20) {
-                    Text("Fly further on your points")
+                    Text("See where your points can take you")
                         .font(.appDisplay)
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                     Button(action: action) {
-                        Text("I'm flexible")
+                        Text("Find a flight")
                             .font(.appButton)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 32)
@@ -150,14 +147,12 @@ private struct HeroCard: View {
 
 private struct SectionHeader: View {
     let title: String
-    let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title).font(.appTitleLarge).accessibilityAddTraits(.isHeader)
-            Text(subtitle).font(.appBody).foregroundStyle(Color.secondaryText)
-        }
-        .padding(EdgeInsets(top: 28, leading: 16, bottom: 12, trailing: 16))
+        Text(title)
+            .font(.appTitleLarge)
+            .padding(EdgeInsets(top: 28, leading: 16, bottom: 12, trailing: 16))
+            .accessibilityAddTraits(.isHeader)
     }
 }
 

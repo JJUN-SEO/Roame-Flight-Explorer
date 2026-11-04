@@ -111,7 +111,7 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
     ScrollToTopOnNewSearch(state, view.listState)
     // D32: asked when the app opens. Here, above the tabs, so switching tabs doesn't read the location again.
     UserLocation(store::setUserLocation)
-    // D36: Explore opens on the landing page; a search, a deal or "I'm flexible" shows the results.
+    // D36: Explore opens on the landing page; the search bar, the banner's button or a deal shows the results.
     var showResults by rememberSaveable { mutableStateOf(false) }
     val landingScroll = rememberScrollState()
 
@@ -132,10 +132,6 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
                         state,
                         landingScroll,
                         onSearch = { showResults = true },
-                        onFlexible = {
-                            store.resetAll()
-                            showResults = true
-                        },
                         onDestination = { deal ->
                             store.openDestination(deal.codes)
                             showResults = true

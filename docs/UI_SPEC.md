@@ -16,10 +16,10 @@ Tab bar
 │   ├── Landing page (Step 6.3b, D36): where Explore opens; no flight list until a search
 │   │     ├── "Flight Explorer" in pink, and the search bar: "Where to?" or the current route, with dates · cabin
 │   │     ├── Status banner (stale / refreshing), when relevant
-│   │     ├── Banner: a landscape, "Fly further on your points", [I'm flexible] → every flight
+│   │     ├── Banner: a landscape, "See where your points can take you", [Find a flight] → the search, like the search bar
 │   │     ├── Best deals by destination: a swipeable deck of photo cards (B8) → that city's flights
 │   │     └── Best offers by program: a program's logo over its best flight (B7) → that route, the flight selected
-│   │         Both sections say "From Toronto (YYZ), the airport nearest you" or "From every airport" (B5)
+│   │         With a location, every deal leaves the nearest airport (B5); the cards' routes show it, with no subtitle (owner's choice)
 │   └── Results (opened from the landing page; Back returns to it)
 │       ├── Search header: From / To fields
 │       │     ├── Suggestions dropdown under the focused field, updated on every keystroke (S14)
@@ -55,11 +55,10 @@ Location is asked for when the app first opens (D32). Steps 6.3c–6.3e replace 
 │ ╰────────────────────────────────────╯ │
 │ ┌────────────────────────────────────┐ │
 │ │      (landscape photo, 4:3)        │ │
-│ │     Fly further on your points     │ │  white, Display 28
-│ │         ( I'm flexible )           │ │  gradient pill, 48 tall
+│ │ See where your points can take you │ │  white, Display 28, centred
+│ │         ( Find a flight )          │ │  gradient pill, 48 tall
 │ └────────────────────────────────────┘ │
 │ Best deals by destination              │  Title large
-│ From Toronto (YYZ), the airport nearest you
 │ ┌──────────────┐ ┌──────────          │  260 × 173 photo cards, swipe sideways
 │ │[Up to 35% below typical]│           │  pink pill
 │ │ Johannesburg │ │ Singapore          │  white Title large over a dark fade
@@ -320,7 +319,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
-| Location for ranking and deals (D16, D32) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked when the app first opens. The dialog's reason (`NSLocationWhenInUseUsageDescription`): "Your approximate location shows deals from the airport nearest you, and puts nearby airports first when you search." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked when the app first opens |
+| Location for ranking and deals (D16, D32) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked when the app first opens. The dialog's reason (`NSLocationWhenInUseUsageDescription`), short and conventional at the owner's request: "Your location is used to show flights from airports near you." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked when the app first opens. Android's dialog is the system's own: apps can't add a reason or restyle it, and its colours follow the phone's theme |
 
 ## 10. Scalability
 
