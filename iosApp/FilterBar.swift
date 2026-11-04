@@ -51,7 +51,7 @@ private struct FilterChip: View {
             }
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isActive ? Color.white : Color.primary)
+        .foregroundStyle(isActive ? Color.onAccent : Color.primary)
         .padding(.horizontal, 14)
         .frame(minHeight: 36)
         .background(isActive ? Color.accent : Color.clear, in: .capsule)

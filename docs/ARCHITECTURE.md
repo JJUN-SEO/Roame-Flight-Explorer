@@ -404,6 +404,8 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 **Refresh and offline (Step 5.6, D29).** As on Android, the app refreshes when it opens, and only Try again on the first-load error refreshes otherwise. The stale banner (R6) and the refresh bar (R11) sit under the List | Map switch, and above the message on the "No flights available" screen. The banner formats `lastSuccessAt` in the device's zone with `Format.syncTime` (T4), the same text as Android's. SwiftUI's linear `ProgressView` with no value is a still grey line on iOS, so the bar is drawn by hand: a short accent bar slides along a track in a `TimelineView`, and with Reduce Motion on it fades instead. Cost: while a refresh runs, only that 4-point bar redraws each frame; otherwise nothing.
 
+**Dark mode (Step 5.8).** System colours adapt by themselves. The accent is the app's own colour, so `Theme.swift` gives it a dark-mode value, Android's dark `primary` (`#AFC6FF`), because the deep blue was too dark to read as text on dark grey (about 1.8:1). Text and icons on an accent fill use `Color.onAccent`, white or Android's `onPrimary` (`#002D6C`). MapKit switches to its dark map by itself.
+
 **Location (Step 5.7, D16, D30).** `OriginLocation.swift` wraps a `CLLocationManager`, made once at launch in the tab view's `.task`. The From field calls `fromFocused()` each time it gets focus:
 - If iOS hasn't asked yet, it calls `requestWhenInUseAuthorization()`.
 - If allowed, it reads one location with `requestLocation()` and passes it to the store's `setUserLocation`.

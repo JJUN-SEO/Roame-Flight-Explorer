@@ -188,7 +188,7 @@ Use the same tokens on both platforms, mapped to native APIs.
 
 | Role | iOS | Android |
 |---|---|---|
-| Accent (selection, active chips, Save) | App `AccentColor`, a deep blue | `primary` (derived from the same seed colour) |
+| Accent (selection, active chips, Save) | `Color.accent`: deep blue `#1E4FA3`, and Android's dark-mode `#AFC6FF` in dark mode. Text on it uses `Color.onAccent`: white, or Android's `#002D6C` in dark mode | `primary` (derived from the same seed colour) |
 | Surface / card | `.background` / `secondarySystemGroupedBackground` | `surface` / `surfaceContainer` |
 | Secondary text | `.secondary` | `onSurfaceVariant` |
 | Saved (heart) | `.pink` / `systemPink` | A custom `saved` colour token |

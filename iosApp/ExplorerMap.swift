@@ -73,7 +73,7 @@ private struct MarkerPill: View {
             .font(.caption.weight(.bold).monospacedDigit())
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .foregroundStyle(isSelected ? Color.white : Color.black)
+            .foregroundStyle(isSelected ? Color.onAccent : Color.black)
             .background(isSelected ? Color.accent : Color.white, in: .capsule)
             .overlay(Capsule().strokeBorder(isSelected ? Color.accent : Color.black.opacity(0.6), lineWidth: 1))
             .accessibilityElement()

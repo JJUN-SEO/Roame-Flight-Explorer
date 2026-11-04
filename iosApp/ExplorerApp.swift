@@ -310,6 +310,7 @@ private struct UnavailableMessage: View {
         } actions: {
             Button("Try again", action: onRetry)
                 .buttonStyle(.borderedProminent)
+                .foregroundStyle(Color.onAccent)
         }
     }
 

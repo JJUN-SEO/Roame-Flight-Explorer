@@ -78,10 +78,10 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 
 | ID | Requirement | Acceptance criteria | Rules | Status |
 |---|---|---|---|---|
-| PERF-1 | Scrolling, searching, filtering and map interaction stay responsive with the full dataset | No visible jank while scrolling 1,000 rows or typing quickly. The map stays smooth while results change. | — | ⬜ |
-| PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | 🟨 Android launch clean; full session in Step 4.8 |
+| PERF-1 | Scrolling, searching, filtering and map interaction stay responsive with the full dataset | No visible jank while scrolling 1,000 rows or typing quickly. The map stays smooth while results change. | — | 🟨 typing quickly and the map changing results checked on both; scroll smoothness needs a real device (Step 6.1) |
+| PERF-2 | Network and database work never blocks the UI | Android StrictMode in debug builds reports no disk or network access on the main thread. All repository calls are `suspend` or `Flow` on IO dispatchers. | — | 🟨 Android: only MapLibre's own reads (Step 4.8). iOS: the Thread Performance Checker only runs from Xcode (Step 6.1) |
 | PERF-3 | Results always reflect the user's latest search and filter choices | A test sends rapid query changes and sees only the final query's results. A slow, stale computation can never overwrite a newer one (`mapLatest`). | — | ✅ 2026‑11‑02 |
-| PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | 🟨 LeakCanary installed; scripted session in Step 4.8 |
+| PERF-4 | No crashes and no memory leaks | LeakCanary (Android) and the Xcode Memory Graph / Leaks instrument (iOS) are clean after a scripted session. No crashes during QA. | — | ✅ 2026‑11‑03: Android LeakCanary 0 leaks (Step 4.8). iOS: the `leaks` tool (the Leaks instrument's engine) finds none from app code after the scripted loops; its 40 small leaks are all inside Apple's frameworks (Step 5.8). No crashes during QA |
 
 ## 7. Offline & error handling
 
@@ -95,7 +95,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | OFF-6 | Saving the same flight again updates its details without creating a duplicate | Re-saving an id after its details change leaves one row with the new details. | V2 | ✅ 2026‑11‑02 |
 | OFF-7 | Saved flights remain available when they are missing from the latest API response | Remove a saved flight from the fixture and refresh: it stays in Saved and is labelled "No longer listed". | V4 | ✅ 2026‑11‑03 |
 | OFF-8 | Failed save or remove operations never appear successful | With an injected DB failure, the button reverts, an error message is shown, and the saved state is unchanged. | V7 | ✅ 2026‑11‑03 |
-| OFF-9 | Offline map tiles are **not** required | Noted as out of scope. Once the map has loaded online, it works offline from its cache. If the Android map has never loaded online, it shows a message with Retry (D24), and flights stay available in the list. iOS is expected to show markers over empty tiles. | — | ⬜ |
+| OFF-9 | Offline map tiles are **not** required | Noted as out of scope. Once the map has loaded online, it works offline from its cache. If the Android map has never loaded online, it shows a message with Retry (D24), and flights stay available in the list. iOS is expected to show markers over empty tiles. | — | 🟨 Android: a never-loaded map shows the message and Retry. iOS: offline, the pills draw over saved tiles; blank, never-loaded tiles weren't seen |
 
 ## 8. UX quality
 
@@ -115,7 +115,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | TEST-3 | Tests for map aggregation | Grouping, counts, minimum points, empty input, and consistency with the filters. | M | ✅ 2026‑11‑02 |
 | TEST-4 | Tests for persistence | Atomic cache replacement, survival across reopen, upsert without duplicates, and saved flights independent of the cache. | V, R3 | ✅ 2026‑11‑02 |
 | TEST-5 | Tests for failure handling | Offline, timeout, 5xx, malformed body, success-empty, and save/remove failures. | R, V7 | ✅ 2026‑11‑02 |
-| TEST-6 | Document the checks actually performed on both platforms | The QA checklist in TEST_PLAN §5 is filled in with real results and dates. | — | ⬜ |
+| TEST-6 | Document the checks actually performed on both platforms | The QA checklist in TEST_PLAN §5 is filled in with real results and dates. | — | ✅ 2026‑11‑03: every row has a dated Android and iOS entry |
 
 ## 10. Deliverables
 

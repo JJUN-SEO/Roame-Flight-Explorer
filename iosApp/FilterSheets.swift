@@ -30,6 +30,7 @@ struct FilterSheet: View {
                     Spacer()
                     Button("Show \(flightCount(Int(state.resultCount)))") { dismiss() }
                         .buttonStyle(.borderedProminent)
+                        .foregroundStyle(Color.onAccent)
                 }
                 .padding(16)
                 .background(.bar)

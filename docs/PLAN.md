@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 5.8, in progress. Update this line at every review gate.
+> **Current step:** 5.8, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D30) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -369,6 +369,12 @@ Each step has the same goal, coverage, QA rows and "done when" as its Android st
 
 Differences in behaviour between platforms aren't allowed without asking (§3). Any difference must be native styling only.
 
+**Result of Step 5.8 (2026‑11‑03):** every iOS row in TEST_PLAN §5 has an entry. Q8, Q8b, Q22 and Q24 are 🟨 for the reasons in their rows. Fixed: in dark mode the accent was too dark to read as text, so it now switches to Android's dark-mode blue. Found and listed, none blocking:
+- Q8: pinch zoom needs checking by hand (idb sends one finger).
+- Q8b: with the owner's Wi-Fi off, the pills drew over saved tiles; blank, never-loaded tiles weren't seen.
+- Q22: at large text sizes, labels and airport codes wrap letter by letter and the card's points cut off → Step 6.3.
+- Q24: scroll hitches and the Thread Performance Checker can't run on the simulator from the command line → Step 6.1.
+
 ### Phase 6: Hardening
 
 #### [ ] 6.1 Performance and leaks
@@ -377,6 +383,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Covers:** PERF-1, PERF-2, PERF-3, PERF-4, UX-1. QA: Q24.
 - **Read:** TEST_PLAN §4.
 - **Found in Step 4.8:** the emulator renders graphics in software, so frame timing measured there says nothing about the app (Android's own Settings app was as slow). Measure scrolling on a real phone or a hardware-GPU emulator.
+- **Found in Step 5.8 (iOS):** Instruments' Animation Hitches doesn't run on the simulator ("Hitches is not supported on this platform"), and the Thread Performance Checker only runs from Xcode. Measure both from Xcode on a real iPhone. The `leaks`, `heap` and `footprint` tools do work against the simulator app's process.
 - **Found in Step 4.5:** opening the map for the first time logs three StrictMode disk reads on the main thread, all inside MapLibre: loading its native library (425 ms on a slow emulator) and reading its default options. Try loading the library on a background thread before creating the `MapView`.
 - **Done when:** every check in TEST_PLAN §4 is run on both platforms and recorded.
 
@@ -398,6 +405,10 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
   - Add a separate Filters button where people choose their filter options. Settle with the owner whether it replaces the four chips or sits beside them.
   - The owner chose to restyle here rather than before Step 4.4, knowing the card, the Saved tab, the map and the iOS app are built in the current look until then.
 - **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move.
+- **Found in Step 5.8 (iOS):**
+  - At the largest standard text size, the field labels wrap ("Fro / m") and the row's airport codes wrap ("YY / Z"). At the largest accessibility size, the codes wrap one letter per line, the row's points break mid-number, and the card covers most of the screen with its points cut to "16,0…" and Remove to "…". UI_SPEC §8 asks rows to reflow instead.
+  - Row labels read "YYZ, BCN, 16,000 pts, Toronto → Barcelona, Economy, Mon, Feb 1 · Aeroplan", and pills "…, from 26,000 pts", where UI_SPEC §8 asks for full words, "points" and "saved".
+  - In dark mode the card has no visible shadow, so it blends with the rows behind it.
 - **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app.
 - **Found in Step 4.4, for the TalkBack pass:**
   - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label.

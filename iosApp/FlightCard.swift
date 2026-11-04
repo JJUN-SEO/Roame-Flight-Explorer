@@ -75,7 +75,7 @@ private struct SaveButton: View {
         if isSaved {
             Button(action: onTap) { label }.buttonStyle(.bordered).disabled(isPending)
         } else {
-            Button(action: onTap) { label }.buttonStyle(.borderedProminent).disabled(isPending)
+            Button(action: onTap) { label }.buttonStyle(.borderedProminent).foregroundStyle(Color.onAccent).disabled(isPending)
         }
     }
 }
