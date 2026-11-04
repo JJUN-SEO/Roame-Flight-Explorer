@@ -22,10 +22,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -49,12 +51,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
@@ -108,15 +112,32 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
         // Above the selection card, so a message never hides the card's Save or Remove button.
         snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = cardInset)) },
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Text("✈") }, label = { Text(stringResource(R.string.tab_explore)) })
+            // Roame's tab bar: white, with the selected tab in pink and no pill behind it.
+            val tabColors = NavigationBarItemDefaults.colors(
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = Color.Transparent,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurface,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurface,
+            )
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                NavigationBarItem(
+                    selected = tab == 0,
+                    onClick = { tab = 0 },
+                    icon = { Icon(painterResource(R.drawable.ms_search), contentDescription = null) },
+                    label = { Text(stringResource(R.string.tab_explore)) },
+                    colors = tabColors,
+                )
                 NavigationBarItem(
                     selected = tab == 1,
                     onClick = { tab = 1 },
                     icon = {
-                        BadgedBox(badge = { if (state.saved.isNotEmpty()) Badge { Text(groupedCount(state.saved.size)) } }) { Text("♡") }
+                        BadgedBox(badge = { if (state.saved.isNotEmpty()) Badge { Text(groupedCount(state.saved.size)) } }) {
+                            Icon(painterResource(if (tab == 1) R.drawable.ms_favorite_filled else R.drawable.ms_favorite), contentDescription = null)
+                        }
                     },
                     label = { Text(stringResource(R.string.tab_saved)) },
+                    colors = tabColors,
                 )
             }
         },
@@ -330,10 +351,18 @@ private fun StaleBanner(data: DataStatus.Ready) {
 @Composable
 private fun ViewSwitch(showMap: Boolean, onChange: (Boolean) -> Unit) {
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-        SegmentedButton(selected = !showMap, onClick = { onChange(false) }, shape = SegmentedButtonDefaults.itemShape(0, 2)) {
+        // Roame's segmented control: the chosen side filled in pink, with no check mark.
+        val colors = SegmentedButtonDefaults.colors(
+            activeContainerColor = MaterialTheme.colorScheme.primary,
+            activeContentColor = MaterialTheme.colorScheme.onPrimary,
+            activeBorderColor = MaterialTheme.colorScheme.primary,
+            inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            inactiveBorderColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        )
+        SegmentedButton(selected = !showMap, onClick = { onChange(false) }, shape = SegmentedButtonDefaults.itemShape(0, 2), colors = colors, icon = {}) {
             Text(stringResource(R.string.view_list))
         }
-        SegmentedButton(selected = showMap, onClick = { onChange(true) }, shape = SegmentedButtonDefaults.itemShape(1, 2)) {
+        SegmentedButton(selected = showMap, onClick = { onChange(true) }, shape = SegmentedButtonDefaults.itemShape(1, 2), colors = colors, icon = {}) {
             Text(stringResource(R.string.view_map))
         }
     }

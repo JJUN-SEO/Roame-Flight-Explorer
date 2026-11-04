@@ -18,7 +18,7 @@ struct FlightCard: View {
             HStack {
                 Text("Selected flight")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .onLongPressGesture { onDebugLongPress?() }
                 Spacer()
                 Button(action: onClose) {
@@ -34,17 +34,20 @@ struct FlightCard: View {
                 Text(flight.destinationCity)
             }
             .font(.subheadline)
-            .foregroundStyle(.secondary)
-            Text("\(Format.cardDate(flight.departureDate)) · \(flight.cabin)")
-                .font(.subheadline)
-                .padding(.top, 4)
+            .foregroundStyle(Color.secondaryText)
+            HStack {
+                Text(Format.cardDate(flight.departureDate)).font(.subheadline)
+                Spacer()
+                CabinLabel(cabin: flight.cabin)
+            }
+            .padding(.top, 4)
             HStack(spacing: 8) {
-                Text(flight.program).font(.subheadline)
+                ProgramLogo(program: flight.program, height: 18)
                 if !isListed { NotListedTag() }
             }
             HStack {
                 Text(PointsFormat.shared.full(points: flight.points))
-                    .font(.title2.weight(.semibold).monospacedDigit())
+                    .font(.title2.weight(.bold).monospacedDigit())
                 Spacer()
                 SaveButton(isSaved: flight.isSaved, isPending: isPending, onTap: onToggleSave)
             }
@@ -52,7 +55,8 @@ struct FlightCard: View {
         }
         .padding(.leading, 16)
         .padding([.trailing, .bottom], 16)
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .background(Color.card, in: .rect(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.cardBorder))
         .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
     }
 }

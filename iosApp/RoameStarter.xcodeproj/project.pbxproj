@@ -16,6 +16,9 @@
   B10000000000000000000009 = {isa = PBXBuildFile; fileRef = B20000000000000000000009; };
   B1000000000000000000000A = {isa = PBXBuildFile; fileRef = B2000000000000000000000A; };
   B1000000000000000000000B = {isa = PBXBuildFile; fileRef = B2000000000000000000000B; };
+  B1000000000000000000000C = {isa = PBXBuildFile; fileRef = B2000000000000000000000C; };
+  B1000000000000000000000D = {isa = PBXBuildFile; fileRef = B2000000000000000000000D; };
+  B1000000000000000000000E = {isa = PBXBuildFile; fileRef = B2000000000000000000000E; };
   A10000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoameStarterApp.swift; sourceTree = "<group>"; };
   B20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerModel.swift; sourceTree = "<group>"; };
   B20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExplorerApp.swift; sourceTree = "<group>"; };
@@ -30,7 +33,10 @@
   B2000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OriginLocation.swift; sourceTree = "<group>"; };
   A10000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RoameStarter.app; sourceTree = BUILT_PRODUCTS_DIR; };
   A10000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-  A10000000000000000000005 = {isa = PBXGroup; children = (A10000000000000000000002, B20000000000000000000001, B20000000000000000000002, B20000000000000000000003, B20000000000000000000004, B20000000000000000000005, B20000000000000000000006, B20000000000000000000007, B20000000000000000000008, B20000000000000000000009, B2000000000000000000000A, B2000000000000000000000B, A10000000000000000000004, A10000000000000000000006); sourceTree = "<group>"; };
+  B2000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = image.png; name = logo_aeroplan.png; path = "Logos/logo_aeroplan.png"; sourceTree = "<group>"; };
+  B2000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = image.png; name = logo_mileageplus.png; path = "Logos/logo_mileageplus.png"; sourceTree = "<group>"; };
+  B2000000000000000000000E = {isa = PBXFileReference; lastKnownFileType = image.png; name = logo_mileage_plan.png; path = "Logos/logo_mileage_plan.png"; sourceTree = "<group>"; };
+  A10000000000000000000005 = {isa = PBXGroup; children = (A10000000000000000000002, B20000000000000000000001, B20000000000000000000002, B20000000000000000000003, B20000000000000000000004, B20000000000000000000005, B20000000000000000000006, B20000000000000000000007, B20000000000000000000008, B20000000000000000000009, B2000000000000000000000A, B2000000000000000000000B, B2000000000000000000000C, B2000000000000000000000D, B2000000000000000000000E, A10000000000000000000004, A10000000000000000000006); sourceTree = "<group>"; };
   A10000000000000000000006 = {isa = PBXGroup; children = (A10000000000000000000003); name = Products; sourceTree = "<group>"; };
   A10000000000000000000007 = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000008; buildPhases = (A10000000000000000000009, A1000000000000000000000A, A1000000000000000000000B, A1000000000000000000000C); buildRules = (); dependencies = (); name = RoameStarter; productName = RoameStarter; productReference = A10000000000000000000003; productType = "com.apple.product-type.application"; };
   A10000000000000000000009 = {
@@ -47,7 +53,7 @@
   };
   A1000000000000000000000A = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, B10000000000000000000001, B10000000000000000000002, B10000000000000000000003, B10000000000000000000004, B10000000000000000000005, B10000000000000000000006, B10000000000000000000007, B10000000000000000000008, B10000000000000000000009, B1000000000000000000000A, B1000000000000000000000B); runOnlyForDeploymentPostprocessing = 0; };
   A1000000000000000000000B = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-  A1000000000000000000000C = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+  A1000000000000000000000C = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B1000000000000000000000C, B1000000000000000000000D, B1000000000000000000000E); runOnlyForDeploymentPostprocessing = 0; };
   A1000000000000000000000D = {
    isa = PBXProject;
    attributes = {BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; TargetAttributes = {A10000000000000000000007 = {CreatedOnToolsVersion = 16.0; }; }; };

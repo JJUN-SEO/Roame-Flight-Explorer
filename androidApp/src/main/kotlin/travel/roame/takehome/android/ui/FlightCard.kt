@@ -1,5 +1,6 @@
 package travel.roame.takehome.android.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -21,10 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import travel.roame.takehome.android.R
@@ -47,9 +50,10 @@ fun FlightCard(
 ) {
     Surface(
         modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shadowElevation = 8.dp,
     ) {
         Column(Modifier.padding(start = 16.dp, end = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -64,7 +68,7 @@ fun FlightCard(
                 )
                 val close = stringResource(R.string.close)
                 IconButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = close }) {
-                    Text("✕", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.titleMedium)
+                    Icon(painterResource(R.drawable.ms_close), contentDescription = null)
                 }
             }
             Column(Modifier.padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -74,9 +78,12 @@ fun FlightCard(
                     Text(flight.destinationCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
                 }
                 Spacer(Modifier.size(4.dp))
-                Text("${cardDate(flight.departureDate)} · ${flight.cabin}", style = MaterialTheme.typography.bodyMedium)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(flight.program, style = MaterialTheme.typography.bodyMedium)
+                    Text(cardDate(flight.departureDate), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    CabinLabel(flight.cabin)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ProgramLogo(flight.program, height = 18.dp)
                     if (!isListed) {
                         Spacer(Modifier.width(8.dp))
                         NotListedTag()
@@ -87,6 +94,7 @@ fun FlightCard(
                         PointsFormat.full(flight.points),
                         Modifier.weight(1f),
                         style = MaterialTheme.typography.headlineSmall.merge(TabularDigits),
+                        fontWeight = FontWeight.SemiBold,
                     )
                     SaveButton(flight.isSaved, isPending, onToggleSave)
                 }
@@ -102,7 +110,11 @@ private fun SaveButton(isSaved: Boolean, isPending: Boolean, onClick: () -> Unit
         if (isPending) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         } else {
-            Text(if (isSaved) "♥" else "♡", Modifier.clearAndSetSemantics {})
+            Icon(
+                painterResource(if (isSaved) R.drawable.ms_favorite_filled else R.drawable.ms_favorite),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
         }
         Spacer(Modifier.width(8.dp))
         Text(stringResource(if (isSaved) R.string.remove else R.string.save_flight))

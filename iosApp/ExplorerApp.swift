@@ -16,7 +16,7 @@ struct ExplorerApp: View {
     var body: some View {
         TabView {
             ExploreScreen(onOriginFocused: { location?.fromFocused() }, onDebugLongPress: debugHook)
-                .tabItem { Label("Explore", systemImage: "airplane") }
+                .tabItem { Label("Explore", systemImage: "magnifyingglass") }
             SavedScreen(onDebugLongPress: debugHook)
                 .tabItem { Label("Saved", systemImage: "heart") }
                 .badge(model.state.saved.count)
@@ -160,7 +160,7 @@ private struct ExploreScreen: View {
                 .onChange(of: state.markers.map(\.code)) { _, codes in
                     if let code = openMarker, !codes.contains(code) { openMarker = nil }
                 }
-                .background(Color(.systemGroupedBackground))
+                .background(Color.background)
                 .sheet(isPresented: Binding(get: { openSheet != nil }, set: { if !$0 { openSheet = nil } })) {
                     if let kind = openSheet { FilterSheet(kind: kind) }
                 }
@@ -355,7 +355,7 @@ private struct SavedScreen: View {
                 }
                 .padding(16)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.background)
             .safeAreaInset(edge: .bottom) {
                 if let selected = state.savedSelected {
                     FlightCard(

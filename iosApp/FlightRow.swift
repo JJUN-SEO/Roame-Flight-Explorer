@@ -1,7 +1,7 @@
 import SwiftUI
 import Shared
 
-/** One result (UI_SPEC §2.1). Tapping it selects it; the heart saves or removes it (V7). */
+/** One result (UI_SPEC §2.1), as a white card like Roame's. Tapping it selects it; the heart saves or removes it (V7). */
 struct FlightRow: View {
     let flight: FlightItem
     var isSelected = false
@@ -11,25 +11,26 @@ struct FlightRow: View {
     var onToggleSave: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
                 RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
                 Text(PointsFormat.shared.full(points: flight.points))
-                    .font(.headline.monospacedDigit())
+                    .font(.headline.weight(.semibold).monospacedDigit())
             }
             HStack(spacing: 8) {
                 Text("\(flight.originCity) → \(flight.destinationCity)")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondaryText)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                CabinTag(cabin: flight.cabin)
+                CabinLabel(cabin: flight.cabin)
             }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
             HStack(spacing: 8) {
-                Text("\(Format.rowDate(flight.departureDate)) · \(flight.program)")
+                Text(Format.rowDate(flight.departureDate))
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .foregroundStyle(Color.secondaryText)
+                ProgramLogo(program: flight.program)
+                Spacer(minLength: 0)
                 if !isListed { NotListedTag() }
                 // Leaves room for the heart, which sits over this corner with its own 44 pt target.
                 Color.clear.frame(width: 28, height: 1)
@@ -46,8 +47,8 @@ struct FlightRow: View {
                 .padding(.bottom, 2)
         }
         // UI_SPEC §8: colour is never the only signal, so a selected row also gets a border and the selected trait.
-        .background(isSelected ? Color.accent.opacity(0.15) : Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(isSelected ? Color.accent : .clear, lineWidth: 2))
+        .background(isSelected ? Color.selectedCard : Color.card, in: .rect(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(isSelected ? Color.accent : Color.cardBorder, lineWidth: isSelected ? 2 : 1))
     }
 }
 
@@ -84,30 +85,78 @@ struct RouteConnector: View {
         HStack(spacing: 4) {
             Text(origin).font(.headline)
             line
-            Image(systemName: "airplane").font(.caption).foregroundStyle(.tint)
+            Image(systemName: "airplane").font(.caption).foregroundStyle(Color.brand)
             line
             Text(destination).font(.headline)
         }
     }
 
     private var line: some View {
-        Rectangle().fill(Color(.separator)).frame(height: 1)
+        Rectangle().fill(Color.cardBorder).frame(height: 1)
     }
 }
 
-/** Grey Economy, teal Premium Economy, indigo Business (UI_SPEC §6). */
-struct CabinTag: View {
+/**
+ * Roame's seat-class tag: an icon and the name in the class's colour (UI_SPEC §6). A cabin the app doesn't know yet
+ * gets the Economy look, so new data can't break it (DM1).
+ */
+struct CabinLabel: View {
     let cabin: String
 
     var body: some View {
-        Tag(text: cabin, color: .cabin(cabin))
+        let colors = Color.cabin(cabin)
+        HStack(spacing: 4) {
+            Image(systemName: Self.symbol(cabin)).font(.caption).foregroundStyle(colors.icon)
+            Text(cabin).font(.subheadline.weight(.semibold)).foregroundStyle(colors.text).lineLimit(1)
+        }
+    }
+
+    private static func symbol(_ cabin: String) -> String {
+        switch cabin {
+        case "First": "sparkles"
+        case "Business": "crown.fill"
+        case "Premium Economy": "chair.lounge.fill"
+        default: "carseat.right.fill"
+        }
+    }
+}
+
+/**
+ * The loyalty program's logo on a white pill, like Roame's program chips; white in dark mode too, so the logos keep
+ * their own colours (D34). Programs without a freely licensed logo show their name instead.
+ */
+struct ProgramLogo: View {
+    let program: String
+    var height: CGFloat = 14
+
+    var body: some View {
+        Group {
+            if let logo = Self.logo(program) {
+                Image(uiImage: logo).resizable().scaledToFit().frame(height: height).accessibilityLabel(program)
+            } else {
+                Text(program).font(.caption.weight(.bold)).foregroundStyle(Color(red: 0x30 / 255, green: 0x2D / 255, blue: 0x2A / 255)).lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.white, in: .capsule)
+        .overlay(Capsule().strokeBorder(Color(red: 0xE8 / 255, green: 0xE5 / 255, blue: 0xE0 / 255)))
+    }
+
+    private static func logo(_ program: String) -> UIImage? {
+        switch program {
+        case "Aeroplan": UIImage(named: "logo_aeroplan")
+        case "MileagePlus": UIImage(named: "logo_mileageplus")
+        case "Mileage Plan": UIImage(named: "logo_mileage_plan")
+        default: nil
+        }
     }
 }
 
 /** V4: the latest refresh no longer has this saved flight. */
 struct NotListedTag: View {
     var body: some View {
-        Tag(text: "No longer listed", color: .gray)
+        Tag(text: "No longer listed", color: .secondaryText)
     }
 }
 

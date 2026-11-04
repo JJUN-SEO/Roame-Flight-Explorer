@@ -29,9 +29,9 @@ struct ExplorerMap: View {
                 let origin = CLLocationCoordinate2D(latitude: selected.originLatitude, longitude: selected.originLongitude)
                 let destination = CLLocationCoordinate2D(latitude: selected.destinationLatitude, longitude: selected.destinationLongitude)
                 MapPolyline(coordinates: [origin, destination], contourStyle: .geodesic)
-                    .stroke(Color.accent, lineWidth: 3)
+                    .stroke(Color.brand, lineWidth: 3)
                 Annotation("", coordinate: origin) {
-                    Circle().fill(Color.accent).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2))
+                    Circle().fill(Color.brand).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2))
                 }
             }
         }
@@ -109,7 +109,7 @@ struct MarkerSheet: View {
                     }
                     .padding(16)
                 }
-                .background(Color(.systemGroupedBackground))
+                .background(Color.background)
                 .navigationTitle("\(marker.city) · \(marker.code) — \(flightCount(Int(marker.flightCount))) from \(PointsFormat.shared.full(points: marker.minPoints))")
                 .navigationBarTitleDisplayMode(.inline)
             }

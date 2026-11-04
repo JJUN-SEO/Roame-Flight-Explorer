@@ -55,7 +55,8 @@ private struct FilterChip: View {
         .padding(.horizontal, 14)
         .frame(minHeight: 36)
         .background(isActive ? Color.accent : Color.clear, in: .capsule)
-        .overlay(Capsule().strokeBorder(isActive ? Color.clear : Color(.separator)))
+        .background(isActive ? Color.clear : Color.card, in: .capsule)
+        .overlay(Capsule().strokeBorder(isActive ? Color.clear : Color.cardBorder))
         .contentShape(.capsule)
     }
 }

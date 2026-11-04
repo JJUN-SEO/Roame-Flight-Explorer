@@ -96,7 +96,8 @@ private struct OptionRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack {
-                Text(label).foregroundStyle(.primary)
+                // Color.primary, not .primary: inside a Button, .primary is the pink tint.
+                Text(label).foregroundStyle(Color.primary)
                 Spacer()
                 if selected { Image(systemName: "checkmark").foregroundStyle(.tint) }
             }

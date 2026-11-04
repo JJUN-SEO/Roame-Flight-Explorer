@@ -461,7 +461,8 @@ private fun Style.addOverlays() {
 }
 
 /** The route's colour; the map style is always light, so one value works in both themes. */
-private const val ROUTE_COLOR = 0xFF1E4FA3.toInt()
+/** Roame's pink (Step 6.3). */
+private const val ROUTE_COLOR = 0xFFEA4167.toInt()
 
 private class PillColors(val fill: Int, val text: Int, val accent: Int, val onAccent: Int)
 

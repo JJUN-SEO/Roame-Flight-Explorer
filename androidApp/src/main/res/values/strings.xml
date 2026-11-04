@@ -86,4 +86,5 @@
 
     <!-- Debug builds only (TEST_PLAN §6). -->
     <string name="debug_fail_next">Debug: the next save or remove will fail.</string>
+    <string name="clear_field">Clear %1$s</string>
 </resources>

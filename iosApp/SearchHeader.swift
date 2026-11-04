@@ -69,9 +69,13 @@ private struct SearchField: View {
         let shown = pick.map(airportLabel) ?? text
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.secondaryText)
+                    .accessibilityHidden(true)
                 Text(label)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.secondaryText)
                     .frame(width: 40, alignment: .leading)
                 TextField("City or airport", text: Binding(get: { shown }, set: { newText in
                     // Losing focus can write the old text back unchanged. Only a real edit may clear a pick (S14).
@@ -96,9 +100,11 @@ private struct SearchField: View {
                     .accessibilityLabel("Clear \(label)")
                 }
             }
-            .padding(.leading, 12)
+            .padding(.leading, 16)
             .frame(minHeight: 48)
-            .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+            // Roame's search pill: white, fully rounded, with a thin warm border.
+            .background(Color.card, in: .capsule)
+            .overlay(Capsule().strokeBorder(Color.cardBorder))
             if !hint.isEmpty {
                 Text(hintText(hint))
                     .font(.footnote)
@@ -140,7 +146,7 @@ private struct SuggestionList: View {
                 .buttonStyle(.plain)
             }
         }
-        .background(Color(.secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+        .background(Color.card, in: .rect(cornerRadius: 16))
         .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
     }
 }

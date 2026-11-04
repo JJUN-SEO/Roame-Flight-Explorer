@@ -184,18 +184,31 @@ Use the same tokens on both platforms, mapped to native APIs.
 | Chips and buttons | `.subheadline.weight(.medium)` | `labelLarge` |
 | Captions and banner | `.footnote` | `labelMedium` |
 
-**Colour roles.** Use system colours so light and dark mode come for free.
+**Colour roles (Step 6.3a, Roame's look).** Sampled from Roame's app, the same values on both platforms: iOS `Theme.swift`, Android `Theme.kt`. Light / dark:
 
-| Role | iOS | Android |
-|---|---|---|
-| Accent (selection, active chips, Save) | `Color.accent`: deep blue `#1E4FA3`, and Android's dark-mode `#AFC6FF` in dark mode. Text on it uses `Color.onAccent`: white, or Android's `#002D6C` in dark mode | `primary` (derived from the same seed colour) |
-| Surface / card | `.background` / `secondarySystemGroupedBackground` | `surface` / `surfaceContainer` |
-| Secondary text | `.secondary` | `onSurfaceVariant` |
-| Saved (heart) | `.pink` / `systemPink` | A custom `saved` colour token |
-| Warning (stale banner) | `.orange` at 15% background opacity | `tertiaryContainer` |
-| Error | `.red` | `error` / `errorContainer` |
+| Role | Value | iOS | Android |
+|---|---|---|---|
+| Brand pink (route, plane, hearts, logos, gradients) | `#EA4167` / `#FF7A98` | `Color.brand` | `LocalExtraColors.brand` |
+| Accent for controls and pink text (4.5:1 on white) | `#D63A60` / `#FF7A98` | `Color.accent` | `primary` |
+| Text on the accent | white / `#4A0016` | `Color.onAccent` | `onPrimary` |
+| Background (warm white) | `#FEFCF6` / `#151312` | `Color.background` | `background`, `surface` |
+| Cards | white / `#211E1C`, with a `#E8E5E0` / `#3A3532` border | `Color.card`, `Color.cardBorder` | `surfaceContainer`, `outlineVariant` |
+| Selected card | `#FDE3E9` / `#5C1A2C` with a 2 pt accent border | `Color.selectedCard` | `primaryContainer` |
+| Text / secondary text | `#302D2A` / `#F2EEE9`, and `#6B6661` / `#BDB6AF` | system label, `Color.secondaryText` | `onSurface`, `onSurfaceVariant` |
+| Warning (stale banner) | soft peach | `.orange` at 15% | `tertiaryContainer` |
 
-**Cabin tags:** Economy is neutral grey, Premium Economy is teal, and Business is indigo. Each tag is a small capsule with a tinted background and full-colour text.
+**Seat classes**, as Roame shows them: an icon and the name in the class's colour, with no capsule. The icon uses Roame's colour; the text uses a deeper shade where Roame's is too light to read at 4.5:1.
+
+| Cabin | Icon (iOS / Android) | Icon colour | Text colour |
+|---|---|---|---|
+| Economy, and any cabin the app doesn't know | `carseat.right.fill` / `airline_seat_recline_normal` | `#312D2A` | the same |
+| Premium Economy | `chair.lounge.fill` / `airline_seat_recline_extra` | `#007986` | the same |
+| Business | `crown.fill` / `crown` | `#EC9D26` | `#A65F00` |
+| First (not in the data yet) | `sparkles` / `auto_awesome` | `#FF2765` | `#D81B50` |
+
+**Program logos (D34):** each program's logo on a white pill with a thin border, white in dark mode too. Aeroplan, MileagePlus and Mileage Plan use their public-domain logos. Avios and Flying Blue show their name, because no freely licensed logo exists (THIRD_PARTY_NOTICES).
+
+**Controls:** the List | Map switch fills the chosen side in pink, like Roame's segmented control. The tab bar marks the selected tab in pink with no pill (Android); iOS keeps its own tab bar, tinted pink. Search fields are white pills with a magnifying glass.
 
 ## 7. Formatting
 

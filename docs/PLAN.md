@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.3a, in progress. Update this line at every review gate.
+> **Current step:** 6.3a, committed and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D37) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 

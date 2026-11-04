@@ -9,8 +9,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -93,19 +97,26 @@ private fun SearchField(
             label = { Text(label) },
             placeholder = { Text(stringResource(R.string.search_placeholder)) },
             singleLine = true,
+            leadingIcon = { Icon(painterResource(R.drawable.ms_search), contentDescription = null) },
             trailingIcon = if (shown.isNotEmpty()) {
                 {
-                    TextButton(onClick = {
+                    val clear = stringResource(R.string.clear_field, label)
+                    IconButton(onClick = {
                         text = ""
                         onQueryChange("")
-                    }) { Text("ⓧ") }
+                    }) { Icon(painterResource(R.drawable.ms_close), contentDescription = clear) }
                 }
             } else {
                 null
             },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(28.dp),
         )
         if (hint.isNotEmpty()) {
             Text(
