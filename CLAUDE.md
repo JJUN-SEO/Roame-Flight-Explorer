@@ -15,6 +15,7 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 | `docs/TEST_PLAN.md` | Shared test matrix, the manual QA checklist, the demo script |
 | `docs/PLAN.md` | What to build next: phases, steps, review gates, risks, priority tiers |
 | `docs/SUBMISSION_NOTES.md` | Decisions, assumptions, limitations, the AI usage log |
+| `docs/CASE_STUDY_MAP_LEAK.md` | How the Android map's memory leak was found, narrowed down and fixed (Step 6.1, D31) |
 
 ## How we work (owner's rules — follow every time)
 
