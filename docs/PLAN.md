@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.3a, built with one identical UI on both platforms, waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 6.3b, the Explore landing page. Update this line at every review gate.
 
 This plan turns the decided design (D1–D40) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -414,8 +414,8 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Decided (D32–D40):** location at first launch; bundled destination photos; real program logos where licences allow; best offer by value score; results and the map only after a search; Material icons; one UI on both platforms; the Account placeholder; Inter as the shared font.
 - **What the data can't show:** it has no airlines, times, duration, stops or travellers, so cards show the program, cabin, date, points, distance and an estimated value, and search has no travellers. Nothing is made up.
 - **Sub-steps.** Each is built on both platforms, checked, and reviewed by the owner before the next:
-  - [ ] **6.3a One design system.** Roame's colours; Inter on both (D40); the same Material Symbols on both (iOS through an asset catalog); seat-class icons and program logos; Roame's tab bar with Explore, Saved and Account, drawn the same on both; the segmented control, chips, buttons and toasts drawn the same on both; the Account placeholder with a working light, dark or system setting (D39).
-    - **Result (2026‑11‑04), waiting for the owner's review:** built on both; QA Q25 and Q26 pass with side-by-side screenshots in light and dark. The tab bar now speaks the Saved count on both (the Step 4.4 finding). Found and fixed in QA: black text on Android's dark background, and iOS's body text in the system's black instead of Roame's `#302D2A`. Still native until later sub-steps: sheets, the date picker and the points slider (6.3c, 6.3d).
+  - [x] **6.3a One design system.** Roame's colours; Inter on both (D40); the same Material Symbols on both (iOS through an asset catalog); seat-class icons and program logos; Roame's tab bar with Explore, Saved and Account, drawn the same on both; the segmented control, chips, buttons and toasts drawn the same on both; the Account placeholder with a working light, dark or system setting (D39).
+    - **Result (2026‑11‑04), accepted by the owner:** built on both; QA Q25 and Q26 pass with side-by-side screenshots in light and dark. The tab bar now speaks the Saved count on both (the Step 4.4 finding). Found and fixed in QA: black text on Android's dark background, and iOS's body text in the system's black instead of Roame's `#302D2A`. Still native until later sub-steps: sheets, the date picker and the points slider (6.3c, 6.3d).
   - [ ] **6.3b Explore landing page.** Header, the horizontal search bar, the destination photo deck (D33), best offers by program (D35, location-aware). Location asked at first launch (D32).
   - [ ] **6.3c Search page.** Full screen, like Roame's: From and To with suggestions and a swap button, departure dates on a calendar drawn the same on both, and cabin. Its Search button opens the results.
   - [ ] **6.3d Results (D36).** The map with a draggable list over it, where switching keeps the selection; the search summary at the top with a Filters button (one sheet with every filter), active filters as chips, the count and Reset. The selected route as a moving dotted line with a plane, framed on both airports; still under Reduce Motion. On Android the map stays attached (D31).
