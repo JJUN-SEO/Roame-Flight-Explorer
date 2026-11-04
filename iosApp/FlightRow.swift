@@ -15,11 +15,11 @@ struct FlightRow: View {
             HStack(spacing: 12) {
                 RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
                 Text(PointsFormat.shared.full(points: flight.points))
-                    .font(.headline.weight(.semibold).monospacedDigit())
+                    .font(.appTitle.monospacedDigit())
             }
             HStack(spacing: 8) {
                 Text("\(flight.originCity) → \(flight.destinationCity)")
-                    .font(.subheadline)
+                    .font(.appBody)
                     .foregroundStyle(Color.secondaryText)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -27,16 +27,16 @@ struct FlightRow: View {
             }
             HStack(spacing: 8) {
                 Text(Format.rowDate(flight.departureDate))
-                    .font(.subheadline)
+                    .font(.appBody)
                     .foregroundStyle(Color.secondaryText)
                 ProgramLogo(program: flight.program)
                 Spacer(minLength: 0)
                 if !isListed { NotListedTag() }
-                // Leaves room for the heart, which sits over this corner with its own 44 pt target.
-                Color.clear.frame(width: 28, height: 1)
+                // Leaves room for the heart, which sits over this corner with its own 48 pt target, as on Android.
+                Color.clear.frame(width: 36, height: 48)
             }
         }
-        .padding(16)
+        .padding(EdgeInsets(top: 16, leading: 16, bottom: 4, trailing: 16))
         .contentShape(.rect)
         .onTapGesture(perform: onTap)
         .accessibilityElement(children: .combine)
@@ -44,7 +44,7 @@ struct FlightRow: View {
         .overlay(alignment: .bottomTrailing) {
             SaveHeart(isSaved: flight.isSaved, isPending: isPending, onTap: onToggleSave)
                 .padding(.trailing, 4)
-                .padding(.bottom, 2)
+                .padding(.bottom, 4)
         }
         // UI_SPEC §8: colour is never the only signal, so a selected row also gets a border and the selected trait.
         .background(isSelected ? Color.selectedCard : Color.card, in: .rect(cornerRadius: 16))
@@ -64,11 +64,11 @@ private struct SaveHeart: View {
                 if isPending {
                     ProgressView()
                 } else {
-                    Image(systemName: isSaved ? "heart.fill" : "heart")
-                        .foregroundStyle(isSaved ? Color.saved : .secondary)
+                    MSIcon(name: isSaved ? "ms_favorite_filled" : "ms_favorite")
+                        .foregroundStyle(isSaved ? Color.saved : Color.secondaryText)
                 }
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 48, height: 48)
         }
         .buttonStyle(.plain)
         .disabled(isPending)
@@ -83,11 +83,11 @@ struct RouteConnector: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(origin).font(.headline)
-            line
-            Image(systemName: "airplane").font(.caption).foregroundStyle(Color.brand)
-            line
-            Text(destination).font(.headline)
+            Text(origin).font(.appTitle)
+            line.padding(.leading, 4)
+            MSIcon(name: "ms_flight", size: 18).rotationEffect(.degrees(90)).foregroundStyle(Color.brand)
+            line.padding(.trailing, 4)
+            Text(destination).font(.appTitle)
         }
     }
 
@@ -106,17 +106,18 @@ struct CabinLabel: View {
     var body: some View {
         let colors = Color.cabin(cabin)
         HStack(spacing: 4) {
-            Image(systemName: Self.symbol(cabin)).font(.caption).foregroundStyle(colors.icon)
-            Text(cabin).font(.subheadline.weight(.semibold)).foregroundStyle(colors.text).lineLimit(1)
+            MSIcon(name: Self.icon(cabin), size: 16).foregroundStyle(colors.icon)
+            Text(cabin).font(.appButton).foregroundStyle(colors.text).lineLimit(1)
         }
     }
 
-    private static func symbol(_ cabin: String) -> String {
+    /** The same Material Symbols as Android's (D37, D38). */
+    private static func icon(_ cabin: String) -> String {
         switch cabin {
-        case "First": "sparkles"
-        case "Business": "crown.fill"
-        case "Premium Economy": "chair.lounge.fill"
-        default: "carseat.right.fill"
+        case "First": "ms_sparkles"
+        case "Business": "ms_crown"
+        case "Premium Economy": "ms_seat_premium"
+        default: "ms_seat"
         }
     }
 }
@@ -134,7 +135,7 @@ struct ProgramLogo: View {
             if let logo = Self.logo(program) {
                 Image(uiImage: logo).resizable().scaledToFit().frame(height: height).accessibilityLabel(program)
             } else {
-                Text(program).font(.caption.weight(.bold)).foregroundStyle(Color(red: 0x30 / 255, green: 0x2D / 255, blue: 0x2A / 255)).lineLimit(1)
+                Text(program).font(.appBadge).foregroundStyle(Color(red: 0x30 / 255, green: 0x2D / 255, blue: 0x2A / 255)).lineLimit(1)
             }
         }
         .padding(.horizontal, 8)
@@ -167,7 +168,7 @@ private struct Tag: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.medium))
+            .font(.appLabelSmall)
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)

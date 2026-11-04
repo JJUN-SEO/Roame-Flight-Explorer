@@ -1,12 +1,18 @@
 package travel.roame.takehome.android.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -33,8 +40,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import travel.roame.takehome.android.R
 import travel.roame.takehome.model.FetchError
@@ -75,28 +81,25 @@ import travel.roame.takehome.presentation.ExplorerStore
 import travel.roame.takehome.presentation.UserMessageKind
 
 /**
- * Two tabs (UI_SPEC §1). The app only renders the shared state and sends intents.
- * [failNextWrite] is set in debug builds only (TEST_PLAN §6).
+ * Three tabs, Explore, Saved and Account, with Roame's tab bar drawn the same as on iOS (UI_SPEC §1, D38). The app only
+ * renders the shared state and sends intents. [failNextWrite] is set in debug builds only (TEST_PLAN §6).
  */
 @Composable
-fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
+fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, failNextWrite: (() -> Unit)? = null) {
     val state by store.state.collectAsStateWithLifecycle()
-    var tab by rememberSaveable { mutableIntStateOf(0) }
-    val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    var tab by rememberSaveable { mutableStateOf(AppTab.Explore) }
+    // A short message of the app's own, such as the debug hook's confirmation, shown like a failed write's.
+    var note by remember { mutableStateOf<String?>(null) }
     val debugArmed = stringResource(R.string.debug_fail_next)
     val onDebugLongPress = failNextWrite?.let { arm ->
         {
             arm()
-            scope.launch { snackbar.showSnackbar(debugArmed) }
-            Unit
+            note = debugArmed
         }
     }
 
-    WriteMessages(state, store, snackbar)
     SuccessHaptics(state)
-    var cardInset by remember { mutableStateOf(0.dp) }
-    // Kept here, outside both tabs, so List or Map, the list's position, the map's camera and the map itself (D31)
+    // Kept here, outside the tabs, so List or Map, the list's position, the map's camera and the map itself (D31)
     // survive tab switches.
     val view = ExploreView(
         showMap = rememberSaveable { mutableStateOf(false) },
@@ -105,75 +108,79 @@ fun ExplorerApp(store: ExplorerStore, failNextWrite: (() -> Unit)? = null) {
         map = rememberMapHolder(),
     )
     ScrollToTopOnNewSearch(state, view.listState)
-    // Here, above both tabs, so switching tabs doesn't read the location again (D30).
+    // Here, above the tabs, so switching tabs doesn't read the location again (D30).
     val onOriginFocused = rememberOriginLocation(store::setUserLocation)
 
-    Scaffold(
-        // Above the selection card, so a message never hides the card's Save or Remove button.
-        snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = cardInset)) },
-        bottomBar = {
-            // Roame's tab bar: white, with the selected tab in pink and no pill behind it.
-            val tabColors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = Color.Transparent,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurface,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurface,
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
+                // D31: Explore stays composed while another tab is shown, so its map is never detached from the window.
+                val exploring = tab == AppTab.Explore
+                Box(Modifier.fillMaxSize().notPlacedUnless(exploring)) {
+                    ExploreScreen(state, store, view, exploring, onOriginFocused, onDebugLongPress)
+                }
+                when (tab) {
+                    AppTab.Saved -> SavedScreen(state, store, onDebugLongPress)
+                    AppTab.Account -> AccountScreen(appearance, onToast = { note = it })
+                    AppTab.Explore -> Unit
+                }
+            }
+            AppTabBar(tab, state.saved.size, onSelect = { tab = it })
+        }
+        Toasts(state, store, note, onNoteShown = { note = null })
+    }
+}
+
+/**
+ * At the top of the screen, as on iOS, where they can't cover the card's Save or Remove button. V7: each failed write
+ * is shown once, with Retry, for 6 s; the app's own notes for 3 s.
+ */
+@Composable
+private fun BoxScope.Toasts(state: ExplorerState, store: ExplorerStore, note: String?, onNoteShown: () -> Unit) {
+    val message = state.messages.firstOrNull()
+    val shownMessage = rememberLast(message)
+    val shownNote = rememberLast(note)
+    val reduceMotion = rememberReduceMotion()
+    val enter = if (reduceMotion) fadeIn() else slideInVertically { -it } + fadeIn()
+    val exit = if (reduceMotion) fadeOut() else slideOutVertically { -it } + fadeOut()
+    Column(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AnimatedVisibility(visible = message != null, enter = enter, exit = exit) {
+            val shown = shownMessage ?: return@AnimatedVisibility
+            val text = stringResource(
+                when (shown.kind) {
+                    UserMessageKind.SaveFailed -> R.string.save_failed
+                    UserMessageKind.RemoveFailed -> R.string.remove_failed
+                },
             )
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                NavigationBarItem(
-                    selected = tab == 0,
-                    onClick = { tab = 0 },
-                    icon = { Icon(painterResource(R.drawable.ms_search), contentDescription = null) },
-                    label = { Text(stringResource(R.string.tab_explore)) },
-                    colors = tabColors,
-                )
-                NavigationBarItem(
-                    selected = tab == 1,
-                    onClick = { tab = 1 },
-                    icon = {
-                        BadgedBox(badge = { if (state.saved.isNotEmpty()) Badge { Text(groupedCount(state.saved.size)) } }) {
-                            Icon(painterResource(if (tab == 1) R.drawable.ms_favorite_filled else R.drawable.ms_favorite), contentDescription = null)
-                        }
-                    },
-                    label = { Text(stringResource(R.string.tab_saved)) },
-                    colors = tabColors,
-                )
+            LaunchedEffect(shown.id) {
+                delay(6_000)
+                store.messageShown(shown.id)
             }
-        },
-    ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
-            // D31: Explore stays composed while Saved is shown, so its map is never detached from the window.
-            val exploring = tab == 0
-            Box(Modifier.fillMaxSize().notPlacedUnless(exploring)) {
-                ExploreScreen(state, store, view, exploring, onOriginFocused, onDebugLongPress, onCardInset = { if (exploring) cardInset = it })
+            AppToast(text, stringResource(R.string.retry)) {
+                store.messageShown(shown.id)
+                when (shown.kind) {
+                    UserMessageKind.SaveFailed -> store.toggleSave(shown.flightId)
+                    UserMessageKind.RemoveFailed -> store.removeSaved(shown.flightId)
+                }
             }
-            if (!exploring) SavedScreen(state, store, onDebugLongPress, onCardInset = { cardInset = it })
+        }
+        AnimatedVisibility(visible = note != null, enter = enter, exit = exit) {
+            val shown = shownNote ?: return@AnimatedVisibility
+            LaunchedEffect(shown) {
+                delay(3_000)
+                onNoteShown()
+            }
+            AppToast(shown)
         }
     }
 }
 
-/** V7: each failed write is shown once as a snackbar with Retry, then marked shown. */
+/** The last non-null value, so a toast can still show its text while it slides away. */
 @Composable
-private fun WriteMessages(state: ExplorerState, store: ExplorerStore, snackbar: SnackbarHostState) {
-    val message = state.messages.firstOrNull() ?: return
-    val text = stringResource(
-        when (message.kind) {
-            UserMessageKind.SaveFailed -> R.string.save_failed
-            UserMessageKind.RemoveFailed -> R.string.remove_failed
-        },
-    )
-    val retry = stringResource(R.string.retry)
-    LaunchedEffect(message.id) {
-        val result = snackbar.showSnackbar(text, actionLabel = retry, duration = SnackbarDuration.Long)
-        store.messageShown(message.id)
-        if (result == SnackbarResult.ActionPerformed) {
-            when (message.kind) {
-                UserMessageKind.SaveFailed -> store.toggleSave(message.flightId)
-                UserMessageKind.RemoveFailed -> store.removeSaved(message.flightId)
-            }
-        }
-    }
+private fun <T : Any> rememberLast(value: T?): T? {
+    var last by remember { mutableStateOf(value) }
+    if (value != null) last = value
+    return last
 }
 
 /**
@@ -238,7 +245,6 @@ private fun ExploreScreen(
     active: Boolean,
     onOriginFocused: () -> Unit,
     onDebugLongPress: (() -> Unit)?,
-    onCardInset: (Dp) -> Unit,
 ) {
     // UI_SPEC §5: back closes a sheet first (the sheet handles that), then deselects, then exits.
     BackHandler(enabled = active && state.selected != null) { store.select(null) }
@@ -253,7 +259,7 @@ private fun ExploreScreen(
             state.options.isEmpty -> Column {
                 StaleBanner(data)
                 RefreshProgress(data)
-                Message(stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
+                EmptyState(R.drawable.ms_flight, stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
             }
             else -> Column {
                 var openSheet by rememberSaveable { mutableStateOf<FilterKind?>(null) }
@@ -279,7 +285,6 @@ private fun ExploreScreen(
                             )
                         }
                     },
-                    onInset = onCardInset,
                 ) { bottomInset ->
                     val reduceMotion = rememberReduceMotion()
                     Box(Modifier.fillMaxSize()) {
@@ -347,25 +352,15 @@ private fun StaleBanner(data: DataStatus.Ready) {
     }
 }
 
-/** UI_SPEC §1: List | Map. */
+/** UI_SPEC §1: List | Map, on the shared segmented control (D38). */
 @Composable
 private fun ViewSwitch(showMap: Boolean, onChange: (Boolean) -> Unit) {
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-        // Roame's segmented control: the chosen side filled in pink, with no check mark.
-        val colors = SegmentedButtonDefaults.colors(
-            activeContainerColor = MaterialTheme.colorScheme.primary,
-            activeContentColor = MaterialTheme.colorScheme.onPrimary,
-            activeBorderColor = MaterialTheme.colorScheme.primary,
-            inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            inactiveBorderColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        )
-        SegmentedButton(selected = !showMap, onClick = { onChange(false) }, shape = SegmentedButtonDefaults.itemShape(0, 2), colors = colors, icon = {}) {
-            Text(stringResource(R.string.view_list))
-        }
-        SegmentedButton(selected = showMap, onClick = { onChange(true) }, shape = SegmentedButtonDefaults.itemShape(1, 2), colors = colors, icon = {}) {
-            Text(stringResource(R.string.view_map))
-        }
-    }
+    SegmentedControl(
+        listOf(stringResource(R.string.view_list), stringResource(R.string.view_map)),
+        selectedIndex = if (showMap) 1 else 0,
+        onSelect = { onChange(it == 1) },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -395,10 +390,10 @@ private fun ResultsList(state: ExplorerState, store: ExplorerStore, listState: L
 
 /** V8, L7: every saved flight whatever the filters, with its own selection and card. */
 @Composable
-private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongPress: (() -> Unit)?, onCardInset: (Dp) -> Unit) {
+private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongPress: (() -> Unit)?) {
     BackHandler(enabled = state.savedSelected != null) { store.selectSaved(null) }
     if (state.saved.isEmpty()) {
-        Message(stringResource(R.string.saved_empty_title), stringResource(R.string.saved_empty_body))
+        EmptyState(R.drawable.ms_favorite, stringResource(R.string.saved_empty_title), stringResource(R.string.saved_empty_body))
         return
     }
     val selected = state.savedSelected
@@ -415,7 +410,6 @@ private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongP
                 )
             }
         },
-        onInset = onCardInset,
     ) { bottomInset ->
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp + bottomInset),
@@ -435,17 +429,12 @@ private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongP
     }
 }
 
-/**
- * Lays the selection card over the bottom of [content], which pads by [Dp] so its last row can scroll clear of the card.
- * [onInset] reports the same height, so snackbars can sit above the card.
- */
+/** Lays the selection card over the bottom of [content], which pads by [Dp] so its last row can scroll clear of the card. */
 @Composable
-private fun WithSelectionCard(card: (@Composable () -> Unit)?, onInset: (Dp) -> Unit, content: @Composable (bottomInset: Dp) -> Unit) {
+private fun WithSelectionCard(card: (@Composable () -> Unit)?, content: @Composable (bottomInset: Dp) -> Unit) {
     // Starts at 0 for each new card, so the inset stays 0 until the card has really been measured.
     var cardHeight by remember(card == null) { mutableIntStateOf(0) }
     val inset = if (cardHeight == 0) 0.dp else with(LocalDensity.current) { cardHeight.toDp() } + 16.dp
-    LaunchedEffect(inset) { onInset(inset) }
-    DisposableEffect(Unit) { onDispose { onInset(0.dp) } }
     Box(Modifier.fillMaxSize()) {
         content(inset)
         if (card != null) {
@@ -468,7 +457,7 @@ private fun LoadingList() {
     }
 }
 
-/** R7, R9: the cause, in the words UI_SPEC §4 gives it, with Retry. */
+/** R7, R9: the cause, in the words UI_SPEC §4 gives it, with Try again. */
 @Composable
 private fun UnavailableMessage(error: FetchError, onRetry: () -> Unit) {
     val (title, body) = when (error) {
@@ -478,25 +467,7 @@ private fun UnavailableMessage(error: FetchError, onRetry: () -> Unit) {
         FetchError.InvalidData -> stringResource(R.string.error_invalid_data) to null
         FetchError.Unknown -> stringResource(R.string.error_unknown) to null
     }
-    Message(title, body, icon = "⚠") {
-        Button(onClick = onRetry) { Text(stringResource(R.string.try_again)) }
-    }
-}
-
-@Composable
-private fun Message(title: String, body: String?, icon: String? = null, action: @Composable () -> Unit = {}) {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (icon != null) Text(icon, style = MaterialTheme.typography.displaySmall)
-        Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-        if (body != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.height(16.dp))
-        action()
+    EmptyState(R.drawable.ms_cloud_off, title, body) {
+        PrimaryButton(stringResource(R.string.try_again), onRetry)
     }
 }

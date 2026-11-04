@@ -15,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -106,9 +107,9 @@ fun FlightCard(
 /** V7: no optimistic change. While the write runs, the button shows a spinner and ignores taps. */
 @Composable
 private fun SaveButton(isSaved: Boolean, isPending: Boolean, onClick: () -> Unit) {
-    val content: @Composable () -> Unit = {
+    val leading: @Composable () -> Unit = {
         if (isPending) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
         } else {
             Icon(
                 painterResource(if (isSaved) R.drawable.ms_favorite_filled else R.drawable.ms_favorite),
@@ -116,12 +117,11 @@ private fun SaveButton(isSaved: Boolean, isPending: Boolean, onClick: () -> Unit
                 modifier = Modifier.size(18.dp),
             )
         }
-        Spacer(Modifier.width(8.dp))
-        Text(stringResource(if (isSaved) R.string.remove else R.string.save_flight))
     }
+    val text = stringResource(if (isSaved) R.string.remove else R.string.save_flight)
     if (isSaved) {
-        OutlinedButton(onClick = onClick, enabled = !isPending) { content() }
+        TintedButton(text, onClick, enabled = !isPending, leading = leading)
     } else {
-        Button(onClick = onClick, enabled = !isPending) { content() }
+        PrimaryButton(text, onClick, enabled = !isPending, leading = leading)
     }
 }

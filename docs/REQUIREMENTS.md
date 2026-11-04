@@ -104,7 +104,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | UX-1 | Smooth, understandable experience: responsive scrolling and map gestures | See PERF-1 and MAP-4. | — | ⬜ |
 | UX-2 | Consistent selection | See SEL-1 to SEL-3. The selected row and the selected marker are visually highlighted. | L1–L7 | ✅ 2026‑11‑03 |
 | UX-3 | Clear loading, empty and error states | Every state in [UI_SPEC.md §4](UI_SPEC.md#4-state-catalogue) is implemented on both platforms. | R, C | 🟨 |
-| UX-4 | Cohesive, visually appealing UI with attention to spacing, typography, hierarchy and interaction feedback | The design tokens in UI_SPEC are used. There is pressed, selected and loading feedback, plus haptics on save. Roame is a functional reference, not a pixel spec. | — | 🟨 Step 6.3a: Roame's colours, seat-class icons, program logos and controls on both platforms. The new layouts are in 6.3b–6.3d |
+| UX-4 | Cohesive, visually appealing UI with attention to spacing, typography, hierarchy and interaction feedback | The design tokens in UI_SPEC are used. There is pressed, selected and loading feedback, plus haptics on save. Roame is a functional reference, not a pixel spec. | — | 🟨 Step 6.3a: one design system on both platforms (D38): Roame's colours, Inter, the same Material Symbols, seat-class icons, program logos, and the same tab bar, controls, toasts and empty states; the Account tab (D39). The new layouts are in 6.3b–6.3d |
 
 ## 9. Testing & ownership
 

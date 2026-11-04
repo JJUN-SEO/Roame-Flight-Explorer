@@ -2,6 +2,7 @@ package travel.roame.takehome.android
 
 import android.app.Application
 import android.os.StrictMode
+import travel.roame.takehome.android.ui.preloadAppearance
 import travel.roame.takehome.di.AppGraph
 import travel.roame.takehome.di.createAppGraph
 
@@ -12,6 +13,7 @@ class RoameApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        preloadAppearance(this)
         if (BuildConfig.DEBUG) {
             // PERF-2: report any disk or network access on the main thread.
             StrictMode.setThreadPolicy(

@@ -12,31 +12,35 @@ struct FilterSheet: View {
 
     var body: some View {
         let state = model.state
-        NavigationStack {
-            Group {
-                switch kind {
-                case .dates: DatesBody(state: state, store: model.store)
-                case .cabin: CabinBody(state: state, store: model.store)
-                case .maxpoints: PointsBody(state: state, store: model.store)
-                default: ProgramsBody(state: state, store: model.store)
+        // The same layout as Android's sheet (D38): the filter's name centred, the choices, then the buttons.
+        VStack(spacing: 0) {
+            Text(kindName(kind))
+                .font(.appTitle)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+                .accessibilityAddTraits(.isHeader)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    switch kind {
+                    case .dates: DatesBody(state: state, store: model.store)
+                    case .cabin: CabinBody(state: state, store: model.store)
+                    case .maxpoints: PointsBody(state: state, store: model.store)
+                    default: ProgramsBody(state: state, store: model.store)
+                    }
                 }
             }
-            .navigationTitle(kindName(kind))
-            .navigationBarTitleDisplayMode(.inline)
-            // Always on screen, whatever the sheet's height.
-            .safeAreaInset(edge: .bottom) {
-                HStack {
-                    Button(clearLabel) { model.store.clearFilter(kind: kind) }
-                    Spacer()
-                    Button("Show \(flightCount(Int(state.resultCount)))") { dismiss() }
-                        .buttonStyle(.borderedProminent)
-                        .foregroundStyle(Color.onAccent)
-                }
-                .padding(16)
-                .background(.bar)
+            HStack {
+                TextLink(text: clearLabel) { model.store.clearFilter(kind: kind) }
+                Spacer()
+                PrimaryButton(text: "Show \(flightCount(Int(state.resultCount)))") { dismiss() }
             }
+            .padding(EdgeInsets(top: 16, leading: 8, bottom: 16, trailing: 16))
         }
         .presentationDetents(kind == .dates ? [.large] : [.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.background)
+        .foregroundStyle(Color.text)
     }
 
     private var clearLabel: String {
@@ -61,7 +65,7 @@ private struct DatesBody: View {
            let min = Format.localDate(minIso), let max = Format.localDate(maxIso) {
             let start = Format.localDate(state.filters.dateStart ?? minIso) ?? min
             let end = Format.localDate(state.filters.dateEnd ?? maxIso) ?? max
-            Form {
+            VStack(spacing: 12) {
                 DatePicker("Start", selection: Binding(get: { start }, set: { picked in
                     store.setDateRange(startIso: Format.iso(picked), endIso: state.filters.dateEnd)
                 }), in: min...end, displayedComponents: .date)
@@ -69,6 +73,8 @@ private struct DatesBody: View {
                     store.setDateRange(startIso: state.filters.dateStart, endIso: Format.iso(picked))
                 }), in: start...max, displayedComponents: .date)
             }
+            .font(.appBodyLarge)
+            .padding(.horizontal, 16)
         }
     }
 }
@@ -79,31 +85,12 @@ private struct CabinBody: View {
     let store: ExplorerStoreIos
 
     var body: some View {
-        List {
-            OptionRow(label: "Any", selected: state.filters.cabin == nil) { store.setCabin(cabin: nil) }
+        VStack(spacing: 0) {
+            OptionRow(label: "Any", isSelected: state.filters.cabin == nil) { store.setCabin(cabin: nil) }
             ForEach(state.options.cabins, id: \.self) { cabin in
-                OptionRow(label: cabin, selected: state.filters.cabin == cabin) { store.setCabin(cabin: cabin) }
+                OptionRow(label: cabin, isSelected: state.filters.cabin == cabin) { store.setCabin(cabin: cabin) }
             }
         }
-    }
-}
-
-private struct OptionRow: View {
-    let label: String
-    let selected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                // Color.primary, not .primary: inside a Button, .primary is the pink tint.
-                Text(label).foregroundStyle(Color.primary)
-                Spacer()
-                if selected { Image(systemName: "checkmark").foregroundStyle(.tint) }
-            }
-            .contentShape(.rect)
-        }
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -118,15 +105,16 @@ private struct PointsBody: View {
         if let min = state.options.minPoints?.intValue, let max = state.options.maxPoints?.intValue {
             let current = value ?? Double(state.filters.maxPoints?.intValue ?? max)
             let points = Int(current)
-            Form {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(points >= max ? "Any" : "Up to \(PointsFormat.shared.full(points: Int32(points)))")
-                    .font(.headline.monospacedDigit())
+                    .font(.appTitle.monospacedDigit())
                 Slider(value: Binding(get: { current }, set: { newValue in
                     value = newValue
                     store.setMaxPoints(points: Int32(newValue))
                 }), in: Double(min)...Double(max), step: 500)
                 .accessibilityLabel("Maximum points")
             }
+            .padding(.horizontal, 16)
             .onChange(of: state.filters.maxPoints == nil) { _, cleared in
                 if cleared { value = Double(max) }
             }
@@ -140,9 +128,9 @@ private struct ProgramsBody: View {
     let store: ExplorerStoreIos
 
     var body: some View {
-        List {
+        VStack(spacing: 0) {
             ForEach(state.options.programs, id: \.self) { program in
-                OptionRow(label: program, selected: state.filters.programs.contains(program)) {
+                OptionRow(label: program, isSelected: state.filters.programs.contains(program)) {
                     store.toggleProgram(name: program)
                 }
             }

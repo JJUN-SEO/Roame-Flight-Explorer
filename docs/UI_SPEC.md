@@ -6,7 +6,7 @@ Roame is a *functional* reference, not a pixel spec. The goal is a calm, fast, i
 - The route is instantly scannable.
 - Every state is explained.
 
-Both platforms follow the same information architecture and copy, but each uses native idioms: SwiftUI system controls on iOS, and Material 3 on Android.
+Both platforms follow the same information architecture and copy. Since Step 6.3a they also look the same (D38): one font (Inter, D40), the same Material Symbols icons (D37), and the app's own tab bar, segmented control, chips, buttons, toasts and empty states, drawn the same way in SwiftUI and Compose (§6). Only what the platforms can't share stays native: the maps (MapKit and MapLibre), sheets, the system date picker and slider until Step 6.3c, haptics and permission dialogs.
 
 ## 1. Information architecture
 
@@ -23,10 +23,17 @@ Tab bar
 │   ├── Status banner (stale / refreshing), when relevant
 │   ├── Content: List  or  Map
 │   └── Selection card (overlay at the bottom, shared by List and Map)
-└── Saved (badge = count)         ← always reachable, ignores filters (V8)
-    ├── Saved list
-    └── Saved card (its own selection, L7)
+├── Saved (badge = count)         ← always reachable, ignores filters (V8)
+│   ├── Saved list
+│   └── Saved card (its own selection, L7)
+└── Account (placeholder, D39)
+    ├── Profile header: avatar, "Guest", "View profile"
+    ├── Settings → Appearance: System | Light | Dark   (the only working page; saved between launches)
+    ├── Change profile, Privacy, Info                  (pages of text)
+    └── Log out                                        (a toast: there's no account)
 ```
+
+Steps 6.3b–6.3e replace Explore with Roame's landing page, a full-screen search page and map-first results (PLAN Step 6.3); this section and §2 change with them.
 
 ## 2. Wireframes
 
@@ -116,7 +123,7 @@ Each sheet shows a live **"Show N flights"** button. Choices apply as they're ma
 | `FlightCard` | Selection details + Save / Remove | idle · pending · error message shown |
 | `StatusBanner` | Stale or offline info, with no Retry (D29) | stale · refreshing (inline progress) |
 | `EmptyState` / `ErrorState` | Full-area explanations | See §4 |
-| `Snackbar` / toast | One-shot `UserMessage` | "Couldn't save flight" + Retry |
+| `AppToast` | One-shot `UserMessage`, at the top of the screen (§6) | "Couldn't save flight" + Retry |
 
 ## 4. State catalogue
 
@@ -143,7 +150,7 @@ Use the same copy on both platforms.
 | Map can't load (Android only, D24) | The map's style hasn't loaded after 10 seconds (A15) | The map area shows "Can't load the map" + "It needs internet the first time. Your flights are still in the list." + **Retry**. It disappears as soon as the map loads. |
 | Saved empty | `saved` is empty | "No saved flights yet" + "Tap ♡ on any flight to keep it here — even offline." |
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
-| Save or remove failed | A `UserMessage` arrives (V7) | Snackbar: "Couldn't save flight." / "Couldn't remove flight." + **Retry**. The heart stays in its previous state. |
+| Save or remove failed | A `UserMessage` arrives (V7) | Toast: "Couldn't save flight." / "Couldn't remove flight." + **Retry**. The heart stays in its previous state. |
 | Not listed | A saved flight missing from the cache (V4) | A grey "No longer listed" tag in the Saved row and card |
 
 ## 5. Interaction details
@@ -152,7 +159,7 @@ Use the same copy on both platforms.
 - **A new search or filter** scrolls the list back to the top, so the best results are in view. A save or a background refresh keeps the scroll position. (Found in Step 4.4: Compose keeps the old top flight in view, so after Reset the first rows were hidden above it.)
 - **Tapping a suggestion** picks what it names, closes the dropdown and shows "Tokyo (HND)" or "Tokyo (all airports)" in the field. Editing the text clears the pick.
 - **Tapping a row** selects it, highlights it and shows the card. Tapping the selected row again, or ✕, deselects it.
-- **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the snackbar with no haptic. A write succeeded when its id leaves `pendingWriteIds` with no `UserMessage` for it, because the store has no success event.
+- **Save / Remove** gives haptic feedback on success: `.sensoryFeedback(.success, …)` on iOS and `HapticFeedbackType.LongPress` on Android. On failure, show the toast with no haptic. A write succeeded when its id leaves `pendingWriteIds` with no `UserMessage` for it, because the store has no success event.
 - **Hearts:** each row has a ♡ that saves or removes the flight, the same as the card's button. While its write runs, it shows a spinner and ignores taps (V7).
 - **No manual refresh** (D29, owner): no pull to refresh and no ⟳ button. The app refreshes when it opens, showing a thin progress bar over the data, and the first-load error has Try again (R7). The stale banner sits under the List | Map switch; on the "No flights available" screen it sits above the message.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
@@ -172,17 +179,23 @@ Use the same tokens on both platforms, mapped to native APIs.
 
 **Corner radius:** chips 999 (pill) · rows and cards 16 · sheets use the system default.
 
-**Typography** (system fonts; points use tabular or monospaced digits):
+**Typography (D38, D40).** Inter on both platforms, bundled, at the same sizes: points on iOS, sp on Android. Both scale with the text-size setting (iOS through `Font.custom(_:size:relativeTo:)`, Android through sp). Points use tabular digits.
 
-| Role | iOS (SwiftUI) | Android (M3) |
-|---|---|---|
-| Screen title | `.largeTitle.bold()` | `headlineMedium` |
-| Points hero (card) | `.title2.weight(.semibold).monospacedDigit()` | `headlineSmall` + `tnum` |
-| Points (row) | `.headline.monospacedDigit()` | `titleMedium` + `tnum` |
-| Airport codes | `.headline` | `titleMedium` |
-| City, date, program | `.subheadline`, `.secondary` | `bodyMedium`, `onSurfaceVariant` |
-| Chips and buttons | `.subheadline.weight(.medium)` | `labelLarge` |
-| Captions and banner | `.footnote` | `labelMedium` |
+| Style | Inter | iOS (`Theme.swift`) | Android (`Theme.kt`) | Used for |
+|---|---|---|---|---|
+| Display | 28 Bold | `.appDisplay` | `headlineLarge` | Tab titles (Account), the avatar's initial |
+| Points | 24 Bold | `.appPoints` | `headlineSmall` | The selection card's points |
+| Title large | 22 SemiBold | `.appTitleLarge` | `titleLarge` | The profile name |
+| Title | 16 SemiBold | `.appTitle` | `titleMedium` | Airport codes, row points, sheet and page titles, empty-state titles |
+| Title small | 14 SemiBold | `.appTitleSmall` | `titleSmall` | Section labels |
+| Body large | 16 Regular | `.appBodyLarge` | `bodyLarge` | List rows, option rows, field text |
+| Body | 14 Regular | `.appBody` | `bodyMedium` | City, date, explanations (in secondary text) |
+| Caption | 12 Regular | `.appCaption` | `bodySmall` | Hints under fields |
+| Label | 14 Medium | `.appLabel` | `labelLarge` | Chips, field labels, the segmented control |
+| Button | 14 SemiBold | `.appButton` | `labelLarge` at SemiBold | Buttons, text links, the chosen segment |
+| Label small | 12 Medium | `.appLabelSmall` | `labelMedium` | Tab labels, the stale banner |
+| Label tiny | 11 Bold | `.appLabelTiny` | `labelSmall` at Bold | The tab badge's count |
+| Badge | 12 Bold | `.appBadge` | `labelMedium` at Bold | Program badges; the map's pills on iOS (MapLibre draws Android's with the map style's own font) |
 
 **Colour roles (Step 6.3a, Roame's look).** Sampled from Roame's app, the same values on both platforms: iOS `Theme.swift`, Android `Theme.kt`. Light / dark:
 
@@ -194,21 +207,41 @@ Use the same tokens on both platforms, mapped to native APIs.
 | Background (warm white) | `#FEFCF6` / `#151312` | `Color.background` | `background`, `surface` |
 | Cards | white / `#211E1C`, with a `#E8E5E0` / `#3A3532` border | `Color.card`, `Color.cardBorder` | `surfaceContainer`, `outlineVariant` |
 | Selected card | `#FDE3E9` / `#5C1A2C` with a 2 pt accent border | `Color.selectedCard` | `primaryContainer` |
-| Text / secondary text | `#302D2A` / `#F2EEE9`, and `#6B6661` / `#BDB6AF` | system label, `Color.secondaryText` | `onSurface`, `onSurfaceVariant` |
+| Text / secondary text | `#302D2A` / `#F2EEE9`, and `#6B6661` / `#BDB6AF` | `Color.text` (set at the root and on each sheet), `Color.secondaryText` | `onBackground` and `onSurface` (the default content colour, set at the theme's root), `onSurfaceVariant` |
+| Segmented control's track | `#F2F0EA` / `#34302E` | `Color.track` | `surfaceContainerHighest` |
+| Chip border | `#D6D3CE` / `#5A5450` | `Color.outline` | `outline` |
+| Toast, and its action | `#2B2B2B` with `#FFB3C4`, in both modes | `Color.toast`, `Color.toastAction` | the same values in `DesignSystem.kt` |
+| Avatar gradient | `#F2BD93` → `#DA7083` / `#C98E68` → `#B4506A` | `Color.gradientStart`, `.gradientEnd` | `LocalExtraColors.gradientStart`, `.gradientEnd` |
 | Warning (stale banner) | soft peach | `.orange` at 15% | `tertiaryContainer` |
 
 **Seat classes**, as Roame shows them: an icon and the name in the class's colour, with no capsule. The icon uses Roame's colour; the text uses a deeper shade where Roame's is too light to read at 4.5:1.
 
-| Cabin | Icon (iOS / Android) | Icon colour | Text colour |
+| Cabin | Icon (both platforms) | Icon colour | Text colour |
 |---|---|---|---|
-| Economy, and any cabin the app doesn't know | `carseat.right.fill` / `airline_seat_recline_normal` | `#312D2A` | the same |
-| Premium Economy | `chair.lounge.fill` / `airline_seat_recline_extra` | `#007986` | the same |
-| Business | `crown.fill` / `crown` | `#EC9D26` | `#A65F00` |
-| First (not in the data yet) | `sparkles` / `auto_awesome` | `#FF2765` | `#D81B50` |
+| Economy, and any cabin the app doesn't know | `ms_seat` (`airline_seat_recline_normal`) | `#312D2A` | the same |
+| Premium Economy | `ms_seat_premium` (`airline_seat_recline_extra`) | `#007986` | the same |
+| Business | `ms_crown` (`crown`) | `#EC9D26` | `#A65F00` |
+| First (not in the data yet) | `ms_sparkles` (`auto_awesome`) | `#FF2765` | `#D81B50` |
+
+**Icons (D37).** The same 22 Material Symbols (Rounded, 24) on both: vector drawables on Android, template SVGs in an asset catalog on iOS, each tinted by its context. They're decorative: the control around them carries the spoken label (THIRD_PARTY_NOTICES).
 
 **Program logos (D34):** each program's logo on a white pill with a thin border, white in dark mode too. Aeroplan, MileagePlus and Mileage Plan use their public-domain logos. Avios and Flying Blue show their name, because no freely licensed logo exists (THIRD_PARTY_NOTICES).
 
-**Controls:** the List | Map switch fills the chosen side in pink, like Roame's segmented control. The tab bar marks the selected tab in pink with no pill (Android); iOS keeps its own tab bar, tinted pink. Search fields are white pills with a magnifying glass.
+**Components (D38).** Each is written once per platform, under the same name, in `DesignSystem.kt` and `DesignSystem.swift`, at the same sizes (pt = dp):
+
+| Component | Looks like | Used for |
+|---|---|---|
+| `AppTabBar` | Card colour, a 1 pt top border; each tab a 24 pt icon over a Label small; the chosen tab pink, with a 2 pt pink line along its top. The Saved tab's icon fills when chosen, and carries a pink count badge. Spoken as "Saved, 3 saved flights" | The three tabs |
+| `SegmentedControl` | A 40 pt track with a pink pill (radius 17) for the chosen option | List \| Map; Appearance |
+| `AppChip` | A 36 pt pill: card colour with an outline border, or pink when active, with its own ✕ | The filter bar |
+| `PrimaryButton`, `TintedButton` | 44 pt pills: pink with white text, or pink text on light pink, with an optional leading icon | Save / Remove, Retry, Show results |
+| `TextLink` | Pink Button text with a 44 pt target | Reset, Clear |
+| `AppToast` | A dark rounded card at the top of the screen, white text and a pink action; failures for 6 s, notes for 3 s | Failed writes with Retry; the app's own notes |
+| `EmptyState` | A 32 pt icon in a 72 pt light-pink circle, a Title, a line of Body, an optional button | No results, no saved flights, unavailable, no flights |
+| `PageTitle`, `SubpageTopBar` | A Display title; or a 56 pt bar with Back and a centred Title over a hairline | Account and its pages |
+| `ListRow`, `OptionRow` | 56 pt rows: an icon, Body large text, a chevron; or 52 pt rows with a pink check when chosen | Account's menu; sheet options |
+
+Search fields are pills in the card colour with a magnifying glass. Sheets, the date range picker and the points slider stay native until Step 6.3c and 6.3d redraw them.
 
 ## 7. Formatting
 
@@ -229,12 +262,12 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 
 | | iOS (SwiftUI, iOS 17) | Android (Compose, M3) |
 |---|---|---|
-| Shell | `TabView` + `NavigationStack`. Portrait only (D28) | `Scaffold` + `NavigationBar`. Portrait only (D28) |
+| Shell | A `VStack` of the content and `AppTabBar` (§6). Explore stays alive, hidden, under the other tabs. Portrait only (D28) | A `Column` of the content and `AppTabBar` (§6). Explore stays composed but unplaced under the other tabs, so the map is never detached (D31). Portrait only (D28) |
 | Sheets | `.sheet` + `.presentationDetents([.medium, .large])` | `ModalBottomSheet` |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
 | Map | `Map(position:)` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5) | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the selection card (D27) |
 | Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
-| Messages | Overlay toast with Retry | `SnackbarHost` with an action |
+| Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
 | Location for ranking (D16, D30) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked on the first focus of From. The dialog's reason (`NSLocationWhenInUseUsageDescription`): "Your approximate location puts nearby airports first when you choose where you're flying from." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on the first focus of From |

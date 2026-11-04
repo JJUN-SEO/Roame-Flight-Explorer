@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.3a, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 6.3a, built with one identical UI on both platforms, waiting for the owner's review. Update this line at every review gate.
 
-This plan turns the decided design (D1–D37) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D40) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D37 doesn't work in practice.
+- finding that any of D1–D40 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -405,21 +405,21 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Covers:** UX-2, UX-3, UX-4. QA: Q22, Q23, plus the new rows each sub-step adds.
 - **Read:** UI_SPEC §6 and §8; the owner's design below.
 - **Owner's design (2026‑11‑04).** The owner sent screenshots of Roame's home, search and profile screens, Airbnb's map search, and Roame's seat-class tags, and asked for:
-  - Roame's look throughout: its pink accent, warm white, rounded cards, and its bottom tab bar.
-  - A map that only appears once the user has searched, like Airbnb's: the map with a list over it.
-  - On the map, the selected route as a dotted line moving from origin to destination with a plane icon, framed on both airports.
-  - A swipeable deck of destinations, each with a photo of the place.
-  - "Best offers" for each loyalty program (the data has programs, not airlines), with each program's logo, and nearest to the user first when location is shared. Location is asked for when the app first opens.
-  - Seat-class icons like Roame's: a crown for Business, and so on.
-  - The owner's earlier ask (Step 4.3): a separate Filters button.
-- **Decided (D32–D37):** location asked at first launch; bundled, openly licensed destination photos; real program logos where their licence allows; best offer by a value score; the map after a search; Material icons on Android.
-- **What the data can't show:** it has no airlines, times, duration or stops, so cards show the program, cabin, date, points, distance and an estimated value. Nothing is made up.
+  - Roame's structure: three tabs, **Explore, Saved and Account**. Explore is a landing page like Roame's home. Tapping its horizontal search bar opens a separate full-screen **search page** like Roame's.
+  - Flights appear only after a search (A23). The results are a map with a list over it, like Airbnb's. On the map, the selected route is a dotted line moving from origin to destination with a plane icon, framed on both airports.
+  - On the landing page, a swipeable deck of destinations with a photo of each, and "best offers" for each loyalty program (the data has programs, not airlines), with logos, nearest to the user first when location is shared. Location is asked for when the app first opens.
+  - Seat-class icons like Roame's, and the owner's earlier ask (Step 4.3): a separate Filters button.
+  - **The same UI and UX on Android and iOS, exactly, wherever the platforms allow** (D38): the same font, icons, components, tab bar and toasts. Only the maps differ (MapLibre and MapKit).
+  - Account is a placeholder like Roame's: a profile header, and Settings (light or dark mode), Change profile, Privacy, Log out and Info (D39).
+- **Decided (D32–D40):** location at first launch; bundled destination photos; real program logos where licences allow; best offer by value score; results and the map only after a search; Material icons; one UI on both platforms; the Account placeholder; Inter as the shared font.
+- **What the data can't show:** it has no airlines, times, duration, stops or travellers, so cards show the program, cabin, date, points, distance and an estimated value, and search has no travellers. Nothing is made up.
 - **Sub-steps.** Each is built on both platforms, checked, and reviewed by the owner before the next:
-  - [ ] **6.3a Look and building blocks.** Roame's colours, type, cards and tab bar; seat-class icons; program logos; the Android icons (D37). Screens keep their current layout.
-  - [ ] **6.3b Explore home.** Header, search pill, the destination photo deck (D33), best offers by program (D35, location-aware), and below them every result with its count, Filters and Reset. Location asked at first launch (D32).
-  - [ ] **6.3c Search and filters.** The search pill opens a full-screen search (From and To with suggestions, dates, cabin) with a Search button. A Filters button opens one sheet with every filter; active filters stay as chips.
-  - [ ] **6.3d Results with the map (D36).** After a search, a map with a draggable list over it, where switching keeps the selection. The selected route as a moving dotted line with a plane, framed on both airports; still under Reduce Motion. On Android the map stays attached (D31).
-  - [ ] **6.3e Accessibility, large text and dark mode.** The findings below.
+  - [ ] **6.3a One design system.** Roame's colours; Inter on both (D40); the same Material Symbols on both (iOS through an asset catalog); seat-class icons and program logos; Roame's tab bar with Explore, Saved and Account, drawn the same on both; the segmented control, chips, buttons and toasts drawn the same on both; the Account placeholder with a working light, dark or system setting (D39).
+    - **Result (2026‑11‑04), waiting for the owner's review:** built on both; QA Q25 and Q26 pass with side-by-side screenshots in light and dark. The tab bar now speaks the Saved count on both (the Step 4.4 finding). Found and fixed in QA: black text on Android's dark background, and iOS's body text in the system's black instead of Roame's `#302D2A`. Still native until later sub-steps: sheets, the date picker and the points slider (6.3c, 6.3d).
+  - [ ] **6.3b Explore landing page.** Header, the horizontal search bar, the destination photo deck (D33), best offers by program (D35, location-aware). Location asked at first launch (D32).
+  - [ ] **6.3c Search page.** Full screen, like Roame's: From and To with suggestions and a swap button, departure dates on a calendar drawn the same on both, and cabin. Its Search button opens the results.
+  - [ ] **6.3d Results (D36).** The map with a draggable list over it, where switching keeps the selection; the search summary at the top with a Filters button (one sheet with every filter), active filters as chips, the count and Reset. The selected route as a moving dotted line with a plane, framed on both airports; still under Reduce Motion. On Android the map stays attached (D31).
+  - [ ] **6.3e Saved, accessibility, large text and dark mode.** Saved in the new look, and the findings below.
 - **Findings for 6.3e:**
   - **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move.
   - **Found in Step 5.8 (iOS):**
@@ -428,7 +428,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
     - In dark mode the card has no visible shadow, so it blends with the rows behind it.
   - **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app.
   - **Found in Step 4.4, for the TalkBack pass:**
-    - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label.
+    - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label. *Fixed in 6.3a: the app's own tab bar says "Saved, 3 saved flights" on both platforms.*
     - Each row's spoken description sits on a child node of the clickable row, so check what TalkBack actually reads. A selected row is announced as "Selected", through the checked state.
 - **Done when:** every sub-step is accepted, Q22 and Q23 pass, and the owner has seen the apps side by side.
 

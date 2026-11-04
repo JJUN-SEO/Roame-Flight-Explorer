@@ -51,12 +51,13 @@ struct ExplorerMap: View {
             // M6: no markers, but the map stays usable around the message.
             if state.results.isEmpty {
                 VStack(spacing: 4) {
-                    Text("No flights match").font(.headline)
-                    Button("Reset filters") { model.store.resetAll() }
+                    Text("No flights match").font(.appTitle)
+                    TextLink(text: "Reset filters") { model.store.resetAll() }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(.regularMaterial, in: .rect(cornerRadius: 16))
+                .background(Color.card, in: .rect(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
                 .padding(16)
             }
         }
@@ -70,7 +71,7 @@ private struct MarkerPill: View {
 
     var body: some View {
         Text("\(marker.code) \(marker.flightCount)·\(PointsFormat.shared.compact(points: marker.minPoints))")
-            .font(.caption.weight(.bold).monospacedDigit())
+            .font(.appBadge.monospacedDigit())
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .foregroundStyle(isSelected ? Color.onAccent : Color.black)
@@ -91,7 +92,15 @@ struct MarkerSheet: View {
     var body: some View {
         let state = model.state
         if let marker = state.markers.first(where: { $0.code == code }) {
-            NavigationStack {
+            // The same layout as Android's sheet (D38): a centred title over the destination's flights.
+            VStack(spacing: 0) {
+                Text("\(marker.city) · \(marker.code) — \(flightCount(Int(marker.flightCount))) from \(PointsFormat.shared.full(points: marker.minPoints))")
+                    .font(.appTitle)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .accessibilityAddTraits(.isHeader)
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach(marker.flights, id: \.id) { flight in
@@ -109,11 +118,11 @@ struct MarkerSheet: View {
                     }
                     .padding(16)
                 }
-                .background(Color.background)
-                .navigationTitle("\(marker.city) · \(marker.code) — \(flightCount(Int(marker.flightCount))) from \(PointsFormat.shared.full(points: marker.minPoints))")
-                .navigationBarTitleDisplayMode(.inline)
             }
             .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.background)
+            .foregroundStyle(Color.text)
         }
     }
 }

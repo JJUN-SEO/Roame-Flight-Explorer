@@ -1,7 +1,8 @@
 package travel.roame.takehome.android.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -9,6 +10,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
+import travel.roame.takehome.android.R
 
 /**
  * Colours Material 3 has no role for (UI_SPEC §6). Each seat class has an icon colour, Roame's own, and a text colour
@@ -57,13 +65,45 @@ private val DarkExtras = ExtraColors(
 
 val LocalExtraColors = staticCompositionLocalOf { LightExtras }
 
+/** D40: Inter, bundled in both apps, so text looks the same on Android and iOS. */
+val Inter = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold),
+)
+
+private fun inter(size: TextUnit, weight: FontWeight) =
+    // No extra letter spacing and the font's own line height, as on iOS.
+    TextStyle(fontFamily = Inter, fontWeight = weight, fontSize = size, letterSpacing = 0.sp)
+
+/**
+ * D38: one type scale on both platforms (UI_SPEC §6). iOS uses the same sizes in points, scaled with Dynamic Type as
+ * these scale with the font-size setting.
+ */
+private val AppTypography = Typography(
+    displaySmall = inter(32.sp, FontWeight.Bold),
+    headlineLarge = inter(28.sp, FontWeight.Bold),
+    headlineMedium = inter(26.sp, FontWeight.Bold),
+    headlineSmall = inter(24.sp, FontWeight.Bold),
+    titleLarge = inter(22.sp, FontWeight.SemiBold),
+    titleMedium = inter(16.sp, FontWeight.SemiBold),
+    titleSmall = inter(14.sp, FontWeight.SemiBold),
+    bodyLarge = inter(16.sp, FontWeight.Normal),
+    bodyMedium = inter(14.sp, FontWeight.Normal),
+    bodySmall = inter(12.sp, FontWeight.Normal),
+    labelLarge = inter(14.sp, FontWeight.Medium),
+    labelMedium = inter(12.sp, FontWeight.Medium),
+    labelSmall = inter(11.sp, FontWeight.Medium),
+)
+
 /**
  * Roame's look (Step 6.3, owner's design): a pink accent on warm white, sampled from Roame's app. The light theme's
- * `primary` is a little deeper than Roame's #EA4167, so pink text such as Reset reads at 4.5:1.
+ * `primary` is a little deeper than Roame's #EA4167, so pink text such as Reset reads at 4.5:1. [dark] comes from the
+ * Account tab's appearance setting (D39).
  */
 @Composable
-fun RoameTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+fun RoameTheme(dark: Boolean, content: @Composable () -> Unit) {
     val scheme = if (dark) {
         darkColorScheme(
             primary = Color(0xFFFF7A98),
@@ -81,6 +121,7 @@ fun RoameTheme(content: @Composable () -> Unit) {
             surfaceContainer = Color(0xFF211E1C),
             surfaceContainerHigh = Color(0xFF2A2725),
             surfaceContainerHighest = Color(0xFF34302E),
+            onBackground = Color(0xFFF2EEE9),
             onSurface = Color(0xFFF2EEE9),
             onSurfaceVariant = Color(0xFFBDB6AF),
             outline = Color(0xFF5A5450),
@@ -103,6 +144,7 @@ fun RoameTheme(content: @Composable () -> Unit) {
             surfaceContainer = Color.White,
             surfaceContainerHigh = Color.White,
             surfaceContainerHighest = Color(0xFFF2F0EA),
+            onBackground = Color(0xFF302D2A),
             onSurface = Color(0xFF302D2A),
             onSurfaceVariant = Color(0xFF6B6661),
             outline = Color(0xFFD6D3CE),
@@ -110,6 +152,10 @@ fun RoameTheme(content: @Composable () -> Unit) {
         )
     }
     CompositionLocalProvider(LocalExtraColors provides if (dark) DarkExtras else LightExtras) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        MaterialTheme(colorScheme = scheme, typography = AppTypography) {
+            // Text drawn straight on the background, outside any Surface, would otherwise be Compose's default black,
+            // unreadable in dark mode. iOS gets the same from Color.text at its root.
+            CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+        }
     }
 }

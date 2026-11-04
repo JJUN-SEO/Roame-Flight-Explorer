@@ -15,49 +15,21 @@ struct FilterBar: View {
             HStack(spacing: 8) {
                 ForEach(filterKinds, id: \.self) { kind in
                     let active = state.activeFilters.first { $0.kind == kind }
-                    FilterChip(
-                        name: kindName(kind),
-                        label: active.map { chipValue($0, state) } ?? defaultChipLabel(kind, state),
+                    let name = kindName(kind)
+                    let label = active.map { chipValue($0, state) } ?? defaultChipLabel(kind, state)
+                    AppChip(
+                        label: label,
                         isActive: active != nil,
-                        onOpen: { onOpen(kind) },
-                        onClear: { model.store.clearFilter(kind: kind) }
+                        description: active != nil ? "\(name): \(label), active" : name,
+                        onTap: { onOpen(kind) },
+                        onClear: { model.store.clearFilter(kind: kind) },
+                        clearDescription: "Clear \(name)"
                     )
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-    }
-}
-
-private struct FilterChip: View {
-    let name: String
-    let label: String
-    let isActive: Bool
-    let onOpen: () -> Void
-    let onClear: () -> Void
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Button(action: onOpen) {
-                Text(label).font(.subheadline.weight(.medium))
-            }
-            .accessibilityLabel(isActive ? "\(name): \(label), active" : name)
-            if isActive {
-                Button(action: onClear) {
-                    Image(systemName: "xmark").font(.caption.weight(.semibold))
-                }
-                .accessibilityLabel("Clear \(name)")
-            }
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(isActive ? Color.onAccent : Color.primary)
-        .padding(.horizontal, 14)
-        .frame(minHeight: 36)
-        .background(isActive ? Color.accent : Color.clear, in: .capsule)
-        .background(isActive ? Color.clear : Color.card, in: .capsule)
-        .overlay(Capsule().strokeBorder(isActive ? Color.clear : Color.cardBorder))
-        .contentShape(.capsule)
     }
 }
 
@@ -70,10 +42,10 @@ struct ResultSummary: View {
         let filters = state.activeFilters.count
         HStack {
             Text(filters == 0 ? flightCount(Int(state.resultCount)) : "\(flightCount(Int(state.resultCount))) · \(filters) \(filters == 1 ? "filter" : "filters")")
-                .font(.headline)
+                .font(.appTitle)
             Spacer()
             if state.hasAnythingToReset {
-                Button("Reset") { model.store.resetAll() }
+                TextLink(text: "Reset") { model.store.resetAll() }
             }
         }
         .padding(.horizontal, 16)

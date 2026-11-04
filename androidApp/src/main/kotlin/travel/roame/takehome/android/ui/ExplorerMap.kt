@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -376,8 +377,10 @@ fun MarkerSheet(marker: DestinationMarker, state: ExplorerState, store: Explorer
                 groupedCount(marker.flightCount),
                 PointsFormat.full(marker.minPoints),
             ),
-            Modifier.padding(horizontal = 16.dp),
+            // Centred, like the filter sheets and iOS's (D38).
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
         )
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(marker.flights, key = { it.id }) { flight ->
@@ -424,7 +427,7 @@ private fun MapEmpty(onReset: () -> Unit, modifier: Modifier) {
     Surface(modifier, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.map_empty), style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onReset) { Text(stringResource(R.string.reset_filters)) }
+            TextLink(stringResource(R.string.reset_filters), onReset)
         }
     }
 }

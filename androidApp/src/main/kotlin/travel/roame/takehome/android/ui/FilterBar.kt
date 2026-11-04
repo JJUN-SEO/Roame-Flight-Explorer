@@ -42,23 +42,13 @@ fun FilterBar(state: ExplorerState, store: ExplorerStore, onOpen: (FilterKind) -
             val name = kindName(kind)
             val label = active?.let { chipValue(it, state) } ?: defaultChipLabel(kind, state)
             val description = if (active != null) stringResource(R.string.chip_active, name, label) else name
-            FilterChip(
-                selected = active != null,
+            AppChip(
+                label = label,
+                active = active != null,
+                description = description,
                 onClick = { onOpen(kind) },
-                label = { Text(label, style = MaterialTheme.typography.labelLarge) },
-                modifier = Modifier.semantics { contentDescription = description },
-                trailingIcon = if (active != null) {
-                    {
-                        val clear = stringResource(R.string.clear_filter, name)
-                        Icon(
-                            painterResource(R.drawable.ms_close),
-                            contentDescription = clear,
-                            modifier = Modifier.clickable { store.clearFilter(kind) }.padding(2.dp).size(16.dp),
-                        )
-                    }
-                } else {
-                    null
-                },
+                onClear = { store.clearFilter(kind) },
+                clearDescription = stringResource(R.string.clear_filter, name),
             )
         }
     }
@@ -75,7 +65,7 @@ fun ResultSummary(state: ExplorerState, onReset: () -> Unit) {
             Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
         )
-        if (state.hasAnythingToReset) TextButton(onClick = onReset) { Text(stringResource(R.string.reset)) }
+        if (state.hasAnythingToReset) TextLink(stringResource(R.string.reset), onReset)
     }
 }
 

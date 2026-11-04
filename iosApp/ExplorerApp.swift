@@ -3,24 +3,40 @@ import MapKit
 import Shared
 
 /**
- * Two tabs (UI_SPEC §1). The app only renders the shared state and sends intents.
- * Failed writes show as a toast with Retry, and a successful one gives a haptic (UI_SPEC §5).
+ * Three tabs, Explore, Saved and Account, with Roame's tab bar drawn the same as on Android (UI_SPEC §1, D38). The app
+ * only renders the shared state and sends intents. Failed writes show as a toast with Retry, and a successful one gives
+ * a haptic (UI_SPEC §5).
  */
 struct ExplorerApp: View {
     @Environment(ExplorerModel.self) private var model
-    @State private var debugNote: String?
+    @State private var tab = AppTab.explore
+    /** A short message of the app's own, such as the debug hook's confirmation, shown like a failed write's. */
+    @State private var note: String?
     @State private var pendingBefore: Set<String> = []
     @State private var successes = 0
     @State private var location: OriginLocation?
 
     var body: some View {
-        TabView {
-            ExploreScreen(onOriginFocused: { location?.fromFocused() }, onDebugLongPress: debugHook)
-                .tabItem { Label("Explore", systemImage: "magnifyingglass") }
-            SavedScreen(onDebugLongPress: debugHook)
-                .tabItem { Label("Saved", systemImage: "heart") }
-                .badge(model.state.saved.count)
+        VStack(spacing: 0) {
+            ZStack {
+                // Explore stays alive behind the other tabs, as on Android (D31), so its list, map and camera survive.
+                ExploreScreen(isActive: tab == .explore, onOriginFocused: { location?.fromFocused() }, onDebugLongPress: debugHook)
+                    .opacity(tab == .explore ? 1 : 0)
+                    .allowsHitTesting(tab == .explore)
+                    .accessibilityHidden(tab != .explore)
+                switch tab {
+                case .saved: SavedScreen(onDebugLongPress: debugHook)
+                case .account: AccountScreen(onToast: { note = $0 })
+                case .explore: EmptyView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            AppTabBar(selected: tab, savedCount: model.state.saved.count) { selected in
+                if selected != tab { dismissKeyboard() }
+                tab = selected
+            }
         }
+        .background(Color.background)
         // At the top, so it never covers the selection card's Save or Remove button.
         .overlay(alignment: .top) { toasts }
         // A write succeeded when it leaves pendingWriteIds with no error message, because the store has no success event.
@@ -38,11 +54,11 @@ struct ExplorerApp: View {
         }
     }
 
+    /** V7: each failed write is shown once, with Retry, for 6 s; the app's own notes for 3 s. */
     @ViewBuilder private var toasts: some View {
         VStack(spacing: 8) {
             if let message = model.state.messages.first {
-                // V7: each failed write is shown once, then marked shown.
-                Toast(text: message.kind == .savefailed ? "Couldn't save flight." : "Couldn't remove flight.", action: "Retry") {
+                AppToast(text: message.kind == .savefailed ? "Couldn't save flight." : "Couldn't remove flight.", action: "Retry") {
                     model.store.messageShown(id: message.id)
                     if message.kind == .savefailed {
                         model.store.toggleSave(flightId: message.flightId)
@@ -50,21 +66,24 @@ struct ExplorerApp: View {
                         model.store.removeSaved(flightId: message.flightId)
                     }
                 }
+                .transition(.move(edge: .top).combined(with: .opacity))
                 .task(id: message.id) {
                     try? await Task.sleep(for: .seconds(6))
                     model.store.messageShown(id: message.id)
                 }
             }
-            if let note = debugNote {
-                Toast(text: note)
+            if let note {
+                AppToast(text: note)
+                    .transition(.move(edge: .top).combined(with: .opacity))
                     .task(id: note) {
                         try? await Task.sleep(for: .seconds(3))
-                        debugNote = nil
+                        self.note = nil
                     }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(16)
         .animation(.default, value: model.state.messages.first?.id)
+        .animation(.default, value: note)
     }
 
     /** TEST_PLAN §6: debug builds only. */
@@ -72,32 +91,11 @@ struct ExplorerApp: View {
         #if DEBUG
         return {
             model.store.failNextSavedWrite()
-            debugNote = "Debug: the next save or remove will fail."
+            note = "Debug: the next save or remove will fail."
         }
         #else
         return nil
         #endif
-    }
-}
-
-private struct Toast: View {
-    let text: String
-    var action: String?
-    var onAction: () -> Void = {}
-
-    var body: some View {
-        HStack {
-            Text(text).foregroundStyle(.white)
-            Spacer()
-            if let action {
-                Button(action, action: onAction).fontWeight(.semibold).tint(Color(red: 0.69, green: 0.78, blue: 1))
-            }
-        }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 48)
-        .background(Color(white: 0.17), in: .rect(cornerRadius: 12))
-        .shadow(radius: 6, y: 2)
-        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
@@ -109,6 +107,8 @@ private struct ExploreScreen: View {
     // Kept here, so switching between List and Map, or tabs, keeps the view and the map's camera (M8).
     @State private var showMap = false
     @State private var camera: MapCameraPosition?
+    /** False while another tab is shown on top; this screen stays alive underneath (D31, as on Android). */
+    let isActive: Bool
     let onOriginFocused: () -> Void
     let onDebugLongPress: (() -> Void)?
 
@@ -123,7 +123,7 @@ private struct ExploreScreen: View {
                 VStack(spacing: 0) {
                     StaleBanner(data: data)
                     RefreshProgress(data: data)
-                    ContentUnavailableView("No flights available right now", systemImage: "airplane", description: Text("The server returned no flights."))
+                    EmptyState(icon: "ms_flight", title: "No flights available right now", message: "The server returned no flights.")
                 }
             } else {
                 VStack(spacing: 0) {
@@ -131,13 +131,10 @@ private struct ExploreScreen: View {
                     FilterBar { openSheet = $0 }
                     ResultSummary()
                     // L4: switching changes only the view; the selection and filters stay in the store.
-                    Picker("View", selection: $showMap) {
-                        Text("List").tag(false)
-                        Text("Map").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    SegmentedControl(options: ["List", "Map"], selectedIndex: showMap ? 1 : 0) { showMap = $0 == 1 }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                        .padding(.bottom, 4)
                     StaleBanner(data: data)
                     RefreshProgress(data: data)
                     Group {
@@ -215,7 +212,7 @@ private struct StaleBanner: View {
     var body: some View {
         if data.refreshError != nil {
             Text("Couldn't refresh · showing results from \(Format.syncTime(data.lastSuccessAt))")
-                .font(.footnote)
+                .font(.appLabelSmall)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -283,11 +280,11 @@ private struct LoadingList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Finding flights…")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                .font(.appTitle)
+                .foregroundStyle(Color.secondaryText)
             ForEach(0..<7, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemFill))
+                    .fill(Color.track)
                     .frame(height: 92)
             }
             Spacer()
@@ -303,14 +300,8 @@ private struct UnavailableMessage: View {
 
     var body: some View {
         let (title, body) = copy
-        ContentUnavailableView {
-            Label(title, systemImage: "exclamationmark.triangle")
-        } description: {
-            if let body { Text(body) }
-        } actions: {
-            Button("Try again", action: onRetry)
-                .buttonStyle(.borderedProminent)
-                .foregroundStyle(Color.onAccent)
+        EmptyState(icon: "ms_cloud_off", title: title, message: body) {
+            PrimaryButton(text: "Try again", action: onRetry)
         }
     }
 
@@ -338,7 +329,7 @@ private struct SavedScreen: View {
     var body: some View {
         let state = model.state
         if state.saved.isEmpty {
-            ContentUnavailableView("No saved flights yet", systemImage: "heart", description: Text("Tap ♡ on any flight to keep it here — even offline."))
+            EmptyState(icon: "ms_favorite", title: "No saved flights yet", message: "Tap ♡ on any flight to keep it here — even offline.")
         } else {
             ScrollView {
                 LazyVStack(spacing: 8) {

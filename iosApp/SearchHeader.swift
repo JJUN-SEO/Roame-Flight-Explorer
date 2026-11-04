@@ -69,12 +69,10 @@ private struct SearchField: View {
         let shown = pick.map(airportLabel) ?? text
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.subheadline.weight(.semibold))
+                MSIcon(name: "ms_search")
                     .foregroundStyle(Color.secondaryText)
-                    .accessibilityHidden(true)
                 Text(label)
-                    .font(.subheadline.weight(.medium))
+                    .font(.appLabel)
                     .foregroundStyle(Color.secondaryText)
                     .frame(width: 40, alignment: .leading)
                 TextField("City or airport", text: Binding(get: { shown }, set: { newText in
@@ -87,13 +85,14 @@ private struct SearchField: View {
                 .submitLabel(.search)
                 .onSubmit { focused = false }
                 .autocorrectionDisabled()
+                .font(.appBodyLarge)
                 .accessibilityLabel(label)
                 if !shown.isEmpty {
                     Button {
                         text = ""
                         onQueryChange("")
                     } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        MSIcon(name: "ms_close", size: 20).foregroundStyle(Color.secondaryText)
                     }
                     .buttonStyle(.plain)
                     .frame(minWidth: 44, minHeight: 44)
@@ -107,8 +106,8 @@ private struct SearchField: View {
             .overlay(Capsule().strokeBorder(Color.cardBorder))
             if !hint.isEmpty {
                 Text(hintText(hint))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(.appLabelSmall)
+                    .foregroundStyle(Color.secondaryText)
                     .padding(.leading, 12)
             }
             if focused && !suggestions.isEmpty {
@@ -138,7 +137,7 @@ private struct SuggestionList: View {
                 if index > 0 { Divider() }
                 Button { onTap(suggestion) } label: {
                     Text(airportLabel(suggestion))
-                        .font(suggestion.isCityRow ? .subheadline.weight(.semibold) : .body)
+                        .font(suggestion.isCityRow ? .appTitleSmall : .appBodyLarge)
                         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         .padding(.horizontal, 16)
                         .contentShape(.rect)

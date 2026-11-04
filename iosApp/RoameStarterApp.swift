@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import Shared
 
 @main
@@ -7,17 +6,16 @@ struct RoameStarterApp: App {
     /** The one shared store (D10), pointed at the API in Info.plist: the simulator reaches the Mac at localhost (ARCHITECTURE §6.4). */
     @State private var model = ExplorerModel(store: ExplorerStoreIosKt.createExplorerStore(baseUrl: apiBaseUrl()))
 
-    init() {
-        // Roame's segmented control: the chosen side filled in pink. SwiftUI's segmented Picker has no style for this.
-        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.accent)
-        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.onAccent)], for: .selected)
-    }
+    /** D39: the Account tab's appearance setting, saved between launches. */
+    @AppStorage("appearance") private var appearance = Appearance.system.rawValue
 
     var body: some Scene {
         WindowGroup {
             ExplorerApp()
                 .environment(model)
                 .tint(.accent)
+                .foregroundStyle(Color.text)
+                .preferredColorScheme(Appearance(rawValue: appearance)?.colorScheme)
         }
     }
 }

@@ -17,26 +17,28 @@ struct FlightCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Selected flight")
-                    .font(.subheadline.weight(.medium))
+                    .font(.appLabel)
                     .foregroundStyle(Color.secondaryText)
                     .onLongPressGesture { onDebugLongPress?() }
                 Spacer()
                 Button(action: onClose) {
-                    Image(systemName: "xmark").font(.subheadline.weight(.semibold)).frame(width: 44, height: 44)
+                    MSIcon(name: "ms_close").frame(width: 48, height: 48).contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Close")
             }
+            // As on Android: the close button sits 4 pt from the edge, the rest 16 pt in.
+            VStack(alignment: .leading, spacing: 4) {
             RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
             HStack {
                 Text(flight.originCity)
                 Spacer()
                 Text(flight.destinationCity)
             }
-            .font(.subheadline)
+            .font(.appBody)
             .foregroundStyle(Color.secondaryText)
             HStack {
-                Text(Format.cardDate(flight.departureDate)).font(.subheadline)
+                Text(Format.cardDate(flight.departureDate)).font(.appBody)
                 Spacer()
                 CabinLabel(cabin: flight.cabin)
             }
@@ -47,14 +49,17 @@ struct FlightCard: View {
             }
             HStack {
                 Text(PointsFormat.shared.full(points: flight.points))
-                    .font(.title2.weight(.bold).monospacedDigit())
+                    .font(.appPoints.monospacedDigit())
                 Spacer()
                 SaveButton(isSaved: flight.isSaved, isPending: isPending, onTap: onToggleSave)
             }
             .padding(.top, 8)
+            }
+            .padding(.trailing, 12)
         }
         .padding(.leading, 16)
-        .padding([.trailing, .bottom], 16)
+        .padding(.trailing, 4)
+        .padding(.bottom, 16)
         .background(Color.card, in: .rect(cornerRadius: 20))
         .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.cardBorder))
         .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
@@ -68,18 +73,18 @@ private struct SaveButton: View {
     let onTap: () -> Void
 
     var body: some View {
-        let label = HStack(spacing: 6) {
-            if isPending {
-                ProgressView()
-            } else {
-                Image(systemName: isSaved ? "heart.fill" : "heart")
-            }
-            Text(isSaved ? "Remove" : "Save flight")
-        }
         if isSaved {
-            Button(action: onTap) { label }.buttonStyle(.bordered).disabled(isPending)
+            TintedButton(text: "Remove", isEnabled: !isPending, action: onTap) { icon }
         } else {
-            Button(action: onTap) { label }.buttonStyle(.borderedProminent).foregroundStyle(Color.onAccent).disabled(isPending)
+            PrimaryButton(text: "Save flight", isEnabled: !isPending, action: onTap) { icon }
+        }
+    }
+
+    @ViewBuilder private var icon: some View {
+        if isPending {
+            ProgressView().tint(isSaved ? Color.accent : Color.onAccent).frame(width: 18, height: 18)
+        } else {
+            MSIcon(name: isSaved ? "ms_favorite_filled" : "ms_favorite", size: 18)
         }
     }
 }

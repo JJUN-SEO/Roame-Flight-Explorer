@@ -1,19 +1,27 @@
 package travel.roame.takehome.android.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,9 +35,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import travel.roame.takehome.android.R
@@ -84,40 +96,54 @@ private fun SearchField(
 
     val shown = pick?.let { airportLabel(it) } ?: text
     Column(Modifier.padding(top = 8.dp)) {
-        OutlinedTextField(
-            value = shown,
-            onValueChange = {
-                text = it
-                onQueryChange(it)
-            },
-            modifier = Modifier.fillMaxWidth().onFocusChanged {
-                if (it.isFocused && !focused) onFocused()
-                focused = it.isFocused
-            },
-            label = { Text(label) },
-            placeholder = { Text(stringResource(R.string.search_placeholder)) },
-            singleLine = true,
-            leadingIcon = { Icon(painterResource(R.drawable.ms_search), contentDescription = null) },
-            trailingIcon = if (shown.isNotEmpty()) {
-                {
-                    val clear = stringResource(R.string.clear_field, label)
-                    IconButton(onClick = {
-                        text = ""
-                        onQueryChange("")
-                    }) { Icon(painterResource(R.drawable.ms_close), contentDescription = clear) }
-                }
+        // The same field as iOS's (D38): a white pill with a search icon, the field's name, the text and ✕.
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
+                .border(1.dp, if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                .padding(start = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(painterResource(R.drawable.ms_search), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(8.dp))
+            Text(label, Modifier.width(40.dp).clearAndSetSemantics {}, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(8.dp))
+            BasicTextField(
+                value = shown,
+                onValueChange = {
+                    text = it
+                    onQueryChange(it)
+                },
+                modifier = Modifier.weight(1f)
+                    .semantics { contentDescription = label }
+                    .onFocusChanged {
+                        if (it.isFocused && !focused) onFocused()
+                        focused = it.isFocused
+                    },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                decorationBox = { field ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (shown.isEmpty()) {
+                            Text(stringResource(R.string.search_placeholder), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        field()
+                    }
+                },
+            )
+            if (shown.isNotEmpty()) {
+                val clear = stringResource(R.string.clear_field, label)
+                IconButton(onClick = {
+                    text = ""
+                    onQueryChange("")
+                }) { Icon(painterResource(R.drawable.ms_close), contentDescription = clear, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
-                null
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-            shape = RoundedCornerShape(28.dp),
-        )
+                Spacer(Modifier.width(16.dp))
+            }
+        }
         if (hint.isNotEmpty()) {
             Text(
                 hintText(hint),
@@ -175,9 +201,11 @@ private fun hintText(hint: List<AirportSuggestion>): String {
 /** UI_SPEC §4: an empty result that isn't an error, with the active filters and a way back. */
 @Composable
 fun FilteredEmpty(state: ExplorerState, onReset: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(stringResource(R.string.filtered_empty_title), style = MaterialTheme.typography.titleLarge)
-        ActiveFilterList(state)
-        TextButton(onClick = onReset) { Text(stringResource(R.string.reset_filters)) }
+    EmptyState(R.drawable.ms_search_off, stringResource(R.string.filtered_empty_title), body = null, modifier) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            ActiveFilterList(state)
+            Spacer(Modifier.height(16.dp))
+            PrimaryButton(stringResource(R.string.reset_filters), onReset)
+        }
     }
 }
