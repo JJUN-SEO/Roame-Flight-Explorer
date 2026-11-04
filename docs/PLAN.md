@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.2, committed and waiting for the owner's review. Update this line at every review gate.
+> **Current step:** 6.3, planning with the owner. Update this line at every review gate.
 
 This plan turns the decided design (D1–D31) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -391,7 +391,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Found in Step 4.5:** opening the map for the first time logs three StrictMode disk reads on the main thread, all inside MapLibre: loading its native library (425 ms on a slow emulator) and reading its default options. Try loading the library on a background thread before creating the `MapView`.
 - **Done when:** every check in TEST_PLAN §4 is run on both platforms and recorded.
 
-#### [ ] 6.2 Scale benchmarks
+#### [x] 6.2 Scale benchmarks
 
 - **Goal:** replace estimates with measurements, as the owner's scalability rule asks.
 - **Covers:** SCALE-1, SCALE-2, SCALE-3, SCALE-4, SCALE-5, SCALE-6, SCALE-7.
