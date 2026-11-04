@@ -2,9 +2,9 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.3, planning with the owner. Update this line at every review gate.
+> **Current step:** 6.3a, in progress. Update this line at every review gate.
 
-This plan turns the decided design (D1–D31) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
+This plan turns the decided design (D1–D37) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
 This file says what to do next. The other docs say how things must behave: [REQUIREMENTS](REQUIREMENTS.md), [DOMAIN_RULES](DOMAIN_RULES.md), [ARCHITECTURE](ARCHITECTURE.md), [UI_SPEC](UI_SPEC.md) and [TEST_PLAN](TEST_PLAN.md). If this plan and those docs disagree, stop and ask the owner.
 
@@ -55,7 +55,7 @@ Stop and ask before any of these, with the options, tradeoffs and a recommendati
 - sending data to a third party,
 - using a fallback: SQLDelight instead of Room, or Google Maps instead of MapLibre,
 - cutting anything from scope (§10),
-- finding that any of D1–D31 doesn't work in practice.
+- finding that any of D1–D37 doesn't work in practice.
 
 For a small ambiguity, don't stop. Choose a reasonable behaviour, write it as an *(assumption)* rule in DOMAIN_RULES, add a row to SUBMISSION_NOTES §3, and continue.
 
@@ -399,26 +399,38 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Done when:** the medians are in SUBMISSION_NOTES §6 and each SCALE row has a current status. JVM numbers are labelled as a stand-in for phones.
 - **Result (2026‑11‑04):** `ScaleBenchmark` runs on demand (TEST_PLAN §4.1). Every target is met except a typo searched among 5,000 airports (about 1.25 ms against 1 ms); the fuzzy tier's next step is in ARCHITECTURE §12. At 100k flights an unnarrowed change takes 41–51 ms, which runs off the main thread. SCALE-4 and SCALE-5 stay documented, not built.
 
-#### [ ] 6.3 Accessibility, dark mode and visual polish
+#### [ ] 6.3 Restyle, accessibility and dark mode
 
-- **Goal:** the two apps feel cohesive and finished.
-- **Covers:** UX-2, UX-3, UX-4. QA: Q22, Q23.
-- **Read:** UI_SPEC §6 and §8.
-- **Build:** fixes from comparing the two apps side by side for spacing, typography and copy, including the largest font size, VoiceOver and TalkBack, and dark mode.
-- **Owner's feedback at Step 4.3 (2026‑11‑03):**
-  - The UI works, but it looks plain and generic: Android's stock Material theme with no identity of its own. The owner will describe the look they want; don't design it ahead of them. Until then, build features in the current style.
-  - Add a separate Filters button where people choose their filter options. Settle with the owner whether it replaces the four chips or sits beside them.
-  - The owner chose to restyle here rather than before Step 4.4, knowing the card, the Saved tab, the map and the iOS app are built in the current look until then.
-- **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move.
-- **Found in Step 5.8 (iOS):**
-  - At the largest standard text size, the field labels wrap ("Fro / m") and the row's airport codes wrap ("YY / Z"). At the largest accessibility size, the codes wrap one letter per line, the row's points break mid-number, and the card covers most of the screen with its points cut to "16,0…" and Remove to "…". UI_SPEC §8 asks rows to reflow instead.
-  - Row labels read "YYZ, BCN, 16,000 pts, Toronto → Barcelona, Economy, Mon, Feb 1 · Aeroplan", and pills "…, from 26,000 pts", where UI_SPEC §8 asks for full words, "points" and "saved".
-  - In dark mode the card has no visible shadow, so it blends with the rows behind it.
-- **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app.
-- **Found in Step 4.4, for the TalkBack pass:**
-  - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label.
-  - Each row's spoken description sits on a child node of the clickable row, so check what TalkBack actually reads. A selected row is announced as "Selected", through the checked state.
-- **Done when:** those QA rows pass and the owner has seen the apps side by side.
+- **Goal:** the two apps look and feel like Roame, and work at every text size, with VoiceOver and TalkBack, and in dark mode.
+- **Covers:** UX-2, UX-3, UX-4. QA: Q22, Q23, plus the new rows each sub-step adds.
+- **Read:** UI_SPEC §6 and §8; the owner's design below.
+- **Owner's design (2026‑11‑04).** The owner sent screenshots of Roame's home, search and profile screens, Airbnb's map search, and Roame's seat-class tags, and asked for:
+  - Roame's look throughout: its pink accent, warm white, rounded cards, and its bottom tab bar.
+  - A map that only appears once the user has searched, like Airbnb's: the map with a list over it.
+  - On the map, the selected route as a dotted line moving from origin to destination with a plane icon, framed on both airports.
+  - A swipeable deck of destinations, each with a photo of the place.
+  - "Best offers" for each loyalty program (the data has programs, not airlines), with each program's logo, and nearest to the user first when location is shared. Location is asked for when the app first opens.
+  - Seat-class icons like Roame's: a crown for Business, and so on.
+  - The owner's earlier ask (Step 4.3): a separate Filters button.
+- **Decided (D32–D37):** location asked at first launch; bundled, openly licensed destination photos; real program logos where their licence allows; best offer by a value score; the map after a search; Material icons on Android.
+- **What the data can't show:** it has no airlines, times, duration or stops, so cards show the program, cabin, date, points, distance and an estimated value. Nothing is made up.
+- **Sub-steps.** Each is built on both platforms, checked, and reviewed by the owner before the next:
+  - [ ] **6.3a Look and building blocks.** Roame's colours, type, cards and tab bar; seat-class icons; program logos; the Android icons (D37). Screens keep their current layout.
+  - [ ] **6.3b Explore home.** Header, search pill, the destination photo deck (D33), best offers by program (D35, location-aware), and below them every result with its count, Filters and Reset. Location asked at first launch (D32).
+  - [ ] **6.3c Search and filters.** The search pill opens a full-screen search (From and To with suggestions, dates, cabin) with a Search button. A Filters button opens one sheet with every filter; active filters stay as chips.
+  - [ ] **6.3d Results with the map (D36).** After a search, a map with a draggable list over it, where switching keeps the selection. The selected route as a moving dotted line with a plane, framed on both airports; still under Reduce Motion. On Android the map stays attached (D31).
+  - [ ] **6.3e Accessibility, large text and dark mode.** The findings below.
+- **Findings for 6.3e:**
+  - **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move.
+  - **Found in Step 5.8 (iOS):**
+    - At the largest standard text size, the field labels wrap ("Fro / m") and the row's airport codes wrap ("YY / Z"). At the largest accessibility size, the codes wrap one letter per line, the row's points break mid-number, and the card covers most of the screen with its points cut to "16,0…" and Remove to "…". UI_SPEC §8 asks rows to reflow instead.
+    - Row labels read "YYZ, BCN, 16,000 pts, Toronto → Barcelona, Economy, Mon, Feb 1 · Aeroplan", and pills "…, from 26,000 pts", where UI_SPEC §8 asks for full words, "points" and "saved".
+    - In dark mode the card has no visible shadow, so it blends with the rows behind it.
+  - **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app.
+  - **Found in Step 4.4, for the TalkBack pass:**
+    - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label.
+    - Each row's spoken description sits on a child node of the clickable row, so check what TalkBack actually reads. A selected row is announced as "Selected", through the checked state.
+- **Done when:** every sub-step is accepted, Q22 and Q23 pass, and the owner has seen the apps side by side.
 
 #### [ ] 6.4 Requirements audit
 
