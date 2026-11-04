@@ -224,7 +224,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Messages | Overlay toast with Retry | `SnackbarHost` with an action |
 | Date picker | `DatePicker(…, displayedComponents: .date)`. Convert with `Calendar.current.dateComponents([.year, .month, .day], from:)`. | `DateRangePicker`. The millis are **UTC** midnight, so convert with UTC, never the local zone. |
 | State | `@Observable ExplorerModel` via `.environment` | `collectAsStateWithLifecycle()` |
-| Location for ranking (D16, D30) | Core Location, "when in use", approximate accuracy, asked on the first focus of From | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on the first focus of From |
+| Location for ranking (D16, D30) | Core Location, "when in use", approximate accuracy (`NSLocationDefaultAccuracyReduced`), asked on the first focus of From. The dialog's reason (`NSLocationWhenInUseUsageDescription`): "Your approximate location puts nearby airports first when you choose where you're flying from." | Fused Location Provider (`play-services-location`), `ACCESS_COARSE_LOCATION`, asked on the first focus of From |
 
 ## 10. Scalability
 

@@ -11,10 +11,11 @@ struct ExplorerApp: View {
     @State private var debugNote: String?
     @State private var pendingBefore: Set<String> = []
     @State private var successes = 0
+    @State private var location: OriginLocation?
 
     var body: some View {
         TabView {
-            ExploreScreen(onDebugLongPress: debugHook)
+            ExploreScreen(onOriginFocused: { location?.fromFocused() }, onDebugLongPress: debugHook)
                 .tabItem { Label("Explore", systemImage: "airplane") }
             SavedScreen(onDebugLongPress: debugHook)
                 .tabItem { Label("Saved", systemImage: "heart") }
@@ -29,6 +30,12 @@ struct ExplorerApp: View {
             pendingBefore = now
         }
         .sensoryFeedback(.success, trigger: successes)
+        // D30: made at launch, so a permission granted on an earlier launch is read without asking.
+        .task {
+            location = OriginLocation { latitude, longitude in
+                model.store.setUserLocation(latitude: latitude, longitude: longitude)
+            }
+        }
     }
 
     @ViewBuilder private var toasts: some View {
@@ -102,6 +109,7 @@ private struct ExploreScreen: View {
     // Kept here, so switching between List and Map, or tabs, keeps the view and the map's camera (M8).
     @State private var showMap = false
     @State private var camera: MapCameraPosition?
+    let onOriginFocused: () -> Void
     let onDebugLongPress: (() -> Void)?
 
     var body: some View {
@@ -119,7 +127,7 @@ private struct ExploreScreen: View {
                 }
             } else {
                 VStack(spacing: 0) {
-                    SearchHeader()
+                    SearchHeader(onOriginFocused: onOriginFocused)
                     FilterBar { openSheet = $0 }
                     ResultSummary()
                     // L4: switching changes only the view; the selection and filters stay in the store.

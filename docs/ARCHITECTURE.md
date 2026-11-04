@@ -404,7 +404,14 @@ The app calls `createExplorerStore(baseUrl:)` once in `@main struct … : App`, 
 
 **Refresh and offline (Step 5.6, D29).** As on Android, the app refreshes when it opens, and only Try again on the first-load error refreshes otherwise. The stale banner (R6) and the refresh bar (R11) sit under the List | Map switch, and above the message on the "No flights available" screen. The banner formats `lastSuccessAt` in the device's zone with `Format.syncTime` (T4), the same text as Android's. SwiftUI's linear `ProgressView` with no value is a still grey line on iOS, so the bar is drawn by hand: a short accent bar slides along a track in a `TimelineView`, and with Reduce Motion on it fades instead. Cost: while a refresh runs, only that 4-point bar redraws each frame; otherwise nothing.
 
-**Location (D16, D30).** Core Location with `requestWhenInUseAuthorization()`, asked the first time the From field gets focus, never again automatically after a denial, and read without asking on later launches once allowed. Add `NSLocationWhenInUseUsageDescription` to `Info.plist`; approximate (reduced) accuracy is enough. A single `requestLocation()` result goes to the store as latitude/longitude. In the simulator, set a location via Features › Location.
+**Location (Step 5.7, D16, D30).** `OriginLocation.swift` wraps a `CLLocationManager`, made once at launch in the tab view's `.task`. The From field calls `fromFocused()` each time it gets focus:
+- If iOS hasn't asked yet, it calls `requestWhenInUseAuthorization()`.
+- If allowed, it reads one location with `requestLocation()` and passes it to the store's `setUserLocation`.
+- After a denial it does nothing. iOS won't show the dialog twice anyway.
+
+Core Location reports the current permission when the manager is made, so a permission granted on an earlier launch is read straight away without asking. `Info.plist` sets `NSLocationDefaultAccuracyReduced`, so the dialog offers approximate location only (no Precise switch), matching Android's coarse permission. It also sets `NSLocationWhenInUseUsageDescription`, the reason the dialog shows. A missing fix or an error changes nothing and shows nothing. Callbacks arrive on the main thread, because the manager is made there. Cost: one reading per launch at most, and no background location.
+
+For QA, `xcrun simctl location <udid> set <lat>,<lon>` sets the simulator's location, and `xcrun simctl privacy <udid> reset location <bundle id>` makes the app ask again (TEST_PLAN §3).
 
 ## 9. Android integration
 

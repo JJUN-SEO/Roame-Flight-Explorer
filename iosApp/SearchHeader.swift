@@ -1,9 +1,10 @@
 import SwiftUI
 import Shared
 
-/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). */
+/** From and To, each with its suggestions and hint (S13, S14, UI_SPEC §1). From's focus may ask for location (D30). */
 struct SearchHeader: View {
     @Environment(ExplorerModel.self) private var model
+    let onOriginFocused: () -> Void
 
     var body: some View {
         let state = model.state
@@ -15,7 +16,8 @@ struct SearchHeader: View {
                 suggestions: state.originSuggestions,
                 hint: state.originHint,
                 onQueryChange: { model.store.setOriginQuery(text: $0) },
-                onPick: { model.store.pickOrigin(codes: $0) }
+                onPick: { model.store.pickOrigin(codes: $0) },
+                onFocused: onOriginFocused
             )
             SearchField(
                 label: "To",
@@ -40,6 +42,7 @@ private struct SearchField: View {
     let hint: [AirportSuggestion]
     let onQueryChange: (String) -> Void
     let onPick: ([String]) -> Void
+    let onFocused: () -> Void
 
     // What the user typed. The store's copy arrives a moment later, so the field doesn't read it back while
     // typing; it only follows the store when the store empties it (Reset).
@@ -48,7 +51,7 @@ private struct SearchField: View {
 
     init(
         label: String, query: String, pick: AirportSuggestion?, suggestions: [AirportSuggestion], hint: [AirportSuggestion],
-        onQueryChange: @escaping (String) -> Void, onPick: @escaping ([String]) -> Void
+        onQueryChange: @escaping (String) -> Void, onPick: @escaping ([String]) -> Void, onFocused: @escaping () -> Void = {}
     ) {
         self.label = label
         self.query = query
@@ -57,6 +60,7 @@ private struct SearchField: View {
         self.hint = hint
         self.onQueryChange = onQueryChange
         self.onPick = onPick
+        self.onFocused = onFocused
         _text = State(initialValue: query)
     }
 
@@ -110,6 +114,9 @@ private struct SearchField: View {
         }
         .onChange(of: query) { _, newQuery in
             if newQuery.isEmpty { text = "" }
+        }
+        .onChange(of: focused) { _, isFocused in
+            if isFocused { onFocused() }
         }
     }
 }

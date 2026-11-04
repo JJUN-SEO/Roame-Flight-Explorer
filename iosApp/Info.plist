@@ -3,6 +3,8 @@
 <plist version="1.0"><dict>
     <key>API_BASE_URL</key><string>http://localhost:8080</string>
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+    <key>NSLocationDefaultAccuracyReduced</key><true/>
+    <key>NSLocationWhenInUseUsageDescription</key><string>Your approximate location puts nearby airports first when you choose where you're flying from.</string>
     <key>CFBundleDisplayName</key><string>Roame Starter</string>
     <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
