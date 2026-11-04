@@ -125,7 +125,7 @@ The calendar page: a bar with Back and "Dates", the weekday letters S M T W T F 
 │ Maps · Legal                           │  Apple's (iOS) or the ⓘ credit (Android), above the sheet
 │╭──────────────────────────────────────╮│
 ││                 ───                  ││  handle
-││              238 flights             ││  peek height: 64
+││ 238 flights        (Lowest points ▾) ││  peek height: 64; the sort (D46)
 ││ ┌──────────────────────────────────┐ ││
 ││ │ YYZ ──────✈────── NRT 86,000 pts │ ││  the same rows as before
 ││ └──────────────────────────────────┘ ││
@@ -134,7 +134,9 @@ The calendar page: a bar with Back and "Dates", the weekday letters S M T W T F 
 └────────────────────────────────────────┘
 ```
 
-Fully open, the sheet covers the map up to the header, the list scrolls, and a dark "Map" pill floats at its bottom. At the peek only the handle and the count show.
+Fully open, the sheet covers the map up to the header, the list scrolls, and a dark "Map" pill floats at its bottom. At the peek only the handle, the count and the sort show.
+
+**The sort (D46, O1, O4).** The sheet's header has the count on the left and the current sort on the right, as an outlined pill with ▾; the pill hides when nothing matches. Tapping it opens "Sort by" with four single-choice rows: Lowest points, Highest points, By program and Best offer. Choosing one applies it, closes the sheet and starts the list from its top. Under By program, each program's flights follow a heading, "Aeroplan · 190 flights". A destination's sheet stays cheapest first whatever the sort (O2).
 
 ### 2.2 Explore: results, a flight selected
 
@@ -318,6 +320,7 @@ Use the same tokens on both platforms, mapped to native APIs.
 | Results sheet | The background colour, with 20 pt top corners and a shadow; a 36 × 4 handle and the count | The results (§2.1) |
 | `FiltersButton` | A 48 pt outlined circle with ⚙ (tune) and a count badge | The results' header |
 | Map button | A dark (#2B2B2B) 44 pt pill with a map icon and "Map" in white | Over the full results sheet |
+| Sort pill | A 36 pt outlined pill with the sort's name and ▾ (D46) | The results sheet's header |
 | Plane | Roame's pink plane on a white 32 pt disc with a faint ring, turned to the route's heading (M9) | The selected route |
 
 Search fields are pills in the card colour with a magnifying glass, and a pink border while focused. Their suggestions are a card with a soft shadow. Sheets stay native containers; the points slider stays native until Step 6.3d.
@@ -333,6 +336,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 - **VoiceOver / TalkBack labels:**
   - Row: "Boston to Paris, Monday February 1, Premium Economy, Avios, 25,000 points, saved."
   - Marker: "Paris, 12 flights, from 25,000 points."
+  - Sort pill: "Sort, Lowest points". Program headings under By program: "Aeroplan, 190 flights", as headings.
   - Chips announce "Cabin: Business, active".
   - Landing search bar: "Search flights. Where to?, Feb 1 – Apr 1 · Any cabin" (or the current route).
   - Destination card: "Johannesburg, from 39,000 points, up to 35% below typical".

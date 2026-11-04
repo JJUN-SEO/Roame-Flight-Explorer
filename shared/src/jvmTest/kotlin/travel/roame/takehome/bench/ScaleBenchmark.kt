@@ -8,6 +8,7 @@ import travel.roame.takehome.data.local.configure
 import travel.roame.takehome.data.local.toCachedEntity
 import travel.roame.takehome.data.local.toDomain
 import travel.roame.takehome.domain.DealIndex
+import travel.roame.takehome.domain.sortedFor
 import travel.roame.takehome.domain.search.AIRPORT_PASSENGERS
 import travel.roame.takehome.domain.search.AirportRanking
 import travel.roame.takehome.domain.search.AirportSearchEngine
@@ -17,6 +18,7 @@ import travel.roame.takehome.domain.search.SearchableAirport
 import travel.roame.takehome.domain.toDestinationGroups
 import travel.roame.takehome.model.Flight
 import travel.roame.takehome.model.FlightFilters
+import travel.roame.takehome.model.SortOrder
 import travel.roame.takehome.presentation.ExplorerInputs
 import travel.roame.takehome.presentation.Snapshot
 import travel.roame.takehome.presentation.index
@@ -51,6 +53,7 @@ class ScaleBenchmark {
         cache()
         aggregation()
         deals()
+        sorts()
         memory()
 
         File("build/reports").mkdirs()
@@ -128,6 +131,16 @@ class ScaleBenchmark {
                 time(warmups = 3) { DealIndex.of(flights) },
                 time { reduce(Snapshot(indexed, SyncStatus(), emptyList(), ottawa)) },
             )
+        }
+    }
+
+    /** O1 (D46): each sort's order, made the first time it's used after a data change, then kept. Best offer rates first. */
+    private fun sorts() {
+        section("Sort orders, each once per data change", "Flights", *SortOrder.entries.map { it.name }.toTypedArray())
+        for (flightCount in listOf(1_000, 10_000, 100_000)) {
+            val flights = readBack(SyntheticData.flights(flightCount, SyntheticData.airports(32)))
+            val times = SortOrder.entries.map { sort -> time(warmups = 3) { flights.sortedFor(sort) } }
+            row(count(flightCount), *times.toTypedArray())
         }
     }
 

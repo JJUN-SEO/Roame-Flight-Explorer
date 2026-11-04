@@ -204,9 +204,15 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
 
 ## 4. Ordering (O)
 
-- **O1** Results are sorted by `departureDate` ↑, then `points` ↑, then `id` ↑. The order is deterministic, and we never rely on the order in the file.
-- **O2** The flights in a marker sheet are sorted by `points` ↑, then `departureDate` ↑, then `id` ↑, so the "from" price shown on the marker is the first row.
+- **O1** Results follow the chosen sort (D46: the owner's addition, as the brief asks for none). The default is **Lowest points**. Every order ends with `departureDate` ↑, then `id` ↑, so it's deterministic and never relies on the order in the file.
+  - **Lowest points:** `points` ↑.
+  - **Highest points:** `points` ↓.
+  - **By program:** programs in F6's order (alphabetical, so "Mileage Plan" comes before "MileagePlus"), then `points` ↑. The list shows a heading per program with its flight count (`ExplorerState.sections`).
+  - **Best offer:** B4's value ↑, so the flight most below its cabin's typical points per 1,000 km comes first, whatever its cabin. Then `points` ↑. A flight with no value (B2) goes last.
+  - Each sort's order is made once per data change, the first time it's used (D6).
+- **O2** The flights in a marker sheet are sorted by `points` ↑, then `departureDate` ↑, then `id` ↑, so the "from" price in its title is the first row. This holds whatever the sort. *(assumption)*
 - **O3** The Saved list is sorted by `departureDate` ↑, then `id` ↑.
+- **O4** The sort isn't a filter. It has no chip, doesn't count on the Filters badge or towards Reset, and Clear all, Reset and a new search all keep it. Changing it keeps the selection, and the list starts again from its top. It lasts while the app runs and isn't saved between launches. *(assumption)*
 
 ## 5. Count, active filters, reset (C)
 

@@ -157,4 +157,13 @@
     <string name="filters_button_none">Filters</string>
     <string name="show_map">Map</string>
     <string name="results_sheet_handle">Flight list. Drag to show more or less of the map</string>
+    <!-- The sort (O1, D46) -->
+    <string name="sort_by">Sort by</string>
+    <string name="sort_lowest_points">Lowest points</string>
+    <string name="sort_highest_points">Highest points</string>
+    <string name="sort_by_program">By program</string>
+    <string name="sort_best_offer">Best offer</string>
+    <string name="sort_button">Sort, %1$s</string>
+    <string name="program_heading">%1$s · %2$s</string>
+    <string name="program_heading_description">%1$s, %2$s</string>
 </resources>

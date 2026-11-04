@@ -23,7 +23,7 @@ import travel.roame.takehome.di.AppGraph
 import travel.roame.takehome.domain.DealIndex
 import travel.roame.takehome.domain.GreatCircle
 import travel.roame.takehome.domain.MarkerSheetOrder
-import travel.roame.takehome.domain.ResultOrder
+import travel.roame.takehome.domain.sortedFor
 import travel.roame.takehome.domain.matching
 import travel.roame.takehome.domain.toDestinationGroups
 import travel.roame.takehome.domain.toFilterOptions
@@ -31,6 +31,7 @@ import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.Flight
 import travel.roame.takehome.model.FlightFilters
+import travel.roame.takehome.model.SortOrder
 import travel.roame.takehome.presentation.DataStatus
 import travel.roame.takehome.presentation.ExplorerStore
 import travel.roame.takehome.testing.awaitState
@@ -219,14 +220,23 @@ class FixtureContractTest {
     }
 
     /** SHA-256 of every id in order, one per line, so a single row out of place fails. */
-    private fun orderHash(order: Comparator<Flight>): String {
-        val ids = decoded.sortedWith(order).joinToString("\n") { it.id }
+    private fun orderHash(order: Comparator<Flight>): String = hashOf(decoded.sortedWith(order))
+
+    private fun hashOf(flights: List<Flight>): String {
+        val ids = flights.joinToString("\n") { it.id }
         return MessageDigest.getInstance("SHA-256").digest(ids.toByteArray()).toHexString()
     }
 
+    /** Each sort's hash from an independent Python sort (2026‑11‑04), Best offer's with its own B1–B4 values. */
     @Test
     fun o1_fixtureSortsTheSameAsAnIndependentSort() {
-        assertEquals("41425f759f4d7caa2e1b2e5b76359c98f86a50e29947f08b672156bc32ee6d6f", orderHash(ResultOrder))
+        val expected = mapOf(
+            SortOrder.LowestPoints to "8f3196e19d5a757e06c79e5bff8e15a4a0a6d2d26863861e04466238a4f6f359",
+            SortOrder.HighestPoints to "63c17ae6ae7197d2949fe69b6ff748695eea4e21b5f92709c21cf88d175b9fa8",
+            SortOrder.ByProgram to "bbee9f4b0f44b8cdf183a25571cf099465d888bd21f782c72477e8edeee240a6",
+            SortOrder.BestOffer to "2939683156aaed7598584ba73669550fa00e92b4486d8aee86045bfeae74bf76",
+        )
+        for ((sort, hash) in expected) assertEquals(hash, hashOf(decoded.sortedFor(sort)), "$sort")
     }
 
     @Test
@@ -336,7 +346,8 @@ class FixtureContractTest {
         assertEquals(1000, all.resultCount)
         assertEquals(24, all.markers.size)
         assertEquals(1000, all.markers.sumOf { it.flightCount })
-        assertEquals("fx-YYZ-BCN-20270201", all.results.first().id)
+        // The fixture's cheapest flight comes first, under the default sort (D46).
+        assertEquals("fx-LAX-MEX-20270218", all.results.first().id)
         assertEquals(decoded.toFilterOptions(), all.options)
 
         store.setCabin("Business")

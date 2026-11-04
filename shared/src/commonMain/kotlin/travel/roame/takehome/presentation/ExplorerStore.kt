@@ -24,6 +24,7 @@ import travel.roame.takehome.domain.normalizedTo
 import travel.roame.takehome.domain.search.GeoPoint
 import travel.roame.takehome.model.FilterKind
 import travel.roame.takehome.model.FlightFilters
+import travel.roame.takehome.model.SortOrder
 
 /** The one source of truth for both apps (D2, D10). Every intent is a plain function, so it's easy to call from Swift. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -100,6 +101,9 @@ class ExplorerStore internal constructor(
         val programs = input.filters.programs
         input.copy(filters = input.filters.copy(programs = if (name in programs) programs - name else programs + name))
     }
+
+    /** O1, O4. */
+    fun setSort(sort: SortOrder) = inputs.update { it.copy(sort = sort) }
 
     /** C3. */
     fun clearFilter(kind: FilterKind) = inputs.update { it.copy(filters = it.filters.cleared(kind)) }

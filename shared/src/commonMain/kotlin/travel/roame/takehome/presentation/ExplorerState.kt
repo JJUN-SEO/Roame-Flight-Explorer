@@ -5,6 +5,7 @@ import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.model.FetchError
 import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.FlightFilters
+import travel.roame.takehome.model.SortOrder
 
 /** Everything both apps show (ARCHITECTURE §4.1). They render this and never filter, sort or group flights themselves. */
 data class ExplorerState(
@@ -16,8 +17,12 @@ data class ExplorerState(
     val options: FilterOptions,
     val activeFilters: List<ActiveFilter>,
     val hasAnythingToReset: Boolean,
-    /** After search and filters, in O1 order. */
+    /** After search and filters, in the order of [sort] (O1). */
     val results: List<FlightItem>,
+    /** O1: the chosen sort. Not a filter: it has no chip and isn't cleared by Clear all or Reset (O4). */
+    val sort: SortOrder,
+    /** [results] as the list shows them: a section per program for By program, otherwise one untitled section. */
+    val sections: List<ResultSection>,
     /** From exactly the same flights as [results] (M1), ordered by code. */
     val markers: List<DestinationMarker>,
     /** The discovery selection, shared by the list and the map (L1). Always one of [results]. */
@@ -57,6 +62,8 @@ data class ExplorerState(
             activeFilters = emptyList(),
             hasAnythingToReset = false,
             results = emptyList(),
+            sort = SortOrder.LowestPoints,
+            sections = emptyList(),
             markers = emptyList(),
             selected = null,
             saved = emptyList(),
@@ -73,6 +80,11 @@ data class ExplorerState(
             landing = Landing.Empty,
         )
     }
+}
+
+/** One run of the results list. [program] is its heading under By program, and null under every other sort. */
+data class ResultSection(val program: String?, val flights: List<FlightItem>) {
+    val flightCount: Int get() = flights.size
 }
 
 data class Landing(

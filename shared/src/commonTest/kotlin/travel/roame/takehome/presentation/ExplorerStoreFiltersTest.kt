@@ -51,7 +51,8 @@ class ExplorerStoreFiltersTest {
     @Test
     fun o1_resultsAreSortedWhateverOrderTheCacheIsIn() = runTest {
         val (store) = storeWith()
-        assertEquals(listOf("hong-kong", "pricey-paris", "cheap-paris", "tokyo"), ids(store.state.value))
+        // Lowest points first, the default sort (D46).
+        assertEquals(listOf("hong-kong", "cheap-paris", "pricey-paris", "tokyo"), ids(store.state.value))
     }
 
     @Test
@@ -117,7 +118,7 @@ class ExplorerStoreFiltersTest {
     fun f1_aDateRangeFiltersResultsAndMarkers() = runTest {
         val (store) = storeWith()
         val state = stateAfter(store) { setDateRange("2027-02-05", "2027-02-10") }
-        assertEquals(listOf("pricey-paris", "cheap-paris"), ids(state))
+        assertEquals(listOf("cheap-paris", "pricey-paris"), ids(state))
         assertEquals(listOf("CDG"), state.markers.map { it.code })
     }
 

@@ -27,10 +27,13 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -57,11 +60,13 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import travel.roame.takehome.android.R
+import travel.roame.takehome.model.SortOrder
 import travel.roame.takehome.presentation.DataStatus
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
@@ -98,6 +103,7 @@ internal fun ResultsScreen(
     onDebugLongPress: (() -> Unit)?,
 ) {
     var filtersOpen by rememberSaveable { mutableStateOf(false) }
+    var sortOpen by rememberSaveable { mutableStateOf(false) }
     // UI_SPEC §5: back deselects first, then leaves the results.
     BackHandler(enabled = active) { if (state.selected != null) store.select(null) else onBack() }
     // The fields used to live here and held the focus; let go of it when the results are left.
@@ -116,12 +122,13 @@ internal fun ResultsScreen(
                     // UI_SPEC §4: a successful empty response is not an error (R4).
                     EmptyState(R.drawable.ms_flight, stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
                 } else {
-                    MapWithSheet(state, store, view, active, onDebugLongPress, onFilters = { filtersOpen = true })
+                    MapWithSheet(state, store, view, active, onDebugLongPress, onSort = { sortOpen = true })
                 }
             }
         }
     }
     if (filtersOpen) FiltersSheet(state, store, onDismiss = { filtersOpen = false })
+    if (sortOpen) SortSheet(state, store, onDismiss = { sortOpen = false })
 }
 
 /** ← to the landing page, the search summary (tap it to change the search), and Filters with its count. */
@@ -171,7 +178,7 @@ private fun MapWithSheet(
     view: ResultsView,
     active: Boolean,
     onDebugLongPress: (() -> Unit)?,
-    onFilters: () -> Unit,
+    onSort: () -> Unit,
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -259,7 +266,7 @@ private fun MapWithSheet(
                 .background(MaterialTheme.colorScheme.background, SheetShape)
                 .then(if (full) Modifier else sheetDrag),
         ) {
-            SheetHeader(state, Modifier.then(if (full) sheetDrag else Modifier))
+            SheetHeader(state, onSort, Modifier.then(if (full) sheetDrag else Modifier))
             if (state.results.isEmpty()) {
                 FilteredEmpty(state, onReset = store::resetAll)
             } else {
@@ -283,46 +290,133 @@ private fun MapWithSheet(
     }
 }
 
-/** The handle and the count (C1). Spoken as one element that says the list can be dragged. */
+/**
+ * The handle, the count (C1) and the sort (O1, D46). The count is spoken with a note that the list can be dragged;
+ * the sort is its own button.
+ */
 @Composable
-private fun SheetHeader(state: ExplorerState, modifier: Modifier) {
+private fun SheetHeader(state: ExplorerState, onSort: () -> Unit, modifier: Modifier) {
     val handle = stringResource(R.string.results_sheet_handle)
     val count = resultCountText(state)
-    Column(
-        modifier.fillMaxWidth().height(PeekHeight).clearAndSetSemantics {
-            contentDescription = "$count. $handle"
-            heading()
-        },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    Column(modifier.fillMaxWidth().height(PeekHeight), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.padding(top = 10.dp).size(width = 36.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, CircleShape))
-        Text(
-            if (state.results.isEmpty()) stringResource(R.string.filtered_empty_title) else count,
-            Modifier.padding(top = 14.dp),
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-        )
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, top = 6.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (state.results.isEmpty()) stringResource(R.string.filtered_empty_title) else count,
+                Modifier.weight(1f).clearAndSetSemantics {
+                    contentDescription = "$count. $handle"
+                    heading()
+                },
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (state.results.isNotEmpty()) SortButton(state.sort, onSort)
+        }
+    }
+}
+
+/** The current sort, as an outlined pill with ▾, which opens the sort sheet. */
+@Composable
+private fun SortButton(sort: SortOrder, onClick: () -> Unit) {
+    val name = sortName(sort)
+    val description = stringResource(R.string.sort_button, name)
+    Row(
+        Modifier.height(36.dp)
+            .clip(CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            .clickable(onClick = onClick)
+            .clearAndSetSemantics {
+                contentDescription = description
+                role = Role.Button
+            }
+            .padding(start = 14.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.width(4.dp))
+        Icon(painterResource(R.drawable.ms_arrow_down), contentDescription = null, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The four sorts (O1, D46), drawn the same as iOS's SortSheet. Choosing one applies it and closes the sheet. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SortSheet(state: ExplorerState, store: ExplorerStore, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(Modifier.padding(bottom = 16.dp)) {
+            Text(
+                stringResource(R.string.sort_by),
+                Modifier.fillMaxWidth().padding(bottom = 12.dp).semantics { heading() },
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            for (sort in SortOrder.entries) {
+                OptionRow(sortName(sort), selected = state.sort == sort) {
+                    store.setSort(sort)
+                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                }
+            }
+        }
     }
 }
 
 @Composable
+private fun sortName(sort: SortOrder) = stringResource(
+    when (sort) {
+        SortOrder.LowestPoints -> R.string.sort_lowest_points
+        SortOrder.HighestPoints -> R.string.sort_highest_points
+        SortOrder.ByProgram -> R.string.sort_by_program
+        SortOrder.BestOffer -> R.string.sort_best_offer
+    },
+)
+
+/** The results in the shared sections: under By program, each program's flights follow its heading (O1). */
+@Composable
 private fun ResultsList(state: ExplorerState, store: ExplorerStore, listState: LazyListState, scrollEnabled: Boolean) {
+    // A new sort starts the list from its top. Saved, so turning the phone doesn't scroll it back up.
+    var shownSort by rememberSaveable { mutableStateOf(state.sort) }
+    LaunchedEffect(state.sort) {
+        if (state.sort != shownSort) {
+            shownSort = state.sort
+            listState.scrollToItem(0)
+        }
+    }
     LazyColumn(
         state = listState,
         userScrollEnabled = scrollEnabled,
         contentPadding = PaddingValues(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(state.results, key = { it.id }) { flight ->
-            FlightRow(
-                flight,
-                isSelected = flight.id == state.selected?.id,
-                isPending = flight.id in state.pendingWriteIds,
-                onClick = { store.select(flight.id) },
-                onToggleSave = { store.toggleSave(flight.id) },
-            )
+        for (section in state.sections) {
+            val program = section.program
+            if (program != null) item(key = "program/$program") { ProgramHeading(program, section.flightCount) }
+            items(section.flights, key = { it.id }) { flight ->
+                FlightRow(
+                    flight,
+                    isSelected = flight.id == state.selected?.id,
+                    isPending = flight.id in state.pendingWriteIds,
+                    onClick = { store.select(flight.id) },
+                    onToggleSave = { store.toggleSave(flight.id) },
+                )
+            }
         }
     }
+}
+
+/** "Aeroplan · 212 flights", spoken as a heading. */
+@Composable
+private fun ProgramHeading(program: String, count: Int) {
+    val flights = pluralStringResource(R.plurals.result_count, count, groupedCount(count))
+    val description = stringResource(R.string.program_heading_description, program, flights)
+    Text(
+        stringResource(R.string.program_heading, program, flights),
+        Modifier.padding(start = 4.dp, top = 8.dp).clearAndSetSemantics {
+            contentDescription = description
+            heading()
+        },
+        style = MaterialTheme.typography.titleSmall,
+    )
 }
 
 /** A dark pill with a map icon, over the full list. */

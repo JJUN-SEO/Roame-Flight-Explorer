@@ -6,7 +6,7 @@ import travel.roame.takehome.domain.DealIndex
 import travel.roame.takehome.domain.MarkerSheetOrder
 import travel.roame.takehome.domain.estimatedValueUsd
 import travel.roame.takehome.domain.photoKey
-import travel.roame.takehome.domain.ResultOrder
+import travel.roame.takehome.domain.sortedFor
 import travel.roame.takehome.domain.active
 import travel.roame.takehome.domain.hasAnythingToReset
 import travel.roame.takehome.domain.matching
@@ -28,6 +28,7 @@ import travel.roame.takehome.model.FilterOptions
 import travel.roame.takehome.model.Flight
 import travel.roame.takehome.model.FlightFilters
 import travel.roame.takehome.model.SavedFlight
+import travel.roame.takehome.model.SortOrder
 
 /** What the user has chosen, plus the writes in progress and the messages not yet shown. */
 internal data class ExplorerInputs(
@@ -43,6 +44,8 @@ internal data class ExplorerInputs(
     val destinationPick: List<String>? = null,
     /** Only ever set once the user has allowed location (D16, D30). */
     val userLocation: GeoPoint? = null,
+    /** O1, O4: not a filter, so Clear all, Reset and a new search keep it. */
+    val sort: SortOrder = SortOrder.LowestPoints,
 )
 
 /** One side of the route's airports, indexed once per data change (S3, D18). */
@@ -100,7 +103,7 @@ internal class FieldSearch(
 
 /** The cache, prepared once per data change, so input changes filter without sorting (D6). */
 internal class IndexedFlights(
-    val resultOrder: List<Flight>,
+    flights: List<Flight>,
     val sheetOrder: List<Flight>,
     val options: FilterOptions,
     val lastSuccessAt: Long?,
@@ -108,10 +111,15 @@ internal class IndexedFlights(
     val origins: SideIndex,
     val destinations: SideIndex,
     val deals: DealIndex,
-)
+) {
+    /** O1: each sort's order is made the first time it's used, then kept until the data changes. */
+    private val orders = SortOrder.entries.associateWith { sort -> lazy { flights.sortedFor(sort) } }
+
+    fun inOrder(sort: SortOrder): List<Flight> = orders.getValue(sort).value
+}
 
 internal fun index(cache: CacheSnapshot) = IndexedFlights(
-    resultOrder = cache.flights.sortedWith(ResultOrder),
+    flights = cache.flights,
     sheetOrder = cache.flights.sortedWith(MarkerSheetOrder),
     options = cache.flights.toFilterOptions(),
     lastSuccessAt = cache.lastSuccessAt?.toEpochMilliseconds(),
@@ -137,7 +145,7 @@ internal fun reduce(snapshot: Snapshot): ExplorerState {
     val savedIds = savedFlights.mapTo(HashSet()) { it.flight.id }
     val item = { flight: Flight -> flight.toItem(isSaved = flight.id in savedIds) }
     // P7: ranking only orders the suggestions; the flights keep O1.
-    val results = index.resultOrder.matching(filters, origin.codes, destination.codes).map(item)
+    val results = index.inOrder(inputs.sort).matching(filters, origin.codes, destination.codes).map(item)
     val saved = savedFlights.map { savedFlight ->
         SavedFlightItem(
             flight = savedFlight.flight.toItem(isSaved = true),
@@ -157,6 +165,8 @@ internal fun reduce(snapshot: Snapshot): ExplorerState {
         hasAnythingToReset = hasAnythingToReset(filters, inputs.originQuery, inputs.destinationQuery) ||
             origin.pick != null || destination.pick != null,
         results = results,
+        sort = inputs.sort,
+        sections = sections(results, inputs.sort),
         markers = index.sheetOrder.matching(filters, origin.codes, destination.codes).toDestinationGroups().map { group ->
             DestinationMarker(
                 code = group.destination.code,
@@ -182,6 +192,13 @@ internal fun reduce(snapshot: Snapshot): ExplorerState {
         isLocationShared = inputs.userLocation != null,
         landing = landing(index.deals, inputs.userLocation, item),
     )
+}
+
+/** O1: By program gives one section per program, in the results' order; any other sort, one untitled section. */
+private fun sections(results: List<FlightItem>, sort: SortOrder): List<ResultSection> = when {
+    results.isEmpty() -> emptyList()
+    sort == SortOrder.ByProgram -> results.groupBy { it.program }.map { (program, flights) -> ResultSection(program, flights) }
+    else -> listOf(ResultSection(program = null, flights = results))
 }
 
 /** B5–B8: the deals ignore the search and filters, so only the location and saved flights change them. */

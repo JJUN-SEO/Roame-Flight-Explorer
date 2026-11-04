@@ -17,6 +17,7 @@ struct ResultsScreen: View {
     let onEditSearch: () -> Void
     let onDebugLongPress: (() -> Void)?
     @State private var filtersOpen = false
+    @State private var sortOpen = false
     @State private var openMarker: String?
     // Kept here, as the screen stays alive behind the other pages, so the sheet and the camera survive (M8).
     @State private var stop = SheetStop.half
@@ -41,6 +42,7 @@ struct ResultsScreen: View {
                         camera: $camera,
                         isActive: isActive,
                         onMarkerTap: { openMarker = $0 },
+                        onSort: { sortOpen = true },
                         onDebugLongPress: onDebugLongPress
                     )
                 }
@@ -51,6 +53,7 @@ struct ResultsScreen: View {
         }
         .background(Color.background)
         .sheet(isPresented: $filtersOpen) { FiltersSheet() }
+        .sheet(isPresented: $sortOpen) { SortSheet() }
         .sheet(isPresented: Binding(get: { openMarker != nil }, set: { if !$0 { openMarker = nil } })) {
             if let code = openMarker { MarkerSheet(code: code) }
         }
@@ -118,6 +121,7 @@ private struct MapWithSheet: View {
     @Binding var camera: MapCameraPosition?
     let isActive: Bool
     let onMarkerTap: (String) -> Void
+    let onSort: () -> Void
     let onDebugLongPress: (() -> Void)?
     @State private var drag: CGFloat = 0
     @State private var dragging = false
@@ -178,7 +182,7 @@ private struct MapWithSheet: View {
                 }
 
                 VStack(spacing: 0) {
-                    SheetHeader(state: state).gesture(sheetDrag)
+                    SheetHeader(state: state, onSort: onSort).gesture(sheetDrag)
                     Group {
                         if state.results.isEmpty {
                             FilteredEmpty()
@@ -214,48 +218,143 @@ private struct MapWithSheet: View {
     }
 }
 
-/** The handle and the count (C1). Spoken as one element that says the list can be dragged. */
+/**
+ * The handle, the count (C1) and the sort (O1, D46). The count is spoken with a note that the list can be dragged;
+ * the sort is its own button.
+ */
 private struct SheetHeader: View {
     let state: ExplorerState
+    let onSort: () -> Void
 
     var body: some View {
         let count = flightCount(Int(state.resultCount))
         VStack(spacing: 0) {
             Capsule().fill(Color.outline).frame(width: 36, height: 4).padding(.top, 10)
-            Text(state.results.isEmpty ? "No flights match your search" : count)
-                .font(.appTitle)
-                .padding(.top, 14)
+            HStack(spacing: 8) {
+                Text(state.results.isEmpty ? "No flights match your search" : count)
+                    .font(.appTitle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel("\(count). Flight list. Drag to show more or less of the map")
+                    .accessibilityAddTraits(.isHeader)
+                if !state.results.isEmpty { SortButton(sort: state.sort, action: onSort) }
+            }
+            .padding(EdgeInsets(top: 6, leading: 20, bottom: 0, trailing: 12))
         }
         .frame(maxWidth: .infinity)
         .frame(height: peekHeight, alignment: .top)
         .contentShape(.rect)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(count). Flight list. Drag to show more or less of the map")
-        .accessibilityAddTraits(.isHeader)
     }
 }
 
+/** The current sort, as an outlined pill with ▾, which opens the sort sheet. */
+private struct SortButton: View {
+    let sort: Shared.SortOrder
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(sortName(sort)).font(.appLabel)
+                MSIcon(name: "ms_arrow_down", size: 18)
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .frame(height: 36)
+            .overlay(Capsule().strokeBorder(Color.outline))
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Sort, \(sortName(sort))")
+    }
+}
+
+/** The four sorts (O1, D46), drawn the same as Android's SortSheet. Choosing one applies it and closes the sheet. */
+private struct SortSheet: View {
+    @Environment(ExplorerModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let current = model.state.sort
+        VStack(spacing: 0) {
+            Text("Sort by")
+                .font(.appTitle)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
+                .accessibilityAddTraits(.isHeader)
+            ForEach(Shared.SortOrder.entries, id: \.self) { sort in
+                OptionRow(label: sortName(sort), isSelected: sort == current) {
+                    model.store.setSort(sort: sort)
+                    dismiss()
+                }
+            }
+            Spacer(minLength: 16)
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Color.background)
+        .foregroundStyle(Color.text)
+    }
+}
+
+private func sortName(_ sort: Shared.SortOrder) -> String {
+    switch sort {
+    case .lowestpoints: "Lowest points"
+    case .highestpoints: "Highest points"
+    case .byprogram: "By program"
+    default: "Best offer"
+    }
+}
+
+/** The results in the shared sections: under By program, each program's flights follow its heading (O1). */
 private struct ResultsList: View {
     @Environment(ExplorerModel.self) private var model
     let scrollEnabled: Bool
 
     var body: some View {
         let state = model.state
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                ForEach(state.results, id: \.id) { flight in
-                    FlightRow(
-                        flight: flight,
-                        isSelected: flight.id == state.selected?.id,
-                        isPending: state.pendingWriteIds.contains(flight.id),
-                        onTap: { model.store.select(flightId: flight.id) },
-                        onToggleSave: { model.store.toggleSave(flightId: flight.id) }
-                    )
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    Color.clear.frame(height: 0).id(listTop)
+                    ForEach(state.sections, id: \.program) { section in
+                        if let program = section.program {
+                            ProgramHeading(program: program, count: Int(section.flightCount))
+                        }
+                        ForEach(section.flights, id: \.id) { flight in
+                            FlightRow(
+                                flight: flight,
+                                isSelected: flight.id == state.selected?.id,
+                                isPending: state.pendingWriteIds.contains(flight.id),
+                                onTap: { model.store.select(flightId: flight.id) },
+                                onToggleSave: { model.store.toggleSave(flightId: flight.id) }
+                            )
+                        }
+                    }
                 }
+                .padding(EdgeInsets(top: 4, leading: 16, bottom: 96, trailing: 16))
             }
-            .padding(EdgeInsets(top: 4, leading: 16, bottom: 96, trailing: 16))
+            .scrollDisabled(!scrollEnabled)
+            // A new sort starts the list from its top.
+            .onChange(of: state.sort) { proxy.scrollTo(listTop, anchor: .top) }
         }
-        .scrollDisabled(!scrollEnabled)
+    }
+}
+
+private let listTop = "list-top"
+
+/** "Aeroplan · 212 flights", spoken as a heading. */
+private struct ProgramHeading: View {
+    let program: String
+    let count: Int
+
+    var body: some View {
+        Text("\(program) · \(flightCount(count))")
+            .font(.appTitleSmall)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(EdgeInsets(top: 8, leading: 4, bottom: 0, trailing: 0))
+            .accessibilityLabel("\(program), \(flightCount(count))")
+            .accessibilityAddTraits(.isHeader)
     }
 }
 

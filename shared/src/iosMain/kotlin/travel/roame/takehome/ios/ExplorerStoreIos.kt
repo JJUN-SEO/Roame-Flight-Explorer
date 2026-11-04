@@ -5,6 +5,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import travel.roame.takehome.di.createAppGraph
 import travel.roame.takehome.model.FilterKind
+import travel.roame.takehome.model.SortOrder
 import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
 
@@ -50,6 +51,8 @@ class ExplorerStoreIos internal constructor(
     fun toggleProgram(name: String) = store.toggleProgram(name)
 
     fun clearFilter(kind: FilterKind) = store.clearFilter(kind)
+
+    fun setSort(sort: SortOrder) = store.setSort(sort)
 
     fun resetAll() = store.resetAll()
 
