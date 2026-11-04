@@ -306,8 +306,22 @@ private fun MapContent(
                 else -> Unit
             }
         }
-        lifecycle.addObserver(observer)
+        // MapLibre draws on a SurfaceView. When the map was first made inside the results, Android never gave that view
+        // a surface until the window was hidden and shown again, so the map stayed blank (found in Step 6.3d's review).
+        // So once the map has a size it starts following the lifecycle (adding the observer delivers the start and
+        // resume it missed), and hiding and showing it once makes Android create the surface.
+        val sized = mapView.doOnceSized {
+            lifecycle.addObserver(observer)
+            mapView.post {
+                // Unless it was hidden in the meantime, which recreates the surface anyway.
+                if (mapView.visibility == View.VISIBLE) {
+                    mapView.visibility = View.INVISIBLE
+                    mapView.visibility = View.VISIBLE
+                }
+            }
+        }
         onDispose {
+            mapView.removeOnLayoutChangeListener(sized)
             lifecycle.removeObserver(observer)
             holder.stop()
         }
@@ -696,6 +710,19 @@ private fun pillBitmap(context: Context, marker: DestinationMarker, selected: Bo
     x += icon + dp(2f)
     canvas.drawText(countText, x, count.baseline(), count)
     return bitmap
+}
+
+/** Runs [action] once the view has a size: now, or after the layout that gives it one. Returns the listener to remove. */
+private fun View.doOnceSized(action: () -> Unit): View.OnLayoutChangeListener {
+    val listener = object : View.OnLayoutChangeListener {
+        override fun onLayoutChange(view: View, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
+            if (view.width == 0 || view.height == 0) return
+            view.removeOnLayoutChangeListener(this)
+            action()
+        }
+    }
+    if (width > 0 && height > 0 && !isLayoutRequested) action() else addOnLayoutChangeListener(listener)
+    return listener
 }
 
 /** UI_SPEC §8: with animations off in the system settings, the camera jumps and views don't fade. */
