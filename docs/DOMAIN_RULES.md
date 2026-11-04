@@ -222,7 +222,7 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
 - **M1** Markers are built from **exactly** the same `results` list as the list view.
 - **M2** There is one marker per destination code present in `results`, positioned at the destination's coordinates.
 - **M3** Each marker carries the destination code, city, `flightCount` and `minPoints` over its flights in `results`.
-- **M4** Markers are ordered by code, which keeps them deterministic. When they overlap, the selected flight's destination is drawn on top.
+- **M4** Markers are ordered by code, which keeps them deterministic. When they overlap, the selected flight's destination is always drawn on top. Android gives it the higher symbol sort key. SwiftUI's map has no z-order and MapKit stacks pills by latitude, so iOS makes it the map's own selection, which MapKit draws above the rest (owner's review of Step 6.3d).
 - **M5** Tapping a marker opens that destination's flights in O2 order.
   - The sheet updates live as filters change.
   - If the destination drops out of the results, the sheet closes.
@@ -234,7 +234,10 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
   - On first display, fit all markers.
   - **Never** move the camera automatically when filters change, so the user's pan and zoom are respected.
   - On an explicit selection, animate to fit the route.
-- **M9** The selected route is drawn as dots moving from the origin to the destination (Step 6.3d, owner's design), with a plane at its midpoint, the middle of `GreatCircle.interpolate`'s points. `GreatCircle.plane()` gives the plane's position, its longitude back in -180..180, and its heading: the angle of the line between the points either side of it as a north-up Web Mercator map draws it, in degrees clockwise from north. Both maps stay north-up and flat, so the heading holds. Under Reduce Motion the dots stand still.
+- **M9** The selected route is drawn as still dots, with a plane flying along them from the origin to the destination (Step 6.3d, owner's design; D43 replaced the moving dots after the owner's review).
+  - `PlaneFlight.at(elapsed)` gives each frame. A flight takes 3.6 s, easing out of the origin and into the destination (smoothstep). The plane fades in over the first 3% of the route and out between 80% and 92%, so it has gone before the destination's pill, which covers the end of the route. It waits 0.4 s out of sight, then flies again. Each new selection takes off from the origin.
+  - `GreatCircle.plane(from, to, fraction)` gives the plane's position that fraction of the way along the route (halfway, it's the middle of `interpolate`'s points), with its longitude back in -180..180. It also gives the heading: the angle of the line across a 64th of the route either side, as a north-up Web Mercator map draws it, in degrees clockwise from north. Both maps stay north-up and flat, so the heading holds.
+  - Under Reduce Motion the plane rests halfway, fully visible (`PlaneFlight.resting`).
 
 ## 6b. Landing page deals (B)
 

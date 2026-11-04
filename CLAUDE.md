@@ -165,10 +165,12 @@ These were found in the starter and the fixture.
   - Destination photos are found by the shared photo key (`dest_sao_paulo`). Android maps each key to `R.drawable` explicitly, never by name at runtime. A new photo goes in both apps and in THIRD_PARTY_NOTICES and the Photo credits text, with its Commons licence and requested credit.
   - Keep the results composed under the landing page (unplaced on Android, hidden on iOS), or the Android map is detached and leaks (D31).
 - **The results' map (Step 6.3d):**
-  - MapKit redraws a `MapPolyline` only when its points change; a new dash phase alone is ignored. The moving dots repeat the destination point a different number of times each step.
+  - Don't animate a line's dashes on either map. MapKit redraws a `MapPolyline` only when its points change, and it draws a line's width and dashes about twice as large as asked but its dash phase at a different scale, so moving dots crawled and snapped back. On MapLibre, a zero-length leading dash with round caps draws an extra dot. The route is still dots with a flying plane (D43).
+  - On iOS, draw the flying plane over the map with `MapReader`'s `convert` every frame. As an `Annotation` moved every frame, MapKit placed it unevenly; annotations moved inside `withAnimation` left the route.
+  - SwiftUI's map has no z-order, and MapKit stacks annotations by latitude. The selected pill is raised by making it the map's own selection (M4). Annotations need `.fixedSize()`, or MapKit squeezes them and cuts off text.
   - On iOS, record the camera only once, after the first automatic framing. Recording it on every `onMapCameraChange(.onEnd)` catches MapKit mid-animation while the dots redraw the map, and freezes a route's framing halfway. The user's own moves reach the camera through the position binding.
   - Fit a selected route only after the card has been measured and the sheet has dropped (Android `insetReady`, iOS `routeToFit`), or it lands under them.
-  - MapLibre can't animate a dash offset; step `lineDasharray` through patterns instead. Rotation and tilt are off on both maps, so the plane's heading stays true.
+  - Rotation and tilt are off on both maps, so the plane's heading stays true.
 - **Search fields (Step 6.3c):** a field keeps what's typed locally and ignores the store's late echoes of it, but must take any other text the store sets (a swap, a deal, Reset). Both apps' `SearchField` remember what they sent until the store shows the last of it; keep that, or a swap leaves the results page's fields showing the old text.
 - **Kotlin/Native tests:** `iosSimulatorArm64Test` only runs on macOS. On Linux, `compileKotlinIosSimulatorArm64` still type-checks the iOS code, and `jvmTest` runs the same `commonTest` suite.
 

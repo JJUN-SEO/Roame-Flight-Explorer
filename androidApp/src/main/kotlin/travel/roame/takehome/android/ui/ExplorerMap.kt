@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
@@ -47,10 +47,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -85,6 +87,8 @@ import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import travel.roame.takehome.android.R
 import travel.roame.takehome.domain.GreatCircle
+import travel.roame.takehome.domain.PlaneFlight
+import travel.roame.takehome.domain.PlaneFrame
 import travel.roame.takehome.domain.PointsFormat
 import travel.roame.takehome.domain.search.GeoPoint
 import travel.roame.takehome.presentation.DestinationMarker
@@ -107,10 +111,11 @@ private const val PLANE = "plane"
 private const val PLANE_IMAGE = "plane-image"
 
 /**
- * M9: the route as dots one line width across and 2.5 widths apart. Each pattern moves the dots a quarter of a width
- * towards the destination (a zero-length dash with round caps is a dot), so stepping through them marches the dots along.
+ * M9: the route as dots the size and spacing of iOS's, 5.5 dp across and 16 dp apart: a zero-length dash with round
+ * caps is a dot, and the gap is in line widths.
  */
-private val DOT_STEPS: List<Array<Float>> = List(10) { i -> arrayOf(0f, i * 0.25f, 0f, 2.5f - i * 0.25f) }
+private const val DOT_WIDTH = 5.5f
+private val DOT_PATTERN = arrayOf(0f, 2.9f)
 
 /** Room around fitted markers and routes, so no pill is clipped at the edge. 80 px clipped one in Step 0.3. */
 private val FitPadding = 56.dp
@@ -135,6 +140,8 @@ class MapHolder internal constructor() {
 
     // The map's listeners are added once, so they read the latest screen from here.
     internal var onMarkerTap: (code: String) -> Unit = {}
+    /** The pill images the last two marker updates used. Older ones are removed, so filtering doesn't pile them up. */
+    internal var pillImages: List<Set<String>> = emptyList()
     internal var markers: List<DestinationMarker> = emptyList()
     /** How much of the map's bottom the results sheet covers, so the first fit leaves the markers above it. */
     internal var coveredBottom: Int = 0
@@ -279,11 +286,14 @@ private fun MapContent(
     val reduceMotion = rememberReduceMotion()
     val map = holder.map
     val style = holder.style
+    // The same tokens as iOS's pills: card, text, card border, accent, on-accent and the light pink tint.
     val colors = PillColors(
-        fill = MaterialTheme.colorScheme.surface.toArgb(),
+        card = MaterialTheme.colorScheme.surfaceContainer.toArgb(),
         text = MaterialTheme.colorScheme.onSurface.toArgb(),
+        border = MaterialTheme.colorScheme.outlineVariant.toArgb(),
         accent = MaterialTheme.colorScheme.primary.toArgb(),
         onAccent = MaterialTheme.colorScheme.onPrimary.toArgb(),
+        tint = MaterialTheme.colorScheme.primaryContainer.toArgb(),
     )
 
     // D31: while shown, the map follows the screen's lifecycle. While hidden, or when it leaves with the Explore tab,
@@ -323,22 +333,26 @@ private fun MapContent(
         if (holder.style == null) holder.timedOut = true
     }
 
-    LaunchedEffect(style, state.markers, state.selected) {
+    // The colours and font scale are keys too, so the pills follow the appearance setting and the text size.
+    LaunchedEffect(style, state.markers, state.selected, colors, density) {
         val loaded = style ?: return@LaunchedEffect
-        loaded.showMarkers(state.markers, state.selected?.destinationCode, density.density, colors)
+        holder.pillImages = loaded.showMarkers(context, state.markers, state.selected?.destinationCode, density, colors, holder.pillImages)
         loaded.showRoute(state.selected)
     }
 
-    // M9: the dots march from the origin to the destination while the route shows, and stand still under Reduce Motion.
+    // M9: the plane flies the route while it shows on screen, from the origin for each new selection, as on iOS. Under
+    // Reduce Motion it rests halfway.
     LaunchedEffect(style, state.selected?.id, visible, reduceMotion) {
-        val line = style?.getLayerAs<LineLayer>(ROUTE_LINE) ?: return@LaunchedEffect
-        line.setProperties(PropertyFactory.lineDasharray(DOT_STEPS[0]))
-        if (state.selected == null || !visible || reduceMotion) return@LaunchedEffect
-        var step = 0
+        val loaded = style ?: return@LaunchedEffect
+        val selected = state.selected
+        if (selected == null || !visible || reduceMotion) {
+            loaded.showPlane(selected, PlaneFlight.resting)
+            return@LaunchedEffect
+        }
+        val takeOff = withFrameMillis { it }
         while (true) {
-            delay(60)
-            step = (step + 1) % DOT_STEPS.size
-            line.setProperties(PropertyFactory.lineDasharray(DOT_STEPS[step]))
+            val now = withFrameMillis { it }
+            loaded.showPlane(selected, PlaneFlight.at(now - takeOff))
         }
     }
 
@@ -455,10 +469,10 @@ private fun Style.addOverlays(plane: Bitmap) {
     addLayer(
         LineLayer(ROUTE_LINE, ROUTE).withProperties(
             PropertyFactory.lineColor(ROUTE_COLOR),
-            PropertyFactory.lineWidth(4f),
+            PropertyFactory.lineWidth(DOT_WIDTH),
             PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
-            PropertyFactory.lineDasharray(DOT_STEPS[0]),
+            PropertyFactory.lineDasharray(DOT_PATTERN),
         ),
     )
     addSource(GeoJsonSource(ORIGIN))
@@ -480,7 +494,7 @@ private fun Style.addOverlays(plane: Bitmap) {
             PropertyFactory.symbolSortKey(get("sort")),
         ),
     )
-    // M9: the plane, on top, turned to the route's heading; it turns with the map, which doesn't rotate anyway.
+    // M9: the plane, on top as iOS's, turned to the route's heading; it turns with the map, which doesn't rotate anyway.
     addImage(PLANE_IMAGE, plane)
     addSource(GeoJsonSource(PLANE))
     addLayer(
@@ -488,6 +502,7 @@ private fun Style.addOverlays(plane: Bitmap) {
             PropertyFactory.iconImage(PLANE_IMAGE),
             PropertyFactory.iconRotate(get("heading")),
             PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+            PropertyFactory.iconOpacity(get("opacity")),
             PropertyFactory.iconAllowOverlap(true),
             PropertyFactory.iconIgnorePlacement(true),
         ),
@@ -498,15 +513,26 @@ private fun Style.addOverlays(plane: Bitmap) {
 /** Roame's pink (Step 6.3). */
 private const val ROUTE_COLOR = 0xFFEA4167.toInt()
 
-private class PillColors(val fill: Int, val text: Int, val accent: Int, val onAccent: Int)
+private data class PillColors(val card: Int, val text: Int, val border: Int, val accent: Int, val onAccent: Int, val tint: Int)
 
-/** M2, M3: one pill per destination, reading `CODE count·minPts` (UI_SPEC §3). */
-private fun Style.showMarkers(markers: List<DestinationMarker>, selectedCode: String?, density: Float, colors: PillColors) {
+/**
+ * M2, M3: one pill per destination (UI_SPEC §3). Each pill is an image named by what it shows; returns the names this
+ * update and the one before it used, given [before], and removes any older ones.
+ */
+private fun Style.showMarkers(
+    context: Context,
+    markers: List<DestinationMarker>,
+    selectedCode: String?,
+    density: Density,
+    colors: PillColors,
+    before: List<Set<String>>,
+): List<Set<String>> {
+    val used = mutableSetOf<String>()
     val features = markers.map { marker ->
-        val label = "${marker.code} ${marker.flightCount}·${PointsFormat.compact(marker.minPoints)}"
         val selected = marker.code == selectedCode
-        val image = "pill/$label/$selected"
-        if (getImage(image) == null) addImage(image, pillBitmap(label, selected, density, colors))
+        val image = "pill/${marker.code}/${marker.minPoints}/${marker.flightCount}/$selected/${density.fontScale}/${colors.hashCode()}"
+        if (getImage(image) == null) addImage(image, pillBitmap(context, marker, selected, density, colors))
+        used += image
         Feature.fromGeometry(Point.fromLngLat(marker.longitude, marker.latitude)).apply {
             addStringProperty("code", marker.code)
             addStringProperty("image", image)
@@ -514,19 +540,34 @@ private fun Style.showMarkers(markers: List<DestinationMarker>, selectedCode: St
         }
     }
     getSourceAs<GeoJsonSource>(MARKERS)?.setGeoJson(FeatureCollection.fromFeatures(features))
+    // The previous update's images stay a little longer, as MapLibre may still be drawing them.
+    val kept = listOfNotNull(before.lastOrNull(), used)
+    before.flatten().filterNot { name -> kept.any { name in it } }.forEach(::removeImage)
+    return kept
 }
 
-/** M7, M9: the great-circle line from the shared `GreatCircle`, with a dot at the origin and the plane halfway. */
+/** M7: the great-circle line from the shared `GreatCircle`, with a dot at the origin. */
 private fun Style.showRoute(selected: FlightItem?) {
     val route = selected?.let(::routePoints)
     val line = route?.let { Feature.fromGeometry(LineString.fromLngLats(it)) }
     val origin = route?.first()?.let { Feature.fromGeometry(it) }
-    val plane = selected?.let {
-        val at = GreatCircle.plane(GeoPoint(it.originLatitude, it.originLongitude), GeoPoint(it.destinationLatitude, it.destinationLongitude))
-        Feature.fromGeometry(Point.fromLngLat(at.longitude, at.latitude)).apply { addNumberProperty("heading", at.headingDegrees) }
-    }
     getSourceAs<GeoJsonSource>(ROUTE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(line)))
     getSourceAs<GeoJsonSource>(ORIGIN)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(origin)))
+}
+
+/** M9: the plane [frame] of the way along the selected route, or no plane. */
+private fun Style.showPlane(selected: FlightItem?, frame: PlaneFrame) {
+    val plane = selected?.let {
+        val at = GreatCircle.plane(
+            GeoPoint(it.originLatitude, it.originLongitude),
+            GeoPoint(it.destinationLatitude, it.destinationLongitude),
+            frame.fraction,
+        )
+        Feature.fromGeometry(Point.fromLngLat(at.longitude, at.latitude)).apply {
+            addNumberProperty("heading", at.headingDegrees)
+            addNumberProperty("opacity", frame.opacity)
+        }
+    }
     getSourceAs<GeoJsonSource>(PLANE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(plane)))
 }
 
@@ -583,30 +624,70 @@ private fun CameraPosition.toArray() = doubleArrayOf(target?.latitude ?: 0.0, ta
 private fun DoubleArray.toCameraPosition() =
     CameraPosition.Builder().target(LatLng(this[0], this[1])).zoom(this[2]).bearing(this[3]).tilt(this[4]).build()
 
-/** Draws the whole pill, text included, so it needs no fonts from the network (Step 0.3). */
-private fun pillBitmap(label: String, selected: Boolean, density: Float, colors: PillColors): Bitmap {
-    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 13f * density
-        typeface = Typeface.DEFAULT_BOLD
-        color = if (selected) colors.onAccent else colors.text
+/**
+ * Draws the whole pill, text included, so it needs no fonts from the network (Step 0.3), and as iOS's MarkerPill lays
+ * it out: the code and the lowest points, then the flight count on a badge marked with a plane (MAP-2), pink when
+ * [selected], with a soft shadow. Text follows the font scale; the margin holds the shadow and keeps the pill centred.
+ */
+private fun pillBitmap(context: Context, marker: DestinationMarker, selected: Boolean, density: Density, colors: PillColors): Bitmap {
+    fun dp(value: Float) = value * density.density
+    fun text(font: Int, size: Float, color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = ResourcesCompat.getFont(context, font)
+        textSize = size * density.density * density.fontScale
+        this.color = color
     }
-    val horizontal = 10f * density
-    val height = 26f * density
-    val width = text.measureText(label) + 2 * horizontal
-    val bitmap = Bitmap.createBitmap(width.toInt() + 1, height.toInt() + 1, Bitmap.Config.ARGB_8888)
+    val ink = if (selected) colors.onAccent else colors.text
+    val code = text(R.font.inter_bold, 12f, ink)
+    val points = text(R.font.inter_medium, 12f, ink)
+    val count = text(R.font.inter_bold, 11f, colors.accent)
+    val pointsText = PointsFormat.compact(marker.minPoints)
+    val countText = groupedCount(marker.flightCount)
+
+    val icon = dp(11f)
+    val badgeWidth = dp(5f) + icon + dp(2f) + count.measureText(countText) + dp(5f)
+    val badgeHeight = maxOf(dp(18f), count.fontSpacing)
+    val width = dp(10f) + code.measureText(marker.code) + dp(5f) + points.measureText(pointsText) + dp(6f) + badgeWidth + dp(4f)
+    val height = maxOf(dp(26f), maxOf(code.fontSpacing, badgeHeight) + dp(8f))
+    val margin = dp(4f)
+    val bitmap = Bitmap.createBitmap((width + 2 * margin).toInt() + 1, (height + 2 * margin).toInt() + 1, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val shape = RectF(density, density, width - density, height - density)
-    val radius = height / 2
-    canvas.drawRoundRect(shape, radius, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (selected) colors.accent else colors.fill })
-    canvas.drawRoundRect(
-        shape, radius, radius,
-        Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (selected) colors.accent else colors.text
-            style = Paint.Style.STROKE
-            strokeWidth = density
-        },
-    )
-    canvas.drawText(label, horizontal, height / 2 - (text.ascent() + text.descent()) / 2, text)
+
+    val pill = RectF(margin, margin, margin + width, margin + height)
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = if (selected) colors.accent else colors.card
+        setShadowLayer(dp(3f), 0f, dp(1f), 0x33000000)
+    }
+    canvas.drawRoundRect(pill, height / 2, height / 2, fill)
+    val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = if (selected) colors.accent else colors.border
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1f)
+    }
+    val inset = RectF(pill).apply { inset(dp(0.5f), dp(0.5f)) }
+    canvas.drawRoundRect(inset, inset.height() / 2, inset.height() / 2, border)
+
+    val middle = pill.centerY()
+    fun Paint.baseline() = middle - (ascent() + descent()) / 2
+    var x = pill.left + dp(10f)
+    canvas.drawText(marker.code, x, code.baseline(), code)
+    x += code.measureText(marker.code) + dp(5f)
+    canvas.drawText(pointsText, x, points.baseline(), points)
+    x += points.measureText(pointsText) + dp(6f)
+
+    val badge = RectF(x, middle - badgeHeight / 2, x + badgeWidth, middle + badgeHeight / 2)
+    canvas.drawRoundRect(badge, badgeHeight / 2, badgeHeight / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (selected) colors.onAccent else colors.tint })
+    x += dp(5f)
+    // The plane points along the line from the left, as on the flight cards.
+    ContextCompat.getDrawable(context, R.drawable.ms_flight)?.mutate()?.apply {
+        setTint(colors.accent)
+        setBounds(x.toInt(), (middle - icon / 2).toInt(), (x + icon).toInt(), (middle + icon / 2).toInt())
+        canvas.save()
+        canvas.rotate(90f, x + icon / 2, middle)
+        draw(canvas)
+        canvas.restore()
+    }
+    x += icon + dp(2f)
+    canvas.drawText(countText, x, count.baseline(), count)
     return bitmap
 }
 

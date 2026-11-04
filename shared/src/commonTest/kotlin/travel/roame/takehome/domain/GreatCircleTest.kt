@@ -150,4 +150,29 @@ class GreatCircleTest {
         assertEquals(middle.latitude, tokyoToSeattle.latitude, 1e-9)
         assertEquals((middle.longitude - tokyoToSeattle.longitude + 720.0) % 360.0, 0.0, 1e-9)
     }
+
+    @Test
+    fun m9_thePlaneFliesAlongTheDrawnRoute() {
+        for ((from, to) in routes) {
+            val points = GreatCircle.interpolate(from, to)
+            for (k in 0..64 step 4) {
+                val plane = GreatCircle.plane(from, to, fraction = k / 64.0)
+                assertEquals(points[k].latitude, plane.latitude, 1e-9, "$from to $to at $k/64")
+                assertEquals(normalized(points[k].longitude), plane.longitude, 1e-9, "$from to $to at $k/64")
+            }
+        }
+    }
+
+    @Test
+    fun m9_atTheOriginAndTheDestinationThePlaneStillPointsAlongTheRoute() {
+        val east = GeoPoint(0.0, 0.0) to GeoPoint(0.0, 40.0)
+        assertEquals(90.0, GreatCircle.plane(east.first, east.second, fraction = 0.0).headingDegrees, 1e-6)
+        assertEquals(90.0, GreatCircle.plane(east.first, east.second, fraction = 1.0).headingDegrees, 1e-6)
+    }
+
+    @Test
+    fun m9_thePlaneNeverLeavesTheRoute() {
+        assertEquals(GreatCircle.plane(bos, cdg, fraction = 0.0), GreatCircle.plane(bos, cdg, fraction = -0.5))
+        assertEquals(GreatCircle.plane(bos, cdg, fraction = 1.0), GreatCircle.plane(bos, cdg, fraction = 1.5))
+    }
 }

@@ -30,7 +30,7 @@ Tab bar
 │       ├── Header: ← · the search summary (tap → the search page) · Filters (badge = active count) → the Filters sheet
 │       ├── Active filters as chips, each with ✕ (C3), then "Clear all" (clears filters, keeps the search)
 │       ├── Status banner (stale / refreshing), when relevant
-│       ├── The map, filling the rest: pills (M1–M6); a selected route as moving dots with a plane (M7, M9)
+│       ├── The map, filling the rest: pills (M1–M6); a selected route as dots with a plane flying along them (M7, M9)
 │       │     └── Tap a pill → the destination's flights (M5) → tap one → selected
 │       ├── The list, as a sheet over the map: peek (handle + "238 flights"), half (the start), or full
 │       │     ├── Drag it anywhere while it isn't full; when full, the list scrolls and only its header drags
@@ -139,8 +139,8 @@ Fully open, the sheet covers the map up to the header, the list scrolls, and a d
 ### 2.2 Explore: results, a flight selected
 
 ```
-│      •YYZ ·  ·  · ✈ ·  ·  ·  ·(NRT)    │  dots move from origin to destination; the plane
-│                                        │  sits halfway, pointing along the line (M9)
+│      •YYZ ·  ·  · ✈ ·  ·  ·  ·(NRT)    │  still dots; the plane flies along them, pointing
+│                                        │  along the line, and fades before the pill (M9)
 │ ┌────────── selection card ──────────┐ │  above the sheet, as before (§2.3)
 │ └────────────────────────────────────┘ │
 │╭──────────────── 238 flights ─────────╮│  the sheet, dropped to its peek
@@ -187,7 +187,7 @@ At the bottom, "Clear all" (the filters only, keeping the search) and a live **"
 | `ResultSummary` | "N flights · K filters" + Reset | Reset is hidden when nothing is active |
 | `FlightRow` | One result | default · pressed · selected · saved (filled heart) |
 | `RouteConnector` | `ORIGIN ●──✈──● DEST` graphic | Used in the row (compact) and in the card |
-| `DestinationMarker` | Map pill showing `CODE count·minPts` | default · selected (accent, on top) · pressed |
+| `DestinationMarker` | Map pill (D44): the code in bold, the lowest points, then the flight count on a light pink badge marked with a plane, e.g. `LIS 13k ✈ 33`. Centred on the airport, with a soft shadow | default (card colour) · selected (pink with a white badge, always on top, M4) · pressed |
 | `FlightCard` | Selection details + Save / Remove | idle · pending · error message shown |
 | `StatusBanner` | Stale or offline info, with no Retry (D29) | stale · refreshing (inline progress) |
 | `EmptyState` / `ErrorState` | Full-area explanations | See §4 |
@@ -266,7 +266,7 @@ Use the same tokens on both platforms, mapped to native APIs.
 | Button | 14 SemiBold | `.appButton` | `labelLarge` at SemiBold | Buttons, text links, the chosen segment |
 | Label small | 12 Medium | `.appLabelSmall` | `labelMedium` | Tab labels, the stale banner |
 | Label tiny | 11 Bold | `.appLabelTiny` | `labelSmall` at Bold | The tab badge's count |
-| Badge | 12 Bold | `.appBadge` | `labelMedium` at Bold | Program badges; the map's pills on iOS (MapLibre draws Android's with the map style's own font) |
+| Badge | 12 Bold | `.appBadge` | `labelMedium` at Bold | Program badges; the map pills' codes (Android draws its pills as images, in Inter at the same sizes) |
 
 **Colour roles (Step 6.3a, Roame's look).** Sampled from Roame's app, the same values on both platforms: iOS `Theme.swift`, Android `Theme.kt`. Light / dark:
 
@@ -339,7 +339,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - Search page rows: "From, Toronto (YYZ)", "Dates, Feb 10 – Feb 20"; the swap button: "Swap From and To".
   - Calendar days: "Wed, Feb 10, 2027, start date" (or "end date", "selected", "in range"); month names are headings; the weekday letters are hidden.
 - Colour is never the only signal. Selected rows also get a border and a checkmark or "Selected" accessibility trait.
-- Respect Reduce Motion: no camera fly-to animation, and the route's dots stand still (M9).
+- Respect Reduce Motion: no camera fly-to animation, and the plane rests halfway along the route (M9).
 
 ## 9. Platform notes
 
@@ -348,7 +348,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Shell | A `VStack` of the content and `AppTabBar` (§6). Explore stays alive, hidden, under the other tabs. Portrait only (D28) | A `Column` of the content and `AppTabBar` (§6). Explore stays composed but unplaced under the other tabs, so the map is never detached (D31). Portrait only (D28) |
 | Sheets | `.sheet` + `.presentationDetents` for the Filters, cabin and marker sheets. The results sheet is the app's own (`ResultsScreen.swift`) | `ModalBottomSheet` for the same three. The results sheet is the app's own (`ResultsScreen.kt`) |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
-| Map | `Map(position:, interactionModes: [.pan, .zoom])` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5). The route's dots step with a `TimelineView`; the plane is an `Annotation`. Its bottom safe area is what the sheet and card cover | MapLibre: symbol layer for markers, line layer with `GreatCircle` points for the route, its dash pattern stepped to move the dots, and a symbol layer for the plane. Rotation and tilt off. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the sheet and card (D27) |
+| Map | `Map(position:, interactionModes: [.pan, .zoom])` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5). The route's dots are a still dash pattern. The flying plane is drawn over the map in a `TimelineView` and placed each frame with `MapReader`'s `convert`; under Reduce Motion it's an `Annotation`. The selected destination is the map's own selection, so MapKit draws it on top (M4). Its bottom safe area is what the sheet and card cover | MapLibre: symbol layer for markers (the selected one sorted on top), line layer with `GreatCircle` points for the route as a still dash pattern, and a symbol layer for the plane, its source moved every frame. Rotation and tilt off. OpenFreeMap's grey "Positron" style, no MapLibre logo, and the ⓘ credit kept above the sheet and card (D27) |
 | Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
 | Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
 | Date picker | `DateRangeCalendar` (`Calendar.swift`), drawing the shared `DateCalendar` (D41). Dates stay ISO strings throughout | `DateRangeCalendar` (`Calendar.kt`), the same. Material's `DateRangePicker` and its UTC millis are no longer used |

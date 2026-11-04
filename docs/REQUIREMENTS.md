@@ -61,7 +61,7 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 |---|---|---|---|---|
 | VIEW-1 | List and map show the same filtered results and the same saved state | The list row count equals the sum of marker counts. Saving a flight on the map updates the list immediately, and the reverse. | M1, V3 | ✅ 2026‑11‑03 |
 | MAP-1 | Group markers by destination airport | There is one marker per destination code in the current results. | M2 | ✅ 2026‑11‑03 |
-| MAP-2 | Each marker shows the number of matching flights and the lowest points price | The marker label reads, for example, `CDG · 12 · 25k`, and the values match the filtered data. | M3, T2 | ✅ 2026‑11‑03 |
+| MAP-2 | Each marker shows the number of matching flights and the lowest points price | The marker reads, for example, `CDG 25k ✈ 12`: the code, the lowest points, and the count on a badge marked with a plane (D44). The values match the filtered data. | M3, T2 | ✅ 2026‑11‑03; the new pill checked on iOS 2026‑11‑04 |
 | MAP-3 | Tapping a marker lets the user browse those flights | Tapping a marker opens a sheet listing that destination's flights. Tapping a flight in the sheet selects it. | M5, O2 | ✅ 2026‑11‑03 |
 | MAP-4 | Standard map gestures, including pan and zoom | Pan, pinch-zoom and double-tap zoom all work smoothly and are never fought by automatic camera moves. | M8 | 🟨 pan and double-tap checked on both; pinch not yet (neither adb nor idb can make two fingers) |
 
