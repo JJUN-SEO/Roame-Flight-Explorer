@@ -221,7 +221,7 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
 
 - **M1** Markers are built from **exactly** the same `results` list as the list view.
 - **M2** There is one marker per destination code present in `results`, positioned at the destination's coordinates.
-- **M3** Each marker carries the destination code, city, `flightCount` and `minPoints` over its flights in `results`.
+- **M3** Each marker carries the destination code, city, `flightCount` and `minPoints` over its flights in `results`. The pills draw the code and the count; `minPoints` is in their spoken labels and the destination's sheet (D44).
 - **M4** Markers are ordered by code, which keeps them deterministic. When they overlap, the selected flight's destination is always drawn on top. Android gives it the higher symbol sort key. SwiftUI's map has no z-order and MapKit stacks pills by latitude, so iOS makes it the map's own selection, which MapKit draws above the rest (owner's review of Step 6.3d).
 - **M5** Tapping a marker opens that destination's flights in O2 order.
   - The sheet updates live as filters change.

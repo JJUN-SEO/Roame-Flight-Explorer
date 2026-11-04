@@ -187,7 +187,7 @@ At the bottom, "Clear all" (the filters only, keeping the search) and a live **"
 | `ResultSummary` | "N flights · K filters" + Reset | Reset is hidden when nothing is active |
 | `FlightRow` | One result | default · pressed · selected · saved (filled heart) |
 | `RouteConnector` | `ORIGIN ●──✈──● DEST` graphic | Used in the row (compact) and in the card |
-| `DestinationMarker` | Map pill (D44): the code in bold, the lowest points, then the flight count on a light pink badge marked with a plane, e.g. `LIS 13k ✈ 33`. Centred on the airport, with a soft shadow | default (card colour) · selected (pink with a white badge, always on top, M4) · pressed |
+| `DestinationMarker` | Map pill (D44, the owner's decision): the code in bold, then the flight count on a light pink badge marked with a plane, e.g. `LIS ✈ 33`. The lowest points aren't drawn; they're in the pill's spoken label and the destination's sheet title. Centred on the airport, with a soft shadow | default (card colour) · selected (pink with a white badge, always on top, M4) · pressed |
 | `FlightCard` | Selection details + Save / Remove | idle · pending · error message shown |
 | `StatusBanner` | Stale or offline info, with no Retry (D29) | stale · refreshing (inline progress) |
 | `EmptyState` / `ErrorState` | Full-area explanations | See §4 |

@@ -530,7 +530,7 @@ private fun Style.showMarkers(
     val used = mutableSetOf<String>()
     val features = markers.map { marker ->
         val selected = marker.code == selectedCode
-        val image = "pill/${marker.code}/${marker.minPoints}/${marker.flightCount}/$selected/${density.fontScale}/${colors.hashCode()}"
+        val image = "pill/${marker.code}/${marker.flightCount}/$selected/${density.fontScale}/${colors.hashCode()}"
         if (getImage(image) == null) addImage(image, pillBitmap(context, marker, selected, density, colors))
         used += image
         Feature.fromGeometry(Point.fromLngLat(marker.longitude, marker.latitude)).apply {
@@ -626,8 +626,9 @@ private fun DoubleArray.toCameraPosition() =
 
 /**
  * Draws the whole pill, text included, so it needs no fonts from the network (Step 0.3), and as iOS's MarkerPill lays
- * it out: the code and the lowest points, then the flight count on a badge marked with a plane (MAP-2), pink when
- * [selected], with a soft shadow. Text follows the font scale; the margin holds the shadow and keeps the pill centred.
+ * it out: the code, then the flight count on a badge marked with a plane, pink when [selected], with a soft shadow. The
+ * lowest points aren't drawn (the owner's decision, D44). Text follows the font scale; the margin holds the shadow and
+ * keeps the pill centred.
  */
 private fun pillBitmap(context: Context, marker: DestinationMarker, selected: Boolean, density: Density, colors: PillColors): Bitmap {
     fun dp(value: Float) = value * density.density
@@ -638,15 +639,13 @@ private fun pillBitmap(context: Context, marker: DestinationMarker, selected: Bo
     }
     val ink = if (selected) colors.onAccent else colors.text
     val code = text(R.font.inter_bold, 12f, ink)
-    val points = text(R.font.inter_medium, 12f, ink)
     val count = text(R.font.inter_bold, 11f, colors.accent)
-    val pointsText = PointsFormat.compact(marker.minPoints)
     val countText = groupedCount(marker.flightCount)
 
     val icon = dp(11f)
     val badgeWidth = dp(5f) + icon + dp(2f) + count.measureText(countText) + dp(5f)
     val badgeHeight = maxOf(dp(18f), count.fontSpacing)
-    val width = dp(10f) + code.measureText(marker.code) + dp(5f) + points.measureText(pointsText) + dp(6f) + badgeWidth + dp(4f)
+    val width = dp(10f) + code.measureText(marker.code) + dp(6f) + badgeWidth + dp(4f)
     val height = maxOf(dp(26f), maxOf(code.fontSpacing, badgeHeight) + dp(8f))
     val margin = dp(4f)
     val bitmap = Bitmap.createBitmap((width + 2 * margin).toInt() + 1, (height + 2 * margin).toInt() + 1, Bitmap.Config.ARGB_8888)
@@ -670,9 +669,7 @@ private fun pillBitmap(context: Context, marker: DestinationMarker, selected: Bo
     fun Paint.baseline() = middle - (ascent() + descent()) / 2
     var x = pill.left + dp(10f)
     canvas.drawText(marker.code, x, code.baseline(), code)
-    x += code.measureText(marker.code) + dp(5f)
-    canvas.drawText(pointsText, x, points.baseline(), points)
-    x += points.measureText(pointsText) + dp(6f)
+    x += code.measureText(marker.code) + dp(6f)
 
     val badge = RectF(x, middle - badgeHeight / 2, x + badgeWidth, middle + badgeHeight / 2)
     canvas.drawRoundRect(badge, badgeHeight / 2, badgeHeight / 2, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (selected) colors.onAccent else colors.tint })

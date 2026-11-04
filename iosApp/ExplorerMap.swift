@@ -137,8 +137,8 @@ private struct PlaneBadge: View {
 }
 
 /**
- * The code and the lowest points, with the flight count on a badge marked with a plane (UI_SPEC §3, MAP-2); pink when
- * selected. Drawn the same as Android's.
+ * The code, with the flight count on a badge marked with a plane (UI_SPEC §3); pink when selected. Drawn the same as
+ * Android's. The lowest points are spoken, not drawn (the owner's decision, D44).
  */
 private struct MarkerPill: View {
     let marker: DestinationMarker
@@ -147,7 +147,6 @@ private struct MarkerPill: View {
     var body: some View {
         HStack(spacing: 0) {
             Text(marker.code).font(.appBadge)
-            Text(PointsFormat.shared.compact(points: marker.minPoints)).font(.appLabelSmall).padding(.leading, 5)
             HStack(spacing: 2) {
                 MSIcon(name: "ms_flight", size: 11).rotationEffect(.degrees(90))
                 Text(Format.count(Int(marker.flightCount))).font(.appLabelTiny)
