@@ -53,8 +53,12 @@ private extension CalendarMonth {
 }
 
 private extension CalendarWeek {
-    /** A week's first day, which never changes with the selection. */
-    var key: String { days.first?.iso ?? "" }
+    /**
+     * The week's first day in its own month, which never changes with the selection. Not its first day: a week across
+     * two months is in both, starting on the same Sunday, and the duplicate identity hid March's and April's first
+     * weeks (found while recording the demo).
+     */
+    var key: String { days.first { $0.inMonth }?.iso ?? "" }
 }
 
 /** S M T W T F S, Sunday first like the weeks (K1). */
