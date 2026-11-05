@@ -101,6 +101,7 @@ internal fun ResultsScreen(
     active: Boolean,
     onBack: () -> Unit,
     onEditSearch: () -> Unit,
+    onDetails: () -> Unit,
     onDebugLongPress: (() -> Unit)?,
 ) {
     var filtersOpen by rememberSaveable { mutableStateOf(false) }
@@ -123,7 +124,7 @@ internal fun ResultsScreen(
                     // UI_SPEC §4: a successful empty response is not an error (R4).
                     EmptyState(R.drawable.ms_flight, stringResource(R.string.synced_empty_title), stringResource(R.string.synced_empty_body))
                 } else {
-                    MapWithSheet(state, store, view, active, onDebugLongPress, onSort = { sortOpen = true })
+                    MapWithSheet(state, store, view, active, onDebugLongPress, onSort = { sortOpen = true }, onDetails = onDetails)
                 }
             }
         }
@@ -180,6 +181,7 @@ private fun MapWithSheet(
     active: Boolean,
     onDebugLongPress: (() -> Unit)?,
     onSort: () -> Unit,
+    onDetails: () -> Unit,
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -258,6 +260,7 @@ private fun MapWithSheet(
                     onClose = { store.select(null) },
                     onToggleSave = { store.toggleSave(selected.id) },
                     onDebugLongPress = onDebugLongPress,
+                    onDetails = onDetails,
                 )
             }
         }

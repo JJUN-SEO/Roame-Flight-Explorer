@@ -22,6 +22,7 @@ import travel.roame.takehome.domain.search.toSuggestions
 import travel.roame.takehome.domain.toDestinationGroups
 import travel.roame.takehome.domain.toFilterOptions
 import kotlinx.datetime.LocalDate
+import kotlin.math.roundToInt
 import travel.roame.takehome.model.Airport
 import travel.roame.takehome.model.AirportSuggestion
 import travel.roame.takehome.model.FilterOptions
@@ -154,6 +155,8 @@ internal fun reduce(snapshot: Snapshot): ExplorerState {
             isListed = index.lastSuccessAt == null || savedFlight.flight.id in index.ids,
         )
     }
+    val selected = results.firstOrNull { it.id == inputs.selectedFlightId }
+    val savedSelected = saved.firstOrNull { it.flight.id == inputs.savedSelectedId }
     return ExplorerState(
         data = dataStatus(index.lastSuccessAt, sync),
         originQuery = inputs.originQuery,
@@ -178,9 +181,11 @@ internal fun reduce(snapshot: Snapshot): ExplorerState {
             )
         },
         // L3: a selection the results no longer have shows as nothing; the store then clears it for good.
-        selected = results.firstOrNull { it.id == inputs.selectedFlightId },
+        selected = selected,
+        selectedDetails = selected?.let { details(it, index.deals) },
         saved = saved,
-        savedSelected = saved.firstOrNull { it.flight.id == inputs.savedSelectedId },
+        savedSelected = savedSelected,
+        savedSelectedDetails = savedSelected?.let { details(it.flight, index.deals) },
         pendingWriteIds = inputs.pendingWriteIds,
         messages = inputs.messages,
         originSuggestions = origin.suggestions,
@@ -199,6 +204,19 @@ private fun sections(results: List<FlightItem>, sort: SortOrder): List<ResultSec
     results.isEmpty() -> emptyList()
     sort == SortOrder.ByProgram -> results.groupBy { it.program }.map { (program, flights) -> ResultSection(program, flights) }
     else -> listOf(ResultSection(program = null, flights = results))
+}
+
+/** DT1: the details page's figures, from the flight's own fields, so a saved flight the cache no longer has gets them too. */
+private fun details(flight: FlightItem, deals: DealIndex): FlightDetails {
+    val km = GeoPoint(flight.originLatitude, flight.originLongitude)
+        .distanceKmTo(GeoPoint(flight.destinationLatitude, flight.destinationLongitude))
+    return FlightDetails(
+        flight = flight,
+        distanceKm = km.roundToInt(),
+        percentBelowTypical = deals.percentBelowTypical(km, flight.points, flight.cabin),
+        estimatedValueUsd = estimatedValueUsd(flight.points, flight.cabin),
+        photoKey = photoKey(flight.destinationCity),
+    )
 }
 
 /** B5–B8: the deals ignore the search and filters, so only the location and saved flights change them. */

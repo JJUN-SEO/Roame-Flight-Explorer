@@ -81,6 +81,8 @@ data class ExplorerState(
     val selected: FlightItem?,            // discovery selection, shared by list and map (L1)
     val saved: List<SavedFlightItem>,     // O3, ignores filters (V8), has isListed flag (V4)
     val savedSelected: SavedFlightItem?,  // L7
+    val selectedDetails: FlightDetails?,      // DT1: the details page's figures for `selected` (flight, distanceKm, percentBelowTypical, estimatedValueUsd?, photoKey)
+    val savedSelectedDetails: FlightDetails?, // DT1: the same for `savedSelected`
     val pendingWriteIds: Set<String>,     // save/remove in flight → disable button (V7)
     val messages: List<UserMessage>,      // one-shot errors; the UI calls messageShown(id)
     val originHint: List<AirportSuggestion>,      // S13: every fuzzy match, in ranked order; empty for any other tier
@@ -563,6 +565,7 @@ The rationale and the rejected alternatives for each decision. **Origin** and **
 | D44 | Map pills read `LIS ✈ 33`: the code and the flight count on a badge marked with a plane, without the lowest points | **Owner** (Claude recommended `LIS 13k ✈ 33`, which keeps the points the brief asks for) | The owner found `LIS 33·13k` ugly and wants the simplest pill. The points stay in each pill's spoken label and the sheet a tap opens; MAP-2 is partly met as a result | `LIS 13k ✈ 33` (Claude's recommendation, meets MAP-2); `15k ✈ 33` without the code |
 | D45 | The map stays light in dark mode, with its pills, route and plane | **Owner** | The map keeps one look in both themes. Android's OpenFreeMap style was always light, while MapKit switched to dark and Android's pills followed the theme. Now both keep the light map and the light theme's pill colours | A dark map in dark mode (MapKit's own; Android would need a second style) |
 | D46 | The results can be sorted: Lowest points (the default), Highest points, By program (with a heading per program) and Best offer (B4's value). The control is a pill in the list's header | **Owner** (Claude's recommendations for the default, the place, Best offer's meaning and the headings) | The owner asked for a sort beside the filters. It's shared code (`SortOrder`, `setSort`, `sections`), so both apps order alike. Each order is made once per data change, the first time it's used, and Best offer's values aren't kept, so `index()` holds no more memory | Earliest date as the default; a button in the top bar; Best offer as estimated cash value or as points per distance; no program headings |
+| D47 | A flight details page like Roame's, from "View details" on the selection card in Explore and Saved: the destination's photo, the flight, and the points with how far below typical, the distance and an estimated value (DT1). Times, travel time and aircraft are placeholders (DT2). No share button | **Owner** (Claude's recommendations for the way in, the placeholders, the extra figures and leaving out sharing) | The owner wants a page like Roame's for a picked flight. The figures are shared code (`FlightDetails`, `selectedDetails`, `savedSelectedDetails`), worked out only for the two selections, so both apps show the same numbers; the page is drawn the same in both apps, over the tabs | Opening it by tapping the card; "Boeing 747" as the placeholder; no extra figures; a share sheet |
 
 ## 12. Scalability
 

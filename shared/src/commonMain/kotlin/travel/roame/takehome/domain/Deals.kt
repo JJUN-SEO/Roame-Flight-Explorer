@@ -10,8 +10,11 @@ import kotlin.math.roundToInt
 /** A flight with its value (B4). Lower is better: 0.7 means 30% fewer points per kilometre than typical for its cabin. */
 internal class RatedFlight(val flight: Flight, val value: Double) {
     /** B4: whole percent, rounded down; 0 when the flight isn't below typical. */
-    val percentBelowTypical: Int get() = floor((1 - value) * 100).toInt().coerceAtLeast(0)
+    val percentBelowTypical: Int get() = percentBelow(value)
 }
+
+/** B4: a value as whole percent below typical, rounded down; 0 when it isn't below. */
+internal fun percentBelow(value: Double): Int = floor((1 - value) * 100).toInt().coerceAtLeast(0)
 
 /** B7: one program's best-value flight. */
 internal class ProgramDealResult(val program: String, val best: RatedFlight)
@@ -34,6 +37,8 @@ internal class DealIndex private constructor(
     private val origins: List<Airport>,
     private val everywhere: Deals,
     private val byOrigin: Map<String, Deals>,
+    /** B3: each cabin's typical rate. */
+    private val typical: Map<String, Double>,
 ) {
     /** B5: the origin airport nearest the user, ties by code; null without a location. */
     fun homeAirport(location: GeoPoint?): Airport? = location?.let { here ->
@@ -43,25 +48,46 @@ internal class DealIndex private constructor(
     /** B5: deals from the home airport, or from every airport without one. */
     fun dealsFrom(home: Airport?): Deals = if (home == null) everywhere else byOrigin[home.code] ?: Deals.None
 
+    /**
+     * DT1: how far below its cabin's typical rate (B3, B4) a flight of [points] over [km] is, for any flight, saved ones
+     * included. 0 when it isn't below, has no rate (B2), or its cabin isn't in the cache.
+     */
+    fun percentBelowTypical(km: Double, points: Int, cabin: String): Int {
+        val rate = rate(km, points) ?: return 0
+        val cabinTypical = typical[cabin] ?: return 0
+        return percentBelow(rate / cabinTypical)
+    }
+
     companion object {
         /** B8: the deck stays short whatever the data's size. */
         const val MAX_DESTINATIONS = 30
 
         fun of(flights: List<Flight>): DealIndex {
-            val rated = rate(flights).sortedWith(DealOrder)
+            val rates = rates(flights)
+            val typical = typical(rates)
+            val rated = rated(rates, typical).sortedWith(DealOrder)
             return DealIndex(
                 origins = flights.map { it.origin }.distinctBy { it.code },
                 everywhere = deals(rated),
                 byOrigin = rated.groupBy { it.flight.origin.code }.mapValues { (_, fromOrigin) -> deals(fromOrigin) },
+                typical = typical,
             )
         }
 
         /** B1–B4. Flights with no rate (B2) are left out. */
         internal fun rate(flights: List<Flight>): List<RatedFlight> {
-            val rates = flights.mapNotNull { flight -> flight.rate()?.let { flight to it } }
-            val typical = rates.groupBy({ it.first.cabin }, { it.second }).mapValues { (_, cabinRates) -> median(cabinRates) }
-            return rates.map { (flight, rate) -> RatedFlight(flight, rate / typical.getValue(flight.cabin)) }
+            val rates = rates(flights)
+            return rated(rates, typical(rates))
         }
+
+        private fun rates(flights: List<Flight>) = flights.mapNotNull { flight -> flight.rate()?.let { flight to it } }
+
+        /** B3: each cabin's median rate. */
+        private fun typical(rates: List<Pair<Flight, Double>>): Map<String, Double> =
+            rates.groupBy({ it.first.cabin }, { it.second }).mapValues { (_, cabinRates) -> median(cabinRates) }
+
+        private fun rated(rates: List<Pair<Flight, Double>>, typical: Map<String, Double>) =
+            rates.map { (flight, rate) -> RatedFlight(flight, rate / typical.getValue(flight.cabin)) }
 
         /** B7, B8, from flights already in [DealOrder], so each program's and city's first flight is its best. */
         private fun deals(rated: List<RatedFlight>): Deals {
@@ -96,10 +122,10 @@ internal val DealOrder: Comparator<RatedFlight> =
     compareBy<RatedFlight> { it.value }.thenBy { it.flight.points }.thenBy { it.flight.departureDate }.thenBy { it.flight.id }
 
 /** B1, B2: points per 1,000 km, or null for a flight shorter than 1 km or with no points. */
-internal fun Flight.rate(): Double? {
-    val km = origin.point.distanceKmTo(destination.point)
-    return if (km < 1.0 || points <= 0) null else points / (km / 1000)
-}
+internal fun Flight.rate(): Double? = rate(origin.point.distanceKmTo(destination.point), points)
+
+/** B2: points per 1,000 km over [km], or null under 1 km or with no points. */
+internal fun rate(km: Double, points: Int): Double? = if (km < 1.0 || points <= 0) null else points / (km / 1000)
 
 private val Airport.point get() = GeoPoint(latitude, longitude)
 

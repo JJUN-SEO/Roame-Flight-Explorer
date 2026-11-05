@@ -13,6 +13,8 @@ struct FlightCard: View {
     let onClose: () -> Void
     let onToggleSave: () -> Void
     var onDebugLongPress: (() -> Void)?
+    /** Opens the details page (Step 6.3f). */
+    var onDetails: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -77,22 +79,35 @@ struct FlightCard: View {
                 SaveButton(isSaved: flight.isSaved, isPending: isPending, onTap: onToggleSave)
             }
             .padding(.top, 8)
+            if let onDetails {
+                Button(action: onDetails) {
+                    HStack(spacing: 2) {
+                        Text("View details").font(.appButton)
+                        MSIcon(name: "ms_chevron_right", size: 18)
+                    }
+                    .foregroundStyle(Color.accent)
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.trailing, 12)
     }
 }
 
 /** V7: no optimistic change. While the write runs, the button shows a spinner and ignores taps. */
-private struct SaveButton: View {
+struct SaveButton: View {
     let isSaved: Bool
     let isPending: Bool
+    var fillsWidth = false
     let onTap: () -> Void
 
     var body: some View {
         if isSaved {
-            TintedButton(text: "Remove", isEnabled: !isPending, action: onTap) { icon }
+            TintedButton(text: "Remove", isEnabled: !isPending, fillsWidth: fillsWidth, action: onTap) { icon }
         } else {
-            PrimaryButton(text: "Save flight", isEnabled: !isPending, action: onTap) { icon }
+            PrimaryButton(text: "Save flight", isEnabled: !isPending, fillsWidth: fillsWidth, action: onTap) { icon }
         }
     }
 

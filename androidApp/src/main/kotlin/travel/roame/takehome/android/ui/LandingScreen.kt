@@ -230,7 +230,7 @@ private fun DestinationCard(deal: DestinationDeal, onClick: () -> Unit) {
 
 /** D33: a city the app has no photo for gets a drawn card in Roame's gradient. */
 @Composable
-private fun NoPhoto() {
+internal fun NoPhoto() {
     val extras = LocalExtraColors.current
     Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(extras.gradientStart, extras.gradientEnd))), contentAlignment = Alignment.Center) {
         Icon(painterResource(R.drawable.ms_flight), contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.White.copy(alpha = 0.6f))
@@ -312,7 +312,7 @@ private fun LandingPlaceholders() {
 }
 
 /** D33: the bundled photos, by the shared photo key. Listed here, not looked up by name, so a build can't drop one. */
-private val DestinationPhotos: Map<String, Int> = mapOf(
+internal val DestinationPhotos: Map<String, Int> = mapOf(
     "dest_amsterdam" to R.drawable.dest_amsterdam,
     "dest_athens" to R.drawable.dest_athens,
     "dest_auckland" to R.drawable.dest_auckland,

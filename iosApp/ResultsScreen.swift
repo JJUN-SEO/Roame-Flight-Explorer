@@ -17,6 +17,8 @@ struct ResultsScreen: View {
     @Binding var stop: SheetStop
     let onBack: () -> Void
     let onEditSearch: () -> Void
+    /** Opens the selected flight's details page (Step 6.3f). */
+    let onDetails: () -> Void
     let onDebugLongPress: (() -> Void)?
     @State private var filtersOpen = false
     @State private var sortOpen = false
@@ -44,6 +46,7 @@ struct ResultsScreen: View {
                         isActive: isActive,
                         onMarkerTap: { openMarker = $0 },
                         onSort: { sortOpen = true },
+                        onDetails: onDetails,
                         onDebugLongPress: onDebugLongPress
                     )
                 }
@@ -123,6 +126,7 @@ private struct MapWithSheet: View {
     let isActive: Bool
     let onMarkerTap: (String) -> Void
     let onSort: () -> Void
+    let onDetails: () -> Void
     let onDebugLongPress: (() -> Void)?
     @State private var drag: CGFloat = 0
     @State private var dragging = false
@@ -177,7 +181,8 @@ private struct MapWithSheet: View {
                         isPending: state.pendingWriteIds.contains(selected.id),
                         onClose: { model.store.select(flightId: nil) },
                         onToggleSave: { model.store.toggleSave(flightId: selected.id) },
-                        onDebugLongPress: onDebugLongPress
+                        onDebugLongPress: onDebugLongPress,
+                        onDetails: onDetails
                     )
                     .padding(.horizontal, 16)
                     // Measured before the cap below, which would otherwise report its own, taller frame: the map then

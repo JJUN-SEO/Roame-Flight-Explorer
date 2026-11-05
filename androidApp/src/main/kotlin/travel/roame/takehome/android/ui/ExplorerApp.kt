@@ -94,9 +94,19 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
     // the results; a deal shows its results straight away.
     var page by rememberSaveable { mutableStateOf(ExplorePage.Landing) }
     val landingScroll = rememberScrollState()
+    // Which selection's details page is open (Step 6.3f). It follows the live selection, so it closes if its flight
+    // goes, such as a saved flight removed from the page itself.
+    var detailsSource by rememberSaveable { mutableStateOf<DetailsSource?>(null) }
+    val details = when (detailsSource) {
+        DetailsSource.Explore -> state.selectedDetails
+        DetailsSource.Saved -> state.savedSelectedDetails
+        null -> null
+    }
+    LaunchedEffect(details == null) { if (details == null) detailsSource = null }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Column(Modifier.fillMaxSize()) {
+        // TalkBack reads only the details page while it's open.
+        Column(Modifier.fillMaxSize().then(if (details != null) Modifier.clearAndSetSemantics {} else Modifier)) {
             Box(Modifier.weight(1f).fillMaxWidth().statusBarsPadding()) {
                 // D31: the results stay composed under the other pages and tabs, so the map is never detached from the
                 // window. The landing page stays too, so it keeps its scroll position.
@@ -109,6 +119,7 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
                         active = exploring && page == ExplorePage.Results,
                         onBack = { page = ExplorePage.Landing },
                         onEditSearch = { page = ExplorePage.Search },
+                        onDetails = { detailsSource = DetailsSource.Explore },
                         onDebugLongPress = onDebugLongPress,
                     )
                 }
@@ -137,16 +148,38 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
                     }
                 }
                 when (tab) {
-                    AppTab.Saved -> SavedScreen(state, store, onDebugLongPress)
+                    AppTab.Saved -> SavedScreen(state, store, onDebugLongPress, onDetails = { detailsSource = DetailsSource.Saved })
                     AppTab.Account -> AccountScreen(appearance, onToast = { note = it })
                     AppTab.Explore -> Unit
                 }
             }
             AppTabBar(tab, state.saved.size, onSelect = { tab = it })
         }
+        // Over the tabs, like Roame's, and under the toasts, so a failed save on it still shows.
+        val shownDetails = rememberLast(details)
+        val reduceMotion = rememberReduceMotion()
+        AnimatedVisibility(
+            visible = details != null,
+            enter = if (reduceMotion) fadeIn() else slideInVertically { it },
+            exit = if (reduceMotion) fadeOut() else slideOutVertically { it },
+        ) {
+            val shown = shownDetails ?: return@AnimatedVisibility
+            FlightDetailsScreen(
+                shown,
+                state.data,
+                isPending = shown.flight.id in state.pendingWriteIds,
+                onClose = { detailsSource = null },
+                onToggleSave = {
+                    if (detailsSource == DetailsSource.Saved) store.removeSaved(shown.flight.id) else store.toggleSave(shown.flight.id)
+                },
+            )
+        }
         Toasts(state, store, note, onNoteShown = { note = null })
     }
 }
+
+/** Where a details page was opened from: Explore's selection or Saved's own (L7). */
+private enum class DetailsSource { Explore, Saved }
 
 /** Explore's three pages (D36): the landing page, the search page and the results. */
 private enum class ExplorePage { Landing, Search, Results }
@@ -271,7 +304,7 @@ internal fun StaleBanner(data: DataStatus.Ready) {
 
 /** V8, L7: every saved flight whatever the filters, with its own selection and card. */
 @Composable
-private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongPress: (() -> Unit)?) {
+private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongPress: (() -> Unit)?, onDetails: () -> Unit) {
     BackHandler(enabled = state.savedSelected != null) { store.selectSaved(null) }
     // Roame's large title, as on Account (Step 6.3e).
     val title = stringResource(R.string.tab_saved)
@@ -293,6 +326,7 @@ private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongP
                     onToggleSave = { store.removeSaved(saved.flight.id) },
                     isListed = saved.isListed,
                     onDebugLongPress = onDebugLongPress,
+                    onDetails = onDetails,
                 )
             }
         },

@@ -277,6 +277,20 @@ Implemented in `domain/Deals.kt` (`DealIndex`), built once per data change in `i
   In Map mode, the great-circle line from M7 is drawn as well. *(assumption: "route connector" is satisfied by the map line and also by the connector graphic in the card)*
 - **L7** The Saved view has its own selection, `savedSelectedId`. It is independent of the discovery filters and is cleared when that flight is removed. *(assumption)*
 
+## 7b. Flight details (DT)
+
+The details page is the owner's addition (Step 6.3f, D47): Roame opens one for a picked flight, and the brief asks for none.
+
+- **DT1** `ExplorerState.selectedDetails` and `savedSelectedDetails` hold the page's figures for each selection (L1, L7), and are null when there's none. Each carries the `FlightItem`, so its `isSaved` follows V3, and:
+  - `distanceKm`: B1's distance, rounded to the nearest kilometre;
+  - `percentBelowTypical`: B4, against the cabin's typical rate over the whole cache (B3), wherever the user is. It's 0 when the flight isn't below typical, has no rate (B2), or its cabin has no flights in the cache, as can happen to a saved flight after a refresh;
+  - `estimatedValueUsd`: B6, or null for a cabin with no published value;
+  - `photoKey`: B8's key for the destination city.
+
+  They're worked out from the flight's own fields, so a saved flight the cache no longer has (V4) still gets them.
+- **DT2** The data has no departure or arrival times, no travel time and no aircraft, so the page shows placeholders: `XX:XX`, `Travel time: XX hr XX min` and `Aircraft TBD`, with a line saying they're placeholders and that the value is an estimate. Screen readers say "not in the data". *(the owner's decision, D47)*
+- **DT3** The page opens from the card's "View details" and follows its selection live. Its button is the card's: Save or Remove in Explore, Remove in Saved (L7), and the page updates as the card does. When its selection goes, the page closes: after Remove in Saved (L7), or when the filters or a refresh drop the flight from the results (L3). "Updated …" is `lastSuccessAt` (T4). *(assumption)*
+
 ## 8. Saved flights (V)
 
 - **V1** Saved flights are stored as **full snapshots** (every `Flight` field) plus `savedAt`, in their own table, independent of the cache.
@@ -333,6 +347,7 @@ The rules are written so that their cost stays predictable as the data grows (RE
 | Map (M) | O(n) grouping by destination | Beyond ~200 markers, clustering changes the *rendering*, not M1–M3 |
 | Deals (B) | Once per data change: one distance per flight, a median per cabin, and an O(n log n) sort, for every flight and per origin. A location only looks up the nearest origin's deals: O(origins) | Measured at 6 ms for 10k flights and about 150 ms for 100k, off the main thread (ARCHITECTURE §12). At 100k+, keep only each program's and city's best in one pass instead of sorting everything |
 | Selection (L) | O(1) membership check against the result ids | Unchanged |
+| Details (DT) | At most two selections per state change, each one distance and one lookup of its cabin's typical rate, kept from B3 | Unchanged: it never grows with the data |
 | Saved (V) | One upsert or delete per id; independent of cache size | Unchanged; the Saved tab pages |
 | Refresh (R) | Full replace is O(n) in one transaction | Incremental sync keeps R3's atomicity: one transaction per sync |
 

@@ -35,11 +35,12 @@ Tab bar
 │       ├── The list, as a sheet over the map: peek (handle + "238 flights"), half (the start), or full
 │       │     ├── Drag it anywhere while it isn't full; when full, the list scrolls and only its header drags
 │       │     └── When full, a "Map" button drops it to the peek
-│       └── Selecting a flight drops the sheet to the peek and shows the selection card above it; the map frames
-│           the route above the card (M8). Moving the sheet never changes the selection (L4)
+│       ├── Selecting a flight drops the sheet to the peek and shows the selection card above it; the map frames
+│       │   the route above the card (M8). Moving the sheet never changes the selection (L4)
+│       └── The card's "View details ›" → the flight's details page, over the tabs (Step 6.3f, §2.3b)
 ├── Saved (badge = count)         ← always reachable, ignores filters (V8)
 │   ├── Saved list
-│   └── Saved card (its own selection, L7)
+│   └── Saved card (its own selection, L7), with "View details ›" → the details page (§2.3b)
 └── Account (placeholder, D39)
     ├── Profile header: avatar, "Guest", "View profile"
     ├── Settings → Appearance: System | Light | Dark   (the only working page; saved between launches)
@@ -162,9 +163,46 @@ Tap a pill → a sheet with that destination's flights: "Paris · CDG — 12 fli
 │  Avios                                       │
 │  25,000 pts                                  │  ← hero number
 │  [  ♡  Save flight  ]  /  [  ♥  Remove  ]    │  ← spinner + disabled while pending (V7)
+│  View details ›                              │  ← pink; opens the details page (§2.3b)
 └──────────────────────────────────────────────┘
 In the Saved view, add "No longer listed" when the flight isn't in the latest results (V4).
 ```
+
+### 2.3b Flight details page (Step 6.3f, D47)
+
+Like Roame's, from the owner's screenshot. It slides up over the tabs, and ← or the system's Back returns to the card.
+
+```
+┌────────────────────────────────────────┐
+│ (←)                                    │  white 44 pt circle, over the photo
+│        the destination's photo         │  340 pt; Roame's gradient when there's no photo (D33)
+│          FROM BOSTON TO                │  Label, spaced capitals, white
+│            Singapore                   │  Hero, 40 Bold, white
+│ ┌────────────────────────────────────┐ │  the card overlaps the photo by 48 pt
+│ │ Flight Details                     │ │  Title large
+│ │ Updated 8:51 PM                    │ │  lastSuccessAt (T4)
+│ │ ────────────────────────────────── │ │
+│ │ Departure · Tue, Mar 23, 2027      │ │  Title
+│ │ [MileagePlus]  MileagePlus · Aircraft TBD
+│ │                ♙ Economy           │ │
+│ │ ○ XX:XX                            │ │
+│ │   Boston (BOS)                     │ │
+│ │ ┊ Travel time: XX hr XX min        │ │  placeholders (DT2)
+│ │ ○ XX:XX                            │ │
+│ │   Singapore (SIN)                  │ │
+│ │ ────────────────────────────────── │ │
+│ │ 28,000 pts                         │ │  Points
+│ │ (37% below typical for Economy)    │ │  only above 0 (DT1)
+│ │ Distance                 15,129 km │ │
+│ │ Estimated value         about $504 │ │  only for a cabin with a published value (B6)
+│ │ Times, travel time and aircraft    │ │  Caption, secondary
+│ │ aren't in the data, so they're …   │ │
+│ └────────────────────────────────────┘ │
+│ [         ♡  Save flight          ]    │  full width, fixed at the bottom; Remove when saved
+└────────────────────────────────────────┘
+```
+
+The page shows the live selection (DT3): saving on it updates it, the card and Saved together. In Saved its button is Remove, which closes the page with the selection (L7). There's no share button, by the owner's choice (D47).
 
 ### 2.4 The Filters sheet (Step 6.3d)
 
@@ -190,7 +228,8 @@ At the bottom, "Clear all" (the filters only, keeping the search) and a **"Show 
 | `FlightRow` | One result | default · pressed · selected · saved (filled heart) |
 | `RouteConnector` | `ORIGIN ●──✈──● DEST` graphic | Used in the row (compact) and in the card |
 | `DestinationMarker` | Map pill (D44, the owner's decision): the code in bold, then the flight count on a light pink badge marked with a plane, e.g. `LIS ✈ 33`. The lowest points aren't drawn; they're in the pill's spoken label and the destination's sheet title. Centred on the airport, with a soft shadow | default (card colour) · selected (pink with a white badge, always on top, M4) · pressed |
-| `FlightCard` | Selection details + Save / Remove | idle · pending · error message shown |
+| `FlightCard` | Selection details + Save / Remove, and "View details ›" (Step 6.3f) | idle · pending · error message shown |
+| `FlightDetailsScreen` | The details page (§2.3b, DT1–DT3) | not saved · saved · pending; with or without a photo, a "below typical" badge and a value |
 | `StatusBanner` | Stale or offline info, with no Retry (D29) | stale · refreshing (inline progress) |
 | `EmptyState` / `ErrorState` | Full-area explanations | See §4 |
 | `AppToast` | One-shot `UserMessage`, at the top of the screen (§6) | "Couldn't save flight" + Retry |
@@ -222,6 +261,7 @@ Use the same copy on both platforms.
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
 | Save or remove failed | A `UserMessage` arrives (V7) | Toast: "Couldn't save flight." / "Couldn't remove flight." + **Retry**. The heart stays in its previous state. |
 | Not listed | A saved flight missing from the cache (V4) | A grey "No longer listed" tag in the Saved row and card |
+| Details placeholders | Always, on the details page (DT2) | "XX:XX" for both stops, "Travel time: XX hr XX min", "<program> · Aircraft TBD", and under the figures: "Times, travel time and aircraft aren't in the data, so they're placeholders. The value is an estimate from Roame's average cents per point for the cabin." |
 
 ## 5. Interaction details
 
@@ -256,6 +296,7 @@ Use the same tokens on both platforms, mapped to native APIs.
 
 | Style | Inter | iOS (`Theme.swift`) | Android (`Theme.kt`) | Used for |
 |---|---|---|---|---|
+| Hero | 40 Bold | `.appHero` | `displayMedium` | The details page's city over its photo (Step 6.3f) |
 | Display | 28 Bold | `.appDisplay` | `headlineLarge` | Tab titles (Account), the avatar's initial |
 | Points | 24 Bold | `.appPoints` | `headlineSmall` | The selection card's points |
 | Title large | 22 SemiBold | `.appTitleLarge` | `titleLarge` | The profile name |
@@ -326,6 +367,7 @@ Use the same tokens on both platforms, mapped to native APIs.
 | Map button | A dark (#2B2B2B) 44 pt pill with a map icon and "Map" in white | Over the full results sheet |
 | Sort pill | A 36 pt outlined pill with the sort's name and ▾ (D46) | The results sheet's header |
 | Plane | Roame's pink plane on a white 32 pt disc with a faint ring, turned to the route's heading (M9) | The selected route |
+| Details page | A 340 pt photo with a soft dark gradient top and bottom; a card-colour card with 20 pt corners, an outline border and a shadow, overlapping it by 48 pt; a white 44 pt back circle; the "below typical" badge in pink on light pink; a full-width Save / Remove bar on the background colour | The details page (§2.3b) |
 
 Search fields are pills in the card colour with a magnifying glass, and a pink border while focused. Their suggestions are a card with a soft shadow. Sheets stay native containers; the points slider stays native until Step 6.3d.
 
@@ -341,6 +383,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - The selection card is never taller than the room above the peeking list. Its title and ✕ stay in view, and its details scroll.
   - On iOS the tab bar's labels stop growing at the largest standard size, as Apple's do, and a long press shows the tab in large type.
   - One-line summaries shorten rather than wrap: the search summary, the search page's title and the deal cards' city names. Screen readers read them in full.
+  - On the details page, the city over the photo stops growing at the largest standard size (iOS) or 1.3× (Android), because the photo's height is fixed, and shrinks to fit (iOS) or shortens (Android) a long name. The program's logo goes above its line, and each figure's value goes under its label (Step 6.3f).
 - Touch targets are at least 44 pt on iOS and 48 dp on Android, including the heart icon and chips.
 - **VoiceOver / TalkBack labels:**
   - Row: "Boston to Paris, Monday, February 1, Premium Economy, Avios, 25,000 points, saved", and "no longer listed" when it isn't (Step 6.3e). The heart is its own button.
@@ -352,6 +395,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - Destination card: "Johannesburg, from 39,000 points, up to 35% below typical".
   - Offer card: "MileagePlus best offer: Toronto to Johannesburg, Mon, Mar 22, Premium Economy, 39,000 points, 35% below typical, worth about $702".
   - Section titles are headings, and each card is one button.
+  - Details page: the photo's text is one heading, "From Boston to Singapore"; each stop reads "Departure, Boston (BOS), time not in the data"; the travel time "Travel time not in the data"; the program line "MileagePlus. Aircraft not in the data". While the page is open, VoiceOver and TalkBack read only the page.
   - Search page rows: "From, Toronto (YYZ)", "Dates, Feb 10 – Feb 20"; the swap button: "Swap From and To".
   - Calendar days: "Wed, Feb 10, 2027, start date" (or "end date", "selected", "in range"); month names are headings; the weekday letters are hidden.
 - Colour is never the only signal. Selected rows also get a border and a checkmark or "Selected" accessibility trait.
@@ -385,5 +429,6 @@ The fixture fits on screen comfortably. These rules keep the UI usable when the 
 | Fuzzy hint | One or two airports | Never more than one line: the first two in ranked order, then "+N more" |
 | Search suggestions | Up to 5 ranked rows (S14) | Unchanged: the cap keeps the dropdown short, and ranking decides which airports appear |
 | Saved tab | Small list | Virtualised; grouped by month when long |
+| Details page | One flight's figures (DT1) | Unchanged: it always shows one flight, worked out on its own |
 | Destination deck | 23 photo cards | At most 30 cards (B8), best value first. Photos are bundled per city; a new city gets the drawn card |
 | Best offers | One card per program (5) | One per program, so it grows only with the number of programs; past about 10, add "See all" as Roame does |

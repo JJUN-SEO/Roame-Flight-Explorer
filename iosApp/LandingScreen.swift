@@ -208,7 +208,7 @@ private struct DestinationCard: View {
 }
 
 /** D33: a city the app has no photo for gets a drawn card in Roame's gradient. */
-private struct NoPhoto: View {
+struct NoPhoto: View {
     var body: some View {
         LinearGradient(colors: [.gradientStart, .gradientEnd], startPoint: .topLeading, endPoint: .bottomTrailing)
             .overlay { MSIcon(name: "ms_flight", size: 48).foregroundStyle(.white.opacity(0.6)) }

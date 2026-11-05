@@ -182,11 +182,12 @@ extension PrimaryButton where Leading == EmptyView {
 struct TintedButton<Leading: View>: View {
     let text: String
     var isEnabled = true
+    var fillsWidth = false
     let action: () -> Void
     @ViewBuilder var leading: () -> Leading
 
     var body: some View {
-        PillButton(text: text, isEnabled: isEnabled, fillsWidth: false, background: .selectedCard, content: .accent, action: action, leading: leading)
+        PillButton(text: text, isEnabled: isEnabled, fillsWidth: fillsWidth, background: .selectedCard, content: .accent, action: action, leading: leading)
     }
 }
 

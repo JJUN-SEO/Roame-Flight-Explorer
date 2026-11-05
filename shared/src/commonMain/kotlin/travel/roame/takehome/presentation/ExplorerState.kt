@@ -27,10 +27,14 @@ data class ExplorerState(
     val markers: List<DestinationMarker>,
     /** The discovery selection, shared by the list and the map (L1). Always one of [results]. */
     val selected: FlightItem?,
+    /** DT1: what the details page shows for [selected]. */
+    val selectedDetails: FlightDetails?,
     /** Every saved flight, whatever the filters (V8), in O3 order. */
     val saved: List<SavedFlightItem>,
     /** The Saved view's own selection (L7). */
     val savedSelected: SavedFlightItem?,
+    /** DT1: what the details page shows for [savedSelected]. */
+    val savedSelectedDetails: FlightDetails?,
     /** Flights with a save or remove still running. Their buttons show progress and are disabled (V7). */
     val pendingWriteIds: Set<String>,
     /** One-shot errors. The app shows each once, then calls `messageShown(id)`. */
@@ -66,8 +70,10 @@ data class ExplorerState(
             sections = emptyList(),
             markers = emptyList(),
             selected = null,
+            selectedDetails = null,
             saved = emptyList(),
             savedSelected = null,
+            savedSelectedDetails = null,
             pendingWriteIds = emptySet(),
             messages = emptyList(),
             originSuggestions = emptyList(),
@@ -86,6 +92,19 @@ data class ExplorerState(
 data class ResultSection(val program: String?, val flights: List<FlightItem>) {
     val flightCount: Int get() = flights.size
 }
+
+/** DT1: the details page's figures from the data, beyond the card's. Times and aircraft aren't in the data (DT2). */
+data class FlightDetails(
+    val flight: FlightItem,
+    /** B1, to the nearest kilometre. */
+    val distanceKm: Int,
+    /** B4 against the cached flights of its cabin; 0 when it isn't below typical, or its cabin isn't in the cache. */
+    val percentBelowTypical: Int,
+    /** B6: an estimate in US dollars, or null when its cabin has no published value. */
+    val estimatedValueUsd: Int?,
+    /** D33: the destination's bundled photo, such as `dest_barcelona`. A city without one gets a drawn hero. */
+    val photoKey: String,
+)
 
 data class Landing(
     /** B5: the origin airport nearest the user, when the location is known. The deals are all from it. */

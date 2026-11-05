@@ -82,6 +82,8 @@ extension Font {
     static let appLabelTiny = inter("Inter-Bold", 11, .caption2)
     /** The program badge and the map's pills. */
     static let appBadge = inter("Inter-Bold", 12, .caption)
+    /** The details page's destination name over its photo (Step 6.3f). */
+    static let appHero = inter("Inter-Bold", 40, .largeTitle)
 
     private static func inter(_ name: String, _ size: CGFloat, _ style: Font.TextStyle) -> Font {
         .custom(name, size: size, relativeTo: style)

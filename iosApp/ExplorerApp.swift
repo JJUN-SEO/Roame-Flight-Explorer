@@ -20,6 +20,8 @@ struct ExplorerApp: View {
      * results; a deal shows its results straight away.
      */
     @State private var page = ExplorePage.landing
+    /** Which selection's details page is open (Step 6.3f). */
+    @State private var detailsSource: DetailsSource?
     /** Where the results' list rests, kept here so a destination deal can open it fully. */
     @State private var resultsStop = SheetStop.half
 
@@ -34,6 +36,7 @@ struct ExplorerApp: View {
                     stop: $resultsStop,
                     onBack: { page = .landing },
                     onEditSearch: { page = .search },
+                    onDetails: { openDetails(.explore) },
                     onDebugLongPress: debugHook
                 )
                 .opacity(results ? 1 : 0)
@@ -72,7 +75,7 @@ struct ExplorerApp: View {
                     .background(Color.background)
                 }
                 switch tab {
-                case .saved: SavedScreen(onDebugLongPress: debugHook)
+                case .saved: SavedScreen(onDebugLongPress: debugHook, onDetails: { openDetails(.saved) })
                 case .account: AccountScreen(onToast: { note = $0 })
                 case .explore: EmptyView()
                 }
@@ -84,6 +87,27 @@ struct ExplorerApp: View {
             }
         }
         .background(Color.background)
+        // Over the tabs, like Roame's. It follows the live selection, so it closes if its flight goes, such as a saved
+        // flight removed from the page itself.
+        .overlay {
+            if let details = shownDetails {
+                FlightDetailsScreen(
+                    details: details,
+                    isPending: model.state.pendingWriteIds.contains(details.flight.id),
+                    onClose: { openDetails(nil) },
+                    onToggleSave: {
+                        if detailsSource == .saved {
+                            model.store.removeSaved(flightId: details.flight.id)
+                        } else {
+                            model.store.toggleSave(flightId: details.flight.id)
+                        }
+                    }
+                )
+                .accessibilityAddTraits(.isModal)
+                .transition(.move(edge: .bottom))
+            }
+        }
+        .onChange(of: shownDetails == nil) { _, gone in if gone { detailsSource = nil } }
         // At the top, so it never covers the selection card's Save or Remove button.
         .overlay(alignment: .top) { toasts }
         // A write succeeded when it leaves pendingWriteIds with no error message, because the store has no success event.
@@ -99,6 +123,18 @@ struct ExplorerApp: View {
                 model.store.setUserLocation(latitude: latitude, longitude: longitude)
             }
         }
+    }
+
+    private var shownDetails: FlightDetails? {
+        switch detailsSource {
+        case .explore: model.state.selectedDetails
+        case .saved: model.state.savedSelectedDetails
+        case nil: nil
+        }
+    }
+
+    private func openDetails(_ source: DetailsSource?) {
+        withAnimation(.easeInOut(duration: 0.3)) { detailsSource = source }
     }
 
     /** V7: each failed write is shown once, with Retry, for 6 s; the app's own notes for 3 s. */
@@ -249,6 +285,7 @@ struct UnavailableMessage: View {
 private struct SavedScreen: View {
     @Environment(ExplorerModel.self) private var model
     let onDebugLongPress: (() -> Void)?
+    let onDetails: () -> Void
 
     var body: some View {
         let state = model.state
@@ -284,7 +321,8 @@ private struct SavedScreen: View {
                         isListed: selected.isListed,
                         onClose: { model.store.selectSaved(flightId: nil) },
                         onToggleSave: { model.store.removeSaved(flightId: selected.flight.id) },
-                        onDebugLongPress: onDebugLongPress
+                        onDebugLongPress: onDebugLongPress,
+                        onDetails: onDetails
                     )
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
@@ -293,6 +331,9 @@ private struct SavedScreen: View {
         }
     }
 }
+
+/** Where a details page was opened from: Explore's selection or Saved's own (L7). */
+private enum DetailsSource { case explore, saved }
 
 /** Explore's three pages (D36): the landing page, the search page and the results. */
 private enum ExplorePage { case landing, search, results }

@@ -89,6 +89,28 @@
         <item quantity="other">%1$s, %2$d saved flights</item>
     </plurals>
     <string name="back">Back</string>
+    <!-- The flight details page (Step 6.3f, UI_SPEC §2.3b). Times, travel time and aircraft aren't in the data (DT2). -->
+    <string name="view_details">View details</string>
+    <string name="details_from_to">From %1$s to</string>
+    <string name="details_from_to_description">From %1$s to %2$s</string>
+    <string name="details_title">Flight Details</string>
+    <string name="details_updated">Updated %1$s</string>
+    <string name="details_departure">Departure · %1$s</string>
+    <string name="details_departure_description">Departure, %1$s</string>
+    <string name="details_program_aircraft">%1$s · Aircraft TBD</string>
+    <string name="details_program_aircraft_description">%1$s. Aircraft not in the data</string>
+    <string name="details_time_placeholder">XX:XX</string>
+    <string name="details_place">%1$s (%2$s)</string>
+    <string name="details_stop_departure_description">Departure, %1$s, time not in the data</string>
+    <string name="details_stop_arrival_description">Arrival, %1$s, time not in the data</string>
+    <string name="details_travel_time">Travel time: XX hr XX min</string>
+    <string name="details_travel_time_description">Travel time not in the data</string>
+    <string name="details_below_typical">%1$d%% below typical for %2$s</string>
+    <string name="details_distance">Distance</string>
+    <string name="details_distance_value">%1$s km</string>
+    <string name="details_value">Estimated value</string>
+    <string name="details_value_amount">about $%1$s</string>
+    <string name="details_footnote">Times, travel time and aircraft aren\'t in the data, so they\'re placeholders. The value is an estimate from Roame\'s average cents per point for the cabin.</string>
     <string name="account_guest">Guest</string>
     <string name="account_guest_initial">G</string>
     <string name="account_view_profile">View profile</string>

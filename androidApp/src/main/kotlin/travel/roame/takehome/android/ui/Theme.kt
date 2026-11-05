@@ -82,6 +82,8 @@ private fun inter(size: TextUnit, weight: FontWeight) =
  * these scale with the font-size setting.
  */
 private val AppTypography = Typography(
+    /** The details page's destination name over its photo (Step 6.3f). */
+    displayMedium = inter(40.sp, FontWeight.Bold),
     displaySmall = inter(32.sp, FontWeight.Bold),
     headlineLarge = inter(28.sp, FontWeight.Bold),
     headlineMedium = inter(26.sp, FontWeight.Bold),
