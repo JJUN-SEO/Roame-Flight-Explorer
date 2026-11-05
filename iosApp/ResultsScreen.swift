@@ -205,7 +205,7 @@ private struct MapWithSheet: View {
                             FilteredEmpty()
                         } else {
                             ZStack(alignment: .bottom) {
-                                ResultsList(scrollEnabled: full)
+                                ResultsList(scrollEnabled: full, onPick: pick)
                                 if full {
                                     // Airbnb's way back to the map from the full list.
                                     MapButton { withAnimation(.spring(duration: 0.35)) { stop = .peek } }.padding(.bottom, 24)
@@ -224,6 +224,25 @@ private struct MapWithSheet: View {
             }
         }
         .clipped()
+    }
+
+    /**
+     * Picking a flight from the full list drops the list first, as the Map button does, and selects the flight once it
+     * has landed. On iOS 26, selecting straight from the full list left the map unable to take any touch, even after
+     * deselecting: iOS sent its touches to SwiftUI's root view, which handled none of them. Neither delaying the drop
+     * nor the route fixed it; this order did (found on the owner's iPhone, 2026‑11‑05). Elsewhere, a pick selects at
+     * once, and the selection drops the list (`ResultsScreen`).
+     */
+    private func pick(_ id: String) {
+        guard stop == .full else {
+            model.store.select(flightId: id)
+            return
+        }
+        withAnimation(.spring(duration: 0.35)) {
+            stop = .peek
+        } completion: {
+            model.store.select(flightId: id)
+        }
     }
 
     private func anchor(_ stop: SheetStop, _ height: CGFloat) -> CGFloat {
@@ -331,6 +350,8 @@ private func sortName(_ sort: Shared.SortOrder) -> String {
 private struct ResultsList: View {
     @Environment(ExplorerModel.self) private var model
     let scrollEnabled: Bool
+    /** A row was tapped: select its flight (L2), or deselect it if it's already selected. */
+    let onPick: (String) -> Void
 
     var body: some View {
         let state = model.state
@@ -347,7 +368,7 @@ private struct ResultsList: View {
                                 flight: flight,
                                 isSelected: flight.id == state.selected?.id,
                                 isPending: state.pendingWriteIds.contains(flight.id),
-                                onTap: { model.store.select(flightId: flight.id) },
+                                onTap: { onPick(flight.id) },
                                 onToggleSave: { model.store.toggleSave(flightId: flight.id) }
                             )
                         }

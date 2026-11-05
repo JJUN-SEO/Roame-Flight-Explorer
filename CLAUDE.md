@@ -51,8 +51,6 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 
 ## Repo map
 
-† = planned, does not exist yet.
-
 ```
 server/                Ktor JVM app: GET /flights (raw fixture bytes)
 shared/                KMP module → Android library + static Shared.framework (+ test-only jvm target)
@@ -70,7 +68,7 @@ shared/                KMP module → Android library + static Shared.framework 
   src/commonTest/        rule tests (run on JVM and iOS)
   src/jvmTest/           fixture contracts, DoubleMetaphoneOracleTest (port vs commons-codec jar), real OkHttp failures
   src/iosTest/           real Darwin failures, the app's database file
-  src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = Swift bridge †)
+  src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = the Swift bridge)
 androidApp/            Compose app, package travel.roame.takehome.android
 iosApp/                SwiftUI app: RoameStarter.xcodeproj, iOS 17, Swift 6
 fixtures/flights.json  1,000 flights, envelope {"flights":[…]} — provided; never edit
@@ -90,8 +88,6 @@ docs/                  planning docs (see table above)
 | Build Android | `./gradlew :androidApp:assembleDebug` |
 | Install on emulator | `./gradlew :androidApp:installDebug` |
 | Build iOS (Mac) | `xcodebuild -project iosApp/RoameStarter.xcodeproj -scheme RoameStarter -destination 'platform=iOS Simulator,name=<an installed iPhone>' build` |
-
-When a † command starts working, update this table and `README.md`.
 
 If `./gradlew` says "Unable to locate a Java Runtime", first run `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
@@ -169,6 +165,8 @@ These were found in the starter and the fixture.
   - A SwiftUI `ScrollView` draws its content under the status bar when scrolled; the landing page's is `.clipped()` to match Android.
   - Destination photos are found by the shared photo key (`dest_sao_paulo`). Android maps each key to `R.drawable` explicitly, never by name at runtime. A new photo goes in both apps and in THIRD_PARTY_NOTICES and the Photo credits text, with its Commons licence and requested credit.
   - Keep the results composed under the landing page (unplaced on Android, hidden on iOS), or the Android map is detached and leaks (D31).
+- **iOS 26 and the full list (found on the owner's iPhone, 2026‑11‑05):** selecting a flight straight from the fully open results list left the map unable to take a touch, even after deselecting: iOS 26 delivered every touch on it to SwiftUI's root view, which handled none of them. So a pick from the full list drops the list first and selects once it lands (`MapWithSheet.pick`). The simulator runs iOS 27, where it never happened; check gesture changes on the owner's phone, which runs iOS 26.6.
+  - To see touches on the phone, log with `print` and run the app with `xcrun devicectl device process launch --console --terminate-existing --device <id> <bundle id>`: a window-level `UIGestureRecognizer` that never recognises can log each touch's view and `touch.gestureRecognizers`.
 - **The results' map (Step 6.3d):**
   - Don't animate a line's dashes on either map. MapKit redraws a `MapPolyline` only when its points change, and it draws a line's width and dashes about twice as large as asked but its dash phase at a different scale, so moving dots crawled and snapped back. On MapLibre, a zero-length leading dash with round caps draws an extra dot. The route is still dots with a flying plane (D43).
   - MapKit always draws lines under annotations, so iOS draws the route and the plane over the map as Core Animation layers (`RouteLayer`), placed with `MapReader`'s `convert` from a display link. Don't redraw SwiftUI views over the map every frame or on `onMapCameraChange(.continuous)`: it held up the map's drags, which on a real iPhone only took hold on the line. Don't move an `Annotation` every frame (MapKit places it unevenly) or inside `withAnimation` (it leaves the route). Cut the selected pill out rather than drawing a copy, which trails the map by a frame while dragging.
