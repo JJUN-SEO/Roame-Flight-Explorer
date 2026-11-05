@@ -119,6 +119,8 @@ fun ExplorerApp(store: ExplorerStore, appearance: MutableState<Appearance>, fail
                         onSearch = { page = ExplorePage.Search },
                         onDestination = { deal ->
                             store.openDestination(deal.codes)
+                            // The destination's flights as a list straight away (the owner's review of Step 6.3e).
+                            view.sheet.value = SheetStop.Full
                             page = ExplorePage.Results
                         },
                         onOffer = { offer ->

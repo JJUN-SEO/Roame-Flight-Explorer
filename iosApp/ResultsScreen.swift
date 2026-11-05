@@ -13,14 +13,15 @@ enum SheetStop { case peek, half, full }
 struct ResultsScreen: View {
     @Environment(ExplorerModel.self) private var model
     let isActive: Bool
+    /** Where the list rests. The app holds it, so a destination deal can open the list fully. */
+    @Binding var stop: SheetStop
     let onBack: () -> Void
     let onEditSearch: () -> Void
     let onDebugLongPress: (() -> Void)?
     @State private var filtersOpen = false
     @State private var sortOpen = false
     @State private var openMarker: String?
-    // Kept here, as the screen stays alive behind the other pages, so the sheet and the camera survive (M8).
-    @State private var stop = SheetStop.half
+    // Kept here, as the screen stays alive behind the other pages, so the camera survives (M8).
     @State private var camera: MapCameraPosition?
 
     var body: some View {
@@ -347,13 +348,19 @@ private struct ResultsList: View {
                 .padding(EdgeInsets(top: 4, leading: 16, bottom: 96, trailing: 16))
             }
             .scrollDisabled(!scrollEnabled)
-            // A new sort starts the list from its top.
+            // A new sort or a new search starts the list from its top, as on Android.
             .onChange(of: state.sort) { proxy.scrollTo(listTop, anchor: .top) }
+            .onChange(of: searchKey(state)) { proxy.scrollTo(listTop, anchor: .top) }
         }
     }
 }
 
 private let listTop = "list-top"
+
+/** What the search is: the fields, their picks and the filters. */
+private func searchKey(_ state: ExplorerState) -> [AnyHashable] {
+    [state.originQuery, state.destinationQuery, AnyHashable(state.originPick), AnyHashable(state.destinationPick), state.filters]
+}
 
 /** "Aeroplan · 212 flights", spoken as a heading. */
 private struct ProgramHeading: View {

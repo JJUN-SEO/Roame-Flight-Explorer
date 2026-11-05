@@ -20,6 +20,8 @@ struct ExplorerApp: View {
      * results; a deal shows its results straight away.
      */
     @State private var page = ExplorePage.landing
+    /** Where the results' list rests, kept here so a destination deal can open it fully. */
+    @State private var resultsStop = SheetStop.half
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +31,7 @@ struct ExplorerApp: View {
                 let results = tab == .explore && page == .results
                 ResultsScreen(
                     isActive: results,
+                    stop: $resultsStop,
                     onBack: { page = .landing },
                     onEditSearch: { page = .search },
                     onDebugLongPress: debugHook
@@ -41,6 +44,8 @@ struct ExplorerApp: View {
                     onSearch: { page = .search },
                     onDestination: { deal in
                         model.store.openDestination(codes: deal.codes)
+                        // The destination's flights as a list straight away (the owner's review of Step 6.3e).
+                        resultsStop = .full
                         page = .results
                     },
                     onOffer: { offer in

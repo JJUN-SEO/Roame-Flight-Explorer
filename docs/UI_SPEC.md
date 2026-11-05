@@ -17,7 +17,7 @@ Tab bar
 │   │     ├── "Flight Explorer" in pink, and the search bar: "Where to?" or the current route, with dates · cabin
 │   │     ├── Status banner (stale / refreshing), when relevant
 │   │     ├── Banner: a landscape, "See where your points can take you", [Find a flight] → the search, like the search bar
-│   │     ├── Best deals by destination: a swipeable deck of photo cards (B8) → that city's flights
+│   │     ├── Best deals by destination: a swipeable deck of photo cards (B8) → that city's flights, the list fully open
 │   │     └── Best offers by program: a program's logo over its best flight (B7) → that route, the flight selected
 │   │         With a location, every deal leaves the nearest airport (B5); the cards' routes show it, with no subtitle (owner's choice)
 │   ├── Search page (Step 6.3c), from the search bar or the banner; ✕ returns to the landing page
