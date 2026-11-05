@@ -464,6 +464,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Build:** the final README and SUBMISSION_NOTES: approach, decisions, assumptions, tradeoffs, limitations, scalability and AI usage. Remove the "Working draft" note.
 - **Done when:** a fresh clone builds and runs using only the README, and no TODOs are left.
 - **Result (2026‑11‑04), waiting for the owner's review:** the README is rewritten for reviewers: what's in the app, prerequisites, running the API and both apps (and on a physical iPhone), things to try including the failure cases, the tests, and how it's built. SUBMISSION_NOTES opens with a one-page summary, its AI section is written from the record, its limitations are final, and stale decision statuses are fixed. Followed from a fresh clone: the API, 436 tests, and both apps built and loaded the flights; that found the missing Android SDK step for terminal builds, now in the README. No drafts or TODOs are left. The demo script in TEST_PLAN §7 still describes the old List and Map switch; Step 7.2 rewrites it.
+- **The owner's iPhone review (2026‑11‑05):** the owner confirmed pinch-to-zoom and found no Xcode performance warnings. They found the map wouldn't move after picking a flight from a destination deal's full list, on iOS 26.6 only (the simulator runs iOS 27). Found with a logging build on their phone and fixed: a pick from the full list drops the list first, then selects (QA Q35). A white map they saw once couldn't be reproduced.
 
 #### [ ] 7.2 Screen recording
 
