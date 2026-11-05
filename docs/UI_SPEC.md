@@ -275,7 +275,7 @@ Use the same copy on both platforms.
 - **No manual refresh** (D29, owner): no pull to refresh and no ⟳ button. The app refreshes when it opens, showing a thin progress bar over the data, and the first-load error has Try again (R7). The stale banner sits under the results' header and the landing page's search bar; on the "No flights available" screen it sits above the message.
 - **Reset** gives a light animation as the chips clear. Selection behaviour follows C4 and L3.
 - **The search page** applies each choice as it's made (like the filter sheets), so ✕ keeps them and "Search flights" only opens the results. Picking a suggestion, or the keyboard's Search key, returns from a picker to the form. Back leaves a picker or the calendar first, then the page.
-- **The calendar** (K3): the first tap marks a start and waits for the end; a day on or after it ends the range; an earlier day starts again. The results follow each tap.
+- **The calendar** (K3, D51): taps alternate. The first marks a start and waits for the end, the second ends the range on whichever side of the start it falls, and the third starts again. The results follow each tap.
 - **⇅** swaps From and To (S15).
 - **Map:**
   - Marker tap → the destination's sheet. Row tap there → select.

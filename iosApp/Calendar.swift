@@ -19,13 +19,16 @@ struct DateRangeCalendar: View {
                 WeekdayHeader()
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(DateCalendar.shared.months(minIso: min, maxIso: max, selection: selection), id: \.self) { month in
+                        // Months and weeks keep their identity across taps, as Android's are keyed, so a tap only redraws
+                        // the marks. Identified by their contents, every month was rebuilt on each tap: on the owner's
+                        // iPhone (iOS 26) the calendar animated oddly while picking dates.
+                        ForEach(DateCalendar.shared.months(minIso: min, maxIso: max, selection: selection), id: \.key) { month in
                             Text(Format.monthTitle(year: Int(month.year), month: Int(month.month)))
                                 .font(.appTitle)
                                 .padding(.top, 20)
                                 .padding(.bottom, 8)
                                 .accessibilityAddTraits(.isHeader)
-                            ForEach(month.weeks, id: \.self) { week in
+                            ForEach(month.weeks, id: \.key) { week in
                                 HStack(spacing: 0) {
                                     ForEach(week.days, id: \.iso) { day in
                                         DayCell(day: day) {
@@ -43,6 +46,15 @@ struct DateRangeCalendar: View {
             }
         }
     }
+}
+
+private extension CalendarMonth {
+    var key: Int { Int(year) * 100 + Int(month) }
+}
+
+private extension CalendarWeek {
+    /** A week's first day, which never changes with the selection. */
+    var key: String { days.first?.iso ?? "" }
 }
 
 /** S M T W T F S, Sunday first like the weeks (K1). */

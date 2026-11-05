@@ -42,14 +42,14 @@ object DateCalendar {
     fun selectionOf(filters: FlightFilters): DateSelection = DateSelection(filters.dateStart, filters.dateEnd, awaitingEnd = false)
 
     /**
-     * K3: with a start and its end awaited, a day on or after the start ends the range; any other day starts a new one
-     * and awaits its end. K2: a day outside [minIso, maxIso] changes nothing.
+     * K3: taps alternate. With a start whose end is awaited, the tap ends the range, the two days in date order;
+     * otherwise it starts a new range and awaits its end. K2: a day outside [minIso, maxIso] changes nothing.
      */
     fun tap(selection: DateSelection, dayIso: String, minIso: String, maxIso: String): DateSelection {
         if (dayIso < minIso || dayIso > maxIso) return selection
         val start = selection.startIso
-        return if (selection.awaitingEnd && start != null && dayIso >= start) {
-            DateSelection(start, dayIso, awaitingEnd = false)
+        return if (selection.awaitingEnd && start != null) {
+            DateSelection(minOf(start, dayIso), maxOf(start, dayIso), awaitingEnd = false)
         } else {
             DateSelection(dayIso, null, awaitingEnd = true)
         }
