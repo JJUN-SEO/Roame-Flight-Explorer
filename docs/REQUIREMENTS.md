@@ -124,8 +124,8 @@ Source: the *Flight Explorer* take-home brief (4 pages). This file lists every r
 | ID | Deliverable | Acceptance criteria | Status |
 |---|---|---|---|
 | DEL-1 | A repository link or ZIP containing both apps, the shared KMP module and the local API | A clean clone builds. Nothing depends on files outside the repo. | ⬜ |
-| DEL-2 | Instructions to build, run and test | The README Quick start and Tests sections have been verified from a clean clone. | ⬜ |
-| DEL-3 | Submission notes: approach and key architectural decisions, assumptions and tradeoffs, known limitations, and how AI was used and checked | [SUBMISSION_NOTES.md](SUBMISSION_NOTES.md) is complete, with no TODOs left. | ⬜ |
+| DEL-2 | Instructions to build, run and test | The README Quick start and Tests sections have been verified from a clean clone. | ✅ 2026‑11‑04 (Step 7.1): the README, followed from a fresh clone: the API served the fixture, 436 tests passed, and both apps built, installed and loaded the flights |
+| DEL-3 | Submission notes: approach and key architectural decisions, assumptions and tradeoffs, known limitations, and how AI was used and checked | [SUBMISSION_NOTES.md](SUBMISSION_NOTES.md) is complete, with no TODOs left. | ✅ 2026‑11‑04 (Step 7.1): SUBMISSION_NOTES opens with a one-page summary of the approach, key decisions, assumptions, tradeoffs, limitations and AI use, followed by the full record |
 | DEL-4 | Screen recording walkthrough of **both** apps showing search, filters, map selection, saving flights, and reopening the app with the API stopped | Follows the demo script in TEST_PLAN §7. | ⬜ |
 | DEL-5 | Ambiguities documented as assumptions | Every *(assumption)* rule in DOMAIN_RULES appears in the submission notes. | ✅ 2026‑11‑04 (Step 6.4): all 25 rules marked *(assumption)* are in SUBMISSION_NOTES §3 |
 | DEL-6 | Both starter apps built before implementation | Recorded in TEST_PLAN §5 (pre-flight). | ✅ 2026‑11‑01, before any app, server or data work. The shared search engine came first, at the owner's request. |

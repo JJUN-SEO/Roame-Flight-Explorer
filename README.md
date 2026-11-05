@@ -26,10 +26,13 @@ The submission notes list every decision and who made it ([§2](docs/SUBMISSION_
 
 - **A Mac** for iOS: Xcode 26.4 or newer, with an iOS 17+ simulator.
 - **Android Studio** Quail 3 or newer, with Android SDK 37.0 and build-tools 37.0.0, and an emulator image **with Google Play or Google APIs**, which location needs. API 26 or newer.
-- **A JDK to start Gradle.** Gradle downloads the JDK 25 it builds with. If `./gradlew` says "Unable to locate a Java Runtime", use Android Studio's:
+- **For Gradle in a terminal**, two settings that Android Studio and Xcode find by themselves:
+  - **A JDK to start Gradle.** Gradle downloads the JDK 25 it builds with, but needs a Java to start. If `./gradlew` says "Unable to locate a Java Runtime", use Android Studio's.
+  - **The Android SDK's location.** Android Studio writes it to `local.properties` the first time it opens the project. Before that, Android commands such as `installDebug` fail with "SDK location not found".
 
   ```bash
   export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+  export ANDROID_HOME="$HOME/Library/Android/sdk"
   ```
 
 - **Internet access** for the first build, and for map tiles (Apple Maps on iOS, OpenFreeMap on Android).
