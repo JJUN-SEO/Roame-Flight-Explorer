@@ -52,6 +52,10 @@ struct ExplorerApp: View {
                         page = .results
                     },
                     onOffer: { offer in
+                        // An offer selects its flight, which drops the list to its peek; open it there. Left fully
+                        // open by a destination deal, the list was full when the flight was selected, which leaves
+                        // iOS 26's map unable to take a touch (`MapWithSheet.pick`).
+                        resultsStop = .peek
                         model.store.openOffer(flightId: offer.flight.id)
                         page = .results
                     }
