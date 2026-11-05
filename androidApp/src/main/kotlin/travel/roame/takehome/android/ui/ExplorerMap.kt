@@ -79,6 +79,8 @@ import org.maplibre.android.style.expressions.Expression.eq
 import org.maplibre.android.style.expressions.Expression.get
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.FillExtrusionLayer
+import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
@@ -99,8 +101,11 @@ import travel.roame.takehome.presentation.ExplorerState
 import travel.roame.takehome.presentation.ExplorerStore
 import travel.roame.takehome.presentation.FlightItem
 
-/** OpenFreeMap's free public "Positron" style, light grey so the pills and route stand out, with no key (D8, D27). */
-private const val STYLE_URL = "https://tiles.openfreemap.org/styles/positron"
+/** OpenFreeMap's free public "Liberty" style, in colour like iOS's map, with no key (D8, D48). [matchIos] mutes it. */
+private const val STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+
+/** D48: iOS's open sea, sampled from MapKit's map at the results' first view, in place of Liberty's deeper blue. */
+private const val IOS_WATER = "#96DBFD"
 
 /** D24: nothing draws until the style loads, so stop waiting after this and say so. MapLibre's own failure event isn't reliable. */
 private const val STYLE_TIMEOUT_MS = 10_000L
@@ -335,6 +340,7 @@ private fun MapContent(
         if (holder.style != null) return@LaunchedEffect
         holder.timedOut = false
         loadedMap.setStyle(Style.Builder().fromUri(STYLE_URL)) { loaded ->
+            loaded.matchIos()
             loaded.addOverlays(planeBitmap(context, density.density))
             holder.style = loaded
             holder.timedOut = false
@@ -744,3 +750,18 @@ fun rememberReduceMotion(): Boolean {
 
 private fun animationsOff(context: Context) =
     android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+
+/**
+ * D48: like iOS's muted, flat map with no points of interest (`ExplorerMap.swift`). Hides the style's shops and places
+ * (OpenMapTiles' `poi` layer) and its 3D buildings, and gives the sea iOS's blue. The land keeps Liberty's colours,
+ * from Natural Earth's relief. Layers are found by kind and OpenMapTiles' layer names, not by the style's own ids.
+ */
+private fun Style.matchIos() {
+    for (layer in layers) {
+        when {
+            layer is FillExtrusionLayer || (layer is SymbolLayer && layer.sourceLayer == "poi") ->
+                layer.setProperties(PropertyFactory.visibility(Property.NONE))
+            layer is FillLayer && layer.sourceLayer == "water" -> layer.setProperties(PropertyFactory.fillColor(IOS_WATER))
+        }
+    }
+}
