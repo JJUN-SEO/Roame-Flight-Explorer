@@ -247,9 +247,13 @@ struct LoadingList: View {
                     .fill(Color.track)
                     .frame(height: 92)
             }
-            Spacer()
         }
         .padding(16)
+        // The rows are taller than most screens give the list. Without this frame they stretched the whole app past
+        // the screen while loading, pushing the title under the clock and the tab labels off the bottom (Step 6.4).
+        // Both bounds, so the frame takes the height it's offered, not its rows' height.
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
     }
 }
 
