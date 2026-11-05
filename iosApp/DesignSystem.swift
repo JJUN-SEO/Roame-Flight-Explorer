@@ -68,8 +68,15 @@ private struct TabItem: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .contentShape(.rect)
+            // At the accessibility sizes the labels broke mid-word ("Explor / e"), so they stop growing there, as
+            // Apple's tab bars do, and a long press shows the tab in large type instead (Step 6.3e).
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
         .buttonStyle(.plain)
+        .accessibilityShowsLargeContentViewer {
+            MSIcon(name: icon)
+            Text(label)
+        }
         // The badge's count is part of what VoiceOver reads, in the same words as Android's tab_with_count.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(badge.map { "\(label), \(Format.count($0)) saved \($0 == 1 ? "flight" : "flights")" } ?? label)

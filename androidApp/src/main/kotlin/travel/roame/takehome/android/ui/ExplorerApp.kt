@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,6 +46,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -268,8 +271,13 @@ internal fun StaleBanner(data: DataStatus.Ready) {
 @Composable
 private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongPress: (() -> Unit)?) {
     BackHandler(enabled = state.savedSelected != null) { store.selectSaved(null) }
+    // Roame's large title, as on Account (Step 6.3e).
+    val title = stringResource(R.string.tab_saved)
     if (state.saved.isEmpty()) {
-        EmptyState(R.drawable.ms_favorite, stringResource(R.string.saved_empty_title), stringResource(R.string.saved_empty_body))
+        Column(Modifier.fillMaxSize()) {
+            PageTitle(title, Modifier.semantics { heading() })
+            EmptyState(R.drawable.ms_favorite, stringResource(R.string.saved_empty_title), stringResource(R.string.saved_empty_body), Modifier.weight(1f))
+        }
         return
     }
     val selected = state.savedSelected
@@ -288,9 +296,11 @@ private fun SavedScreen(state: ExplorerState, store: ExplorerStore, onDebugLongP
         },
     ) { bottomInset ->
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp + bottomInset),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp + bottomInset),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // The list's own 16 dp inset would double the title's, so it moves back to the screen's edge.
+            item(key = "title") { PageTitle(title, Modifier.offset(x = (-16).dp).semantics { heading() }) }
             items(state.saved, key = { it.flight.id }) { saved ->
                 FlightRow(
                     saved.flight,

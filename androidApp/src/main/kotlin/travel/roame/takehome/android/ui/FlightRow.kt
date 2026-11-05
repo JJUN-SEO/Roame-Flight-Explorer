@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -43,7 +44,10 @@ import travel.roame.takehome.presentation.FlightItem
 
 val TabularDigits = TextStyle(fontFeatureSettings = "tnum")
 
-/** One result (UI_SPEC §2.1), as a white card like Roame's. Tapping it selects it; the heart saves or removes it (V7). */
+/**
+ * One result (UI_SPEC §2.1), as a white card like Roame's. Tapping it selects it; the heart saves or removes it (V7).
+ * At large font scales its parts stack instead of truncating (UI_SPEC §8), as iOS's do.
+ */
 @Composable
 fun FlightRow(
     flight: FlightItem,
@@ -54,15 +58,18 @@ fun FlightRow(
     modifier: Modifier = Modifier,
     isListed: Boolean = true,
 ) {
-    val description = stringResource(
+    // UI_SPEC §8: "Toronto to Barcelona, Monday, February 1, Economy, Aeroplan, 16,000 points, saved", in full words.
+    val spoken = stringResource(
         if (flight.isSaved) R.string.row_description_saved else R.string.row_description,
         flight.originCity,
         flight.destinationCity,
-        rowDate(flight.departureDate),
+        spokenDate(flight.departureDate),
         flight.cabin,
         flight.program,
-        PointsFormat.full(flight.points),
+        spokenPoints(flight.points),
     )
+    val description = if (isListed) spoken else stringResource(R.string.row_description_not_listed, spoken)
+    val stacked = isLargeText()
     // UI_SPEC §8: colour is never the only signal, so a selected row also gets a border and the selected state.
     Surface(
         selected = isSelected,
@@ -72,44 +79,80 @@ fun FlightRow(
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
         border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RouteConnector(flight.originCode, flight.destinationCode, Modifier.weight(1f))
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    PointsFormat.full(flight.points),
-                    style = MaterialTheme.typography.titleMedium.merge(TabularDigits),
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.route_cities, flight.originCity, flight.destinationCity),
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.width(8.dp))
-                CabinLabel(flight.cabin)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    rowDate(flight.departureDate),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                ProgramLogo(flight.program)
-                Spacer(Modifier.weight(1f))
-                if (!isListed) NotListedTag()
-                // Lines the glyph up with the points above, while keeping the 48 dp touch target.
-                SaveHeart(flight.isSaved, isPending, onToggleSave, Modifier.offset(x = 12.dp))
-            }
+        if (stacked) {
+            StackedRow(flight, isPending, isListed, onToggleSave)
+        } else {
+            CompactRow(flight, isPending, isListed, onToggleSave)
         }
     }
 }
+
+@Composable
+private fun CompactRow(flight: FlightItem, isPending: Boolean, isListed: Boolean, onToggleSave: () -> Unit) {
+    Column(Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RouteConnector(flight.originCode, flight.destinationCode, Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
+            Text(
+                PointsFormat.full(flight.points),
+                style = MaterialTheme.typography.titleMedium.merge(TabularDigits),
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.route_cities, flight.originCity, flight.destinationCity),
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(8.dp))
+            CabinLabel(flight.cabin)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                rowDate(flight.departureDate),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(8.dp))
+            ProgramLogo(flight.program)
+            Spacer(Modifier.weight(1f))
+            if (!isListed) NotListedTag()
+            // Lines the glyph up with the points above, while keeping the 48 dp touch target.
+            SaveHeart(flight.isSaved, isPending, onToggleSave, Modifier.offset(x = 12.dp))
+        }
+    }
+}
+
+/** One part per line, nothing cut short; the heart keeps the bottom corner. */
+@Composable
+private fun StackedRow(flight: FlightItem, isPending: Boolean, isListed: Boolean, onToggleSave: () -> Unit) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        RouteConnector(flight.originCode, flight.destinationCode)
+        Text(PointsFormat.full(flight.points), style = MaterialTheme.typography.titleMedium.merge(TabularDigits), fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.route_cities, flight.originCity, flight.destinationCity), style = MaterialTheme.typography.bodyMedium, color = secondary)
+        CabinLabel(flight.cabin)
+        Text(rowDate(flight.departureDate), style = MaterialTheme.typography.bodyMedium, color = secondary)
+        ProgramLogo(flight.program)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (!isListed) NotListedTag()
+            Spacer(Modifier.weight(1f))
+            SaveHeart(flight.isSaved, isPending, onToggleSave, Modifier.offset(x = 12.dp))
+        }
+    }
+}
+
+/** UI_SPEC §8: at or above this font scale, rows and the card stack their parts, as iOS does at its accessibility sizes. */
+@Composable
+internal fun isLargeText(): Boolean = LocalDensity.current.fontScale >= 1.5f
+
+/** "25,000 points", spoken in place of "25,000 pts" (UI_SPEC §8). */
+@Composable
+internal fun spokenPoints(points: Int): String = stringResource(R.string.spoken_points, groupedCount(points))
 
 /** ♡ or ♥, or a spinner while the write runs (V7). */
 @Composable
@@ -132,7 +175,8 @@ private fun SaveHeart(isSaved: Boolean, isPending: Boolean, onClick: () -> Unit,
 @Composable
 fun RouteConnector(origin: String, destination: String, modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Text(origin, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        // A code never breaks across lines, however large the text (UI_SPEC §8).
+        Text(origin, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, softWrap = false)
         Line(Modifier.weight(1f).padding(start = 8.dp))
         Icon(
             painterResource(R.drawable.ms_flight),
@@ -141,7 +185,7 @@ fun RouteConnector(origin: String, destination: String, modifier: Modifier = Mod
             tint = LocalExtraColors.current.brand,
         )
         Line(Modifier.weight(1f).padding(end = 8.dp))
-        Text(destination, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(destination, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, softWrap = false)
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -185,13 +186,15 @@ private fun MapWithSheet(
     var openMarker by rememberSaveable { mutableStateOf<String?>(null) }
     var stop by view.sheet
     var cardHeight by remember(state.selected?.id) { mutableIntStateOf(0) }
+    // Large text makes the header taller than its usual 64 dp, and the peek shows all of it.
+    var headerHeight by remember { mutableIntStateOf(0) }
 
     // A new selection, from the list, a marker or a deal, drops the sheet so the map shows the route.
     LaunchedEffect(state.selected?.id) { if (state.selected != null) stop = SheetStop.Peek }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val height = constraints.maxHeight.toFloat()
-        val peek = with(density) { PeekHeight.toPx() }
+        val peek = maxOf(with(density) { PeekHeight.toPx() }, headerHeight.toFloat())
         fun anchor(at: SheetStop) = when (at) {
             SheetStop.Full -> 0f
             SheetStop.Half -> height * 0.5f
@@ -201,7 +204,7 @@ private fun MapWithSheet(
         val offset = remember { Animatable(anchor(stop)) }
         var dragging by remember { mutableStateOf(false) }
         // Follows the resting place whenever it changes from outside (a selection, Map) or the area resizes.
-        LaunchedEffect(stop, height) { if (!dragging) offset.animateTo(anchor(stop)) }
+        LaunchedEffect(stop, height, peek) { if (!dragging) offset.animateTo(anchor(stop)) }
         val settle: (Float) -> Unit = { velocity ->
             val stops = SheetStop.entries.sortedBy { anchor(it) }
             val at = offset.value
@@ -240,10 +243,13 @@ private fun MapWithSheet(
 
         val selected = state.selected
         if (showCard && selected != null) {
+            // No taller than the room above the peeking sheet, so its ✕ stays on screen; its details scroll.
+            val cardMax = (with(density) { anchor(SheetStop.Peek).toDp() } - 20.dp).coerceAtLeast(160.dp)
             Box(
                 Modifier.fillMaxWidth()
                     .offset { IntOffset(0, (offset.value - cardHeight - with(density) { 12.dp.toPx() }).roundToInt()) }
                     .padding(horizontal = 16.dp)
+                    .heightIn(max = cardMax)
                     .onSizeChanged { cardHeight = it.height },
             ) {
                 FlightCard(
@@ -266,7 +272,7 @@ private fun MapWithSheet(
                 .background(MaterialTheme.colorScheme.background, SheetShape)
                 .then(if (full) Modifier else sheetDrag),
         ) {
-            SheetHeader(state, onSort, Modifier.then(if (full) sheetDrag else Modifier))
+            SheetHeader(state, onSort, Modifier.onSizeChanged { headerHeight = it.height }.then(if (full) sheetDrag else Modifier))
             if (state.results.isEmpty()) {
                 FilteredEmpty(state, onReset = store::resetAll)
             } else {
@@ -298,18 +304,30 @@ private fun MapWithSheet(
 private fun SheetHeader(state: ExplorerState, onSort: () -> Unit, modifier: Modifier) {
     val handle = stringResource(R.string.results_sheet_handle)
     val count = resultCountText(state)
-    Column(modifier.fillMaxWidth().height(PeekHeight), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier.fillMaxWidth().heightIn(min = PeekHeight), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.padding(top = 10.dp).size(width = 36.dp, height = 4.dp).background(MaterialTheme.colorScheme.outline, CircleShape))
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, top = 6.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        val title: @Composable (Modifier) -> Unit = { modifier ->
             Text(
                 if (state.results.isEmpty()) stringResource(R.string.filtered_empty_title) else count,
-                Modifier.weight(1f).clearAndSetSemantics {
+                modifier.clearAndSetSemantics {
                     contentDescription = "$count. $handle"
                     heading()
                 },
                 style = MaterialTheme.typography.titleMedium,
             )
-            if (state.results.isNotEmpty()) SortButton(state.sort, onSort)
+        }
+        val padding = Modifier.fillMaxWidth().padding(start = 20.dp, top = 6.dp, end = 12.dp, bottom = 8.dp)
+        if (isLargeText()) {
+            // At large font scales the sort goes under the count, as on iOS, so its name never breaks (Step 6.3e).
+            Column(padding, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                title(Modifier)
+                if (state.results.isNotEmpty()) SortButton(state.sort, onSort)
+            }
+        } else {
+            Row(padding, verticalAlignment = Alignment.CenterVertically) {
+                title(Modifier.weight(1f))
+                if (state.results.isNotEmpty()) SortButton(state.sort, onSort)
+            }
         }
     }
 }
@@ -320,7 +338,7 @@ private fun SortButton(sort: SortOrder, onClick: () -> Unit) {
     val name = sortName(sort)
     val description = stringResource(R.string.sort_button, name)
     Row(
-        Modifier.height(36.dp)
+        Modifier.heightIn(min = 36.dp)
             .clip(CircleShape)
             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
             .clickable(onClick = onClick)
@@ -328,7 +346,7 @@ private fun SortButton(sort: SortOrder, onClick: () -> Unit) {
                 contentDescription = description
                 role = Role.Button
             }
-            .padding(start = 14.dp, end = 10.dp),
+            .padding(start = 14.dp, top = 4.dp, end = 10.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(name, style = MaterialTheme.typography.labelLarge)

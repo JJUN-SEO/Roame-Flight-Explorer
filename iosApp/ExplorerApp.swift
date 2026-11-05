@@ -248,9 +248,14 @@ private struct SavedScreen: View {
     var body: some View {
         let state = model.state
         if state.saved.isEmpty {
-            EmptyState(icon: "ms_favorite", title: "No saved flights yet", message: "Tap ♡ on any flight to keep it here — even offline.")
+            VStack(spacing: 0) {
+                PageTitle(text: "Saved")
+                EmptyState(icon: "ms_favorite", title: "No saved flights yet", message: "Tap ♡ on any flight to keep it here — even offline.")
+            }
         } else {
             ScrollView {
+                // Roame's large title, as on Account (Step 6.3e).
+                PageTitle(text: "Saved")
                 LazyVStack(spacing: 8) {
                     ForEach(state.saved, id: \.flight.id) { saved in
                         FlightRow(
@@ -263,7 +268,7 @@ private struct SavedScreen: View {
                         )
                     }
                 }
-                .padding(16)
+                .padding(EdgeInsets(top: 8, leading: 16, bottom: 16, trailing: 16))
             }
             .background(Color.background)
             .safeAreaInset(edge: .bottom) {

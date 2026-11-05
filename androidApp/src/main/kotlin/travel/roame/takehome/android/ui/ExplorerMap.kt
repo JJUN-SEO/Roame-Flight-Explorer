@@ -45,6 +45,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -418,6 +420,14 @@ private fun MapContent(
 fun MarkerSheet(marker: DestinationMarker, state: ExplorerState, store: ExplorerStore, onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    // UI_SPEC §8: spoken with "points" in full.
+    val description = stringResource(
+        R.string.marker_sheet_description,
+        marker.city,
+        marker.code,
+        pluralStringResource(R.plurals.result_count, marker.flightCount, groupedCount(marker.flightCount)),
+        spokenPoints(marker.minPoints),
+    )
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Text(
             pluralStringResource(
@@ -429,7 +439,7 @@ fun MarkerSheet(marker: DestinationMarker, state: ExplorerState, store: Explorer
                 PointsFormat.full(marker.minPoints),
             ),
             // Centred, like the filter sheets and iOS's (D38).
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp).semantics { contentDescription = description },
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )

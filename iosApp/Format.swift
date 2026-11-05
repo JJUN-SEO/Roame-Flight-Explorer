@@ -24,6 +24,8 @@ enum Format {
     private static let row = formatter("EEE, MMM d")
     private static let chip = formatter("MMM d")
     private static let card = formatter("EEE, MMM d, yyyy")
+    private static let spoken = formatter("EEEE, MMMM d")
+    private static let spokenWithYear = formatter("EEEE, MMMM d, yyyy")
 
     /** "Mon, Feb 1, 2027", for the selection card. */
     static func cardDate(_ iso: String) -> String {
@@ -35,6 +37,23 @@ enum Format {
     static func rowDate(_ iso: String) -> String {
         guard let date = calendarDate(iso, in: calendar) else { return iso }
         return row.string(from: date)
+    }
+
+    /** UI_SPEC §8: "Monday, February 1", spoken in full in place of the row's "Mon, Feb 1". */
+    static func spokenDate(_ iso: String) -> String {
+        guard let date = calendarDate(iso, in: calendar) else { return iso }
+        return spoken.string(from: date)
+    }
+
+    /** "Monday, February 1, 2027", spoken in place of the card's date. */
+    static func spokenCardDate(_ iso: String) -> String {
+        guard let date = calendarDate(iso, in: calendar) else { return iso }
+        return spokenWithYear.string(from: date)
+    }
+
+    /** UI_SPEC §8: "25,000 points", spoken in place of "25,000 pts". */
+    static func spokenPoints(_ points: Int32) -> String {
+        "\(count(Int(points))) points"
     }
 
     /** "Feb 10", for the dates chip. */

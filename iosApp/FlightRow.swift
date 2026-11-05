@@ -1,8 +1,12 @@
 import SwiftUI
 import Shared
 
-/** One result (UI_SPEC §2.1), as a white card like Roame's. Tapping it selects it; the heart saves or removes it (V7). */
+/**
+ * One result (UI_SPEC §2.1), as a white card like Roame's. Tapping it selects it; the heart saves or removes it (V7).
+ * At the accessibility text sizes its parts stack instead of truncating (UI_SPEC §8), as Android's do.
+ */
 struct FlightRow: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     let flight: FlightItem
     var isSelected = false
     var isPending = false
@@ -11,35 +15,14 @@ struct FlightRow: View {
     var onToggleSave: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
-                Text(PointsFormat.shared.full(points: flight.points))
-                    .font(.appTitle.monospacedDigit())
-            }
-            HStack(spacing: 8) {
-                Text("\(flight.originCity) → \(flight.destinationCity)")
-                    .font(.appBody)
-                    .foregroundStyle(Color.secondaryText)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                CabinLabel(cabin: flight.cabin)
-            }
-            HStack(spacing: 8) {
-                Text(Format.rowDate(flight.departureDate))
-                    .font(.appBody)
-                    .foregroundStyle(Color.secondaryText)
-                ProgramLogo(program: flight.program)
-                Spacer(minLength: 0)
-                if !isListed { NotListedTag() }
-                // Leaves room for the heart, which sits over this corner with its own 48 pt target, as on Android.
-                Color.clear.frame(width: 36, height: 48)
-            }
+        Group {
+            if typeSize.isAccessibilitySize { stacked } else { compact }
         }
         .padding(EdgeInsets(top: 16, leading: 16, bottom: 4, trailing: 16))
         .contentShape(.rect)
         .onTapGesture(perform: onTap)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(rowLabel(flight, isListed: isListed))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .overlay(alignment: .bottomTrailing) {
             SaveHeart(isSaved: flight.isSaved, isPending: isPending, onTap: onToggleSave)
@@ -50,6 +33,71 @@ struct FlightRow: View {
         .background(isSelected ? Color.selectedCard : Color.card, in: .rect(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(isSelected ? Color.accent : Color.cardBorder, lineWidth: isSelected ? 2 : 1))
     }
+
+    private var points: some View {
+        Text(PointsFormat.shared.full(points: flight.points)).font(.appTitle.monospacedDigit())
+    }
+
+    private var cities: some View {
+        Text("\(flight.originCity) → \(flight.destinationCity)").font(.appBody).foregroundStyle(Color.secondaryText)
+    }
+
+    private var date: some View {
+        Text(Format.rowDate(flight.departureDate)).font(.appBody).foregroundStyle(Color.secondaryText)
+    }
+
+    private var compact: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
+                points
+            }
+            HStack(spacing: 8) {
+                cities.lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                CabinLabel(cabin: flight.cabin)
+            }
+            HStack(spacing: 8) {
+                date
+                ProgramLogo(program: flight.program)
+                Spacer(minLength: 0)
+                if !isListed { NotListedTag() }
+                // Leaves room for the heart, which sits over this corner with its own 48 pt target, as on Android.
+                Color.clear.frame(width: 36, height: 48)
+            }
+        }
+    }
+
+    /** One part per line, nothing cut short; the heart keeps the bottom corner. */
+    private var stacked: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
+            points
+            cities
+            CabinLabel(cabin: flight.cabin)
+            date
+            ProgramLogo(program: flight.program)
+            if !isListed { NotListedTag() }
+            Color.clear.frame(height: 48)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/**
+ * UI_SPEC §8: "Toronto to Barcelona, Monday, February 1, Economy, Aeroplan, 16,000 points, saved", in full words. The
+ * heart is its own button.
+ */
+func rowLabel(_ flight: FlightItem, isListed: Bool) -> String {
+    var parts = [
+        "\(flight.originCity) to \(flight.destinationCity)",
+        Format.spokenDate(flight.departureDate),
+        flight.cabin,
+        flight.program,
+        Format.spokenPoints(flight.points),
+    ]
+    if flight.isSaved { parts.append("saved") }
+    if !isListed { parts.append("no longer listed") }
+    return parts.joined(separator: ", ")
 }
 
 /** ♡ or ♥, or a spinner while the write runs (V7). */
@@ -83,11 +131,12 @@ struct RouteConnector: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(origin).font(.appTitle)
+            // A code never breaks across lines, however large the text (UI_SPEC §8).
+            Text(origin).font(.appTitle).fixedSize()
             line.padding(.leading, 4)
             MSIcon(name: "ms_flight", size: 18).rotationEffect(.degrees(90)).foregroundStyle(Color.brand)
             line.padding(.trailing, 4)
-            Text(destination).font(.appTitle)
+            Text(destination).font(.appTitle).fixedSize()
         }
     }
 

@@ -55,6 +55,10 @@
 
     <string name="row_description">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s</string>
     <string name="row_description_saved">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s, saved</string>
+    <string name="row_description_not_listed">%1$s, no longer listed</string>
+    <!-- UI_SPEC §8: points in full words when spoken -->
+    <string name="spoken_points">%1$s points</string>
+    <string name="marker_sheet_description">%1$s, %2$s, %3$s from %4$s</string>
 
     <string name="selected_flight">Selected flight</string>
     <string name="close">Close</string>

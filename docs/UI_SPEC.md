@@ -298,6 +298,10 @@ Use the same tokens on both platforms, mapped to native APIs.
 
 **Icons (D37).** The same 22 Material Symbols (Rounded, 24) on both: vector drawables on Android, template SVGs in an asset catalog on iOS, each tinted by its context. They're decorative: the control around them carries the spoken label (THIRD_PARTY_NOTICES).
 
+**The selection card's border (Step 6.3e):** the outline colour, darker than a row's border, so in dark mode the card stands out from the rows behind it.
+
+**Saved (Step 6.3e):** a "Saved" large title, as on Account, over the list or the empty state.
+
 **The map in dark mode (D45):** the map, its pills, the route and the plane stay light on both apps, with the light theme's colours.
 
 **Program logos (D34):** each program's logo on a white pill with a thin border, white in dark mode too. Aeroplan, MileagePlus and Mileage Plan use their public-domain logos. Avios and Flying Blue show their name, because no freely licensed logo exists (THIRD_PARTY_NOTICES).
@@ -331,11 +335,17 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 
 ## 8. Accessibility
 
-- Support Dynamic Type and font scaling up to the largest accessibility size. Rows reflow to a vertical layout instead of truncating the points.
+- Support Dynamic Type and font scaling up to the largest accessibility size (Step 6.3e). At iOS's accessibility sizes, and at Android font scale 1.5 and above:
+  - Rows and the selection card put each part on its own line, so nothing is cut short. Airport codes never break across lines.
+  - The list's header grows with its text, and the peek shows all of it. The sort pill goes under the count.
+  - The selection card is never taller than the room above the peeking list. Its title and ✕ stay in view, and its details scroll.
+  - On iOS the tab bar's labels stop growing at the largest standard size, as Apple's do, and a long press shows the tab in large type.
+  - One-line summaries shorten rather than wrap: the search summary, the search page's title and the deal cards' city names. Screen readers read them in full.
 - Touch targets are at least 44 pt on iOS and 48 dp on Android, including the heart icon and chips.
 - **VoiceOver / TalkBack labels:**
-  - Row: "Boston to Paris, Monday February 1, Premium Economy, Avios, 25,000 points, saved."
-  - Marker: "Paris, 12 flights, from 25,000 points."
+  - Row: "Boston to Paris, Monday, February 1, Premium Economy, Avios, 25,000 points, saved", and "no longer listed" when it isn't (Step 6.3e). The heart is its own button.
+  - Card: its date and points in full words, "Monday, February 1, 2027" and "25,000 points".
+  - Marker: "Paris, 12 flights, from 25,000 points" (iOS; MapLibre's pills aren't reachable by TalkBack). A destination's sheet title: "Paris, CDG, 12 flights from 25,000 points".
   - Sort pill: "Sort, Lowest points". Program headings under By program: "Aeroplan, 190 flights", as headings.
   - Chips announce "Cabin: Business, active".
   - Landing search bar: "Search flights. Where to?, Feb 1 – Apr 1 · Any cabin" (or the current route).

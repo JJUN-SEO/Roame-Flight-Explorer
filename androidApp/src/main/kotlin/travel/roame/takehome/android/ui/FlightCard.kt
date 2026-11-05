@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -53,7 +55,8 @@ fun FlightCard(
         modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        // The outline, darker than a row's border, so the card stands out from the rows behind it in dark mode too.
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shadowElevation = 8.dp,
     ) {
         Column(Modifier.padding(start = 16.dp, end = 4.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -72,16 +75,35 @@ fun FlightCard(
                     Icon(painterResource(R.drawable.ms_close), contentDescription = null)
                 }
             }
-            Column(Modifier.padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // When it's taller than the room it's given, as at the largest font scales, the details scroll and the title
+            // and ✕ stay in view (Step 6.3e).
+            Column(
+                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(end = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 RouteConnector(flight.originCode, flight.destinationCode)
-                Row {
-                    Text(flight.originCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(flight.destinationCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
+                // At large font scales each pair stacks, so nothing is cut short (UI_SPEC §8), as on iOS.
+                val stacked = isLargeText()
+                val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+                val date = spokenCardDate(flight.departureDate)
+                if (stacked) {
+                    Text(flight.originCity, style = MaterialTheme.typography.bodyMedium, color = secondary)
+                    Text(flight.destinationCity, style = MaterialTheme.typography.bodyMedium, color = secondary)
+                } else {
+                    Row {
+                        Text(flight.originCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = secondary)
+                        Text(flight.destinationCity, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = secondary, textAlign = TextAlign.End)
+                    }
                 }
                 Spacer(Modifier.size(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(cardDate(flight.departureDate), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                if (stacked) {
+                    Text(cardDate(flight.departureDate), Modifier.semantics { contentDescription = date }, style = MaterialTheme.typography.bodyMedium)
                     CabinLabel(flight.cabin)
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(cardDate(flight.departureDate), Modifier.weight(1f).semantics { contentDescription = date }, style = MaterialTheme.typography.bodyMedium)
+                        CabinLabel(flight.cabin)
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ProgramLogo(flight.program, height = 18.dp)
@@ -90,14 +112,25 @@ fun FlightCard(
                         NotListedTag()
                     }
                 }
-                Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                val points = spokenPoints(flight.points)
+                if (stacked) {
                     Text(
                         PointsFormat.full(flight.points),
-                        Modifier.weight(1f),
+                        Modifier.padding(top = 8.dp).semantics { contentDescription = points },
                         style = MaterialTheme.typography.headlineSmall.merge(TabularDigits),
                         fontWeight = FontWeight.SemiBold,
                     )
                     SaveButton(flight.isSaved, isPending, onToggleSave)
+                } else {
+                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            PointsFormat.full(flight.points),
+                            Modifier.weight(1f).semantics { contentDescription = points },
+                            style = MaterialTheme.typography.headlineSmall.merge(TabularDigits),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        SaveButton(flight.isSaved, isPending, onToggleSave)
+                    }
                 }
             }
         }

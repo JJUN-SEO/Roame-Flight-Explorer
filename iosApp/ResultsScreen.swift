@@ -126,6 +126,8 @@ private struct MapWithSheet: View {
     @State private var drag: CGFloat = 0
     @State private var dragging = false
     @State private var cardHeight: CGFloat = 0
+    /** Large text makes the header taller than its usual 64 pt, and the peek shows all of it. */
+    @State private var headerHeight: CGFloat = 0
 
     var body: some View {
         let state = model.state
@@ -177,12 +179,18 @@ private struct MapWithSheet: View {
                         onDebugLongPress: onDebugLongPress
                     )
                     .padding(.horizontal, 16)
+                    // Measured before the cap below, which would otherwise report its own, taller frame: the map then
+                    // took most of itself as covered and framed routes at its top (found in Step 6.3e).
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeight = $0 }
+                    // No taller than the room above the peeking sheet, so its ✕ stays on screen; its details scroll.
+                    .frame(maxHeight: max(anchor(.peek, height) - 20, 160), alignment: .top)
                     .offset(y: offset - cardHeight - 12)
                 }
 
                 VStack(spacing: 0) {
-                    SheetHeader(state: state, onSort: onSort).gesture(sheetDrag)
+                    SheetHeader(state: state, onSort: onSort)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
+                        .gesture(sheetDrag)
                     Group {
                         if state.results.isEmpty {
                             FilteredEmpty()
@@ -213,7 +221,7 @@ private struct MapWithSheet: View {
         switch stop {
         case .full: 0
         case .half: height * 0.5
-        case .peek: max(height - peekHeight, 0)
+        case .peek: max(height - max(peekHeight, headerHeight), 0)
         }
     }
 }
@@ -223,14 +231,19 @@ private struct MapWithSheet: View {
  * the sort is its own button.
  */
 private struct SheetHeader: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     let state: ExplorerState
     let onSort: () -> Void
 
     var body: some View {
         let count = flightCount(Int(state.resultCount))
+        // At the accessibility sizes the sort goes under the count, or its name broke mid-word (Step 6.3e).
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
         VStack(spacing: 0) {
             Capsule().fill(Color.outline).frame(width: 36, height: 4).padding(.top, 10)
-            HStack(spacing: 8) {
+            layout {
                 Text(state.results.isEmpty ? "No flights match your search" : count)
                     .font(.appTitle)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -238,10 +251,10 @@ private struct SheetHeader: View {
                     .accessibilityAddTraits(.isHeader)
                 if !state.results.isEmpty { SortButton(sort: state.sort, action: onSort) }
             }
-            .padding(EdgeInsets(top: 6, leading: 20, bottom: 0, trailing: 12))
+            .padding(EdgeInsets(top: 6, leading: 20, bottom: 8, trailing: 12))
         }
         .frame(maxWidth: .infinity)
-        .frame(height: peekHeight, alignment: .top)
+        .frame(minHeight: peekHeight, alignment: .top)
         .contentShape(.rect)
     }
 }
@@ -257,9 +270,8 @@ private struct SortButton: View {
                 Text(sortName(sort)).font(.appLabel)
                 MSIcon(name: "ms_arrow_down", size: 18)
             }
-            .padding(.leading, 14)
-            .padding(.trailing, 10)
-            .frame(height: 36)
+            .padding(EdgeInsets(top: 4, leading: 14, bottom: 4, trailing: 10))
+            .frame(minHeight: 36)
             .overlay(Capsule().strokeBorder(Color.outline))
             .contentShape(.capsule)
         }

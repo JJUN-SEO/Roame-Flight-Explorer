@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.3e, Saved, accessibility, large text and dark mode. Update this line at every review gate.
+> **Current step:** 6.3e, Saved, accessibility, large text and dark mode, built and waiting for the owner's review. Update this line at every review gate.
 
 This plan turns the decided design (D1–D40) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -426,12 +426,13 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
   - [x] **6.3d2 Sort (the owner's addition, D46).** A sort beside the filters: Lowest points (the default), Highest points, By program (a heading per program) and Best offer, from a pill in the list's header.
     - **Result (2026‑11‑04), accepted by the owner:** the sort is shared code (`SortOrder`, `setSort`, `sections`; DOMAIN_RULES O1 and O4) with 15 new tests, including the fixture's four orders against an independent Python sort. Both apps have the pill, the Sort by sheet and the program headings. Checked on iOS (QA Q30); Android built and unit-tested, not run (memory pressure). Each order is made once per data change, the first time it's used: 44 ms at 100k flights, 156 ms for Best offer, off the main thread, with nothing more kept in memory.
   - [ ] **6.3e Saved, accessibility, large text and dark mode.** Saved in the new look, and the findings below.
+    - **Result (2026‑11‑04), waiting for the owner's review:** Saved has Account's large title. Spoken labels use full words on both apps: rows, the card's date and points, iOS's pills and the destination sheets. At iOS's accessibility sizes and Android font scale 1.5 and above, rows and the card stack, the list's header grows and puts the sort under the count, and the card is capped above the list with its details scrolling. iOS's tab labels stop growing at the largest standard size, with the large content viewer. In dark mode, the card's border now shows. Found and fixed on the way: capping the iOS card's height made the map take most of itself as covered and frame routes at its top. Checked on both (QA Q22, Q23); VoiceOver and TalkBack themselves weren't run.
 - **Findings for 6.3e:**
-  - **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move.
+  - **Found in Step 5.5 (iOS map):** MapKit has no grey style, so the map uses muted emphasis with no points of interest; Apple's logo and Legal link must stay. When the selection card closes, the map slides by half the card's height, because the card sets the map's safe area (which keeps Legal visible and frames routes above the card). The camera itself doesn't move. *Since 6.3d the camera holds its own framing, and closing the card no longer moves the map (checked in 6.3e).*
   - **Found in Step 5.8 (iOS):**
-    - At the largest standard text size, the field labels wrap ("Fro / m") and the row's airport codes wrap ("YY / Z"). At the largest accessibility size, the codes wrap one letter per line, the row's points break mid-number, and the card covers most of the screen with its points cut to "16,0…" and Remove to "…". UI_SPEC §8 asks rows to reflow instead.
-    - Row labels read "YYZ, BCN, 16,000 pts, Toronto → Barcelona, Economy, Mon, Feb 1 · Aeroplan", and pills "…, from 26,000 pts", where UI_SPEC §8 asks for full words, "points" and "saved".
-    - In dark mode the card has no visible shadow, so it blends with the rows behind it.
+    - At the largest standard text size, the field labels wrap ("Fro / m") and the row's airport codes wrap ("YY / Z"). At the largest accessibility size, the codes wrap one letter per line, the row's points break mid-number, and the card covers most of the screen with its points cut to "16,0…" and Remove to "…". UI_SPEC §8 asks rows to reflow instead. *Fixed in 6.3e (the search page's labels were fixed by 6.3c's new layout).*
+    - Row labels read "YYZ, BCN, 16,000 pts, Toronto → Barcelona, Economy, Mon, Feb 1 · Aeroplan", and pills "…, from 26,000 pts", where UI_SPEC §8 asks for full words, "points" and "saved". *Fixed in 6.3e.*
+    - In dark mode the card has no visible shadow, so it blends with the rows behind it. *Fixed in 6.3e: its border shows.*
   - **Found in Step 4.8:** at 2× font, cities in rows truncate and the card's points wrap to two lines; row descriptions say "Mon, Feb 1" and "pts" where UI_SPEC §8 asks for "Monday February 1" and "points"; in dark mode the light-grey map is much brighter than the app. *Kept by the owner's choice (D45): the map stays light in dark mode on both.*
   - **Found in Step 4.4, for the TalkBack pass:**
     - TalkBack doesn't announce the Saved badge's count, because Material's `NavigationBarItem` hides its icon, badge included, from accessibility when it shows a label. *Fixed in 6.3a: the app's own tab bar says "Saved, 3 saved flights" on both platforms.*

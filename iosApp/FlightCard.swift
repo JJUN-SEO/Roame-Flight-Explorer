@@ -6,6 +6,7 @@ import Shared
  * `onDebugLongPress` is set in debug builds only: long-pressing the title arms "Fail next DB write" (TEST_PLAN §6).
  */
 struct FlightCard: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     let flight: FlightItem
     let isPending: Bool
     var isListed = true
@@ -27,19 +28,40 @@ struct FlightCard: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Close")
             }
-            // As on Android: the close button sits 4 pt from the edge, the rest 16 pt in.
-            VStack(alignment: .leading, spacing: 4) {
+            // When it's taller than the room it's given, as at the largest text sizes, the details scroll and the title
+            // and ✕ stay in view (Step 6.3e).
+            ViewThatFits(in: .vertical) {
+                details
+                ScrollView { details }.scrollBounceBehavior(.basedOnSize)
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 4)
+        .padding(.bottom, 16)
+        .background(Color.card, in: .rect(cornerRadius: 20))
+        // The outline, darker than a row's border, so the card stands out from the rows behind it in dark mode too.
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.outline))
+        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+    }
+
+    /** Everything under the title, 16 pt in; the ✕ sits 4 pt from the edge, as on Android. */
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 4) {
             RouteConnector(origin: flight.originCode, destination: flight.destinationCode)
-            HStack {
+            // At the accessibility text sizes each pair stacks, so nothing is cut short (UI_SPEC §8), as on Android.
+            let stacked = typeSize.isAccessibilitySize
+            let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout())
+            layout {
                 Text(flight.originCity)
-                Spacer()
+                if !stacked { Spacer() }
                 Text(flight.destinationCity)
             }
             .font(.appBody)
             .foregroundStyle(Color.secondaryText)
-            HStack {
+            layout {
                 Text(Format.cardDate(flight.departureDate)).font(.appBody)
-                Spacer()
+                    .accessibilityLabel(Format.spokenCardDate(flight.departureDate))
+                if !stacked { Spacer() }
                 CabinLabel(cabin: flight.cabin)
             }
             .padding(.top, 4)
@@ -47,22 +69,16 @@ struct FlightCard: View {
                 ProgramLogo(program: flight.program, height: 18)
                 if !isListed { NotListedTag() }
             }
-            HStack {
+            layout {
                 Text(PointsFormat.shared.full(points: flight.points))
                     .font(.appPoints.monospacedDigit())
-                Spacer()
+                    .accessibilityLabel(Format.spokenPoints(flight.points))
+                if !stacked { Spacer() }
                 SaveButton(isSaved: flight.isSaved, isPending: isPending, onTap: onToggleSave)
             }
             .padding(.top, 8)
-            }
-            .padding(.trailing, 12)
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 4)
-        .padding(.bottom, 16)
-        .background(Color.card, in: .rect(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.cardBorder))
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+        .padding(.trailing, 12)
     }
 }
 

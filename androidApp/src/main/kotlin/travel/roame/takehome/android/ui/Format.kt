@@ -10,12 +10,20 @@ import java.util.Locale
 private val rowDate = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US)
 private val chipDate = DateTimeFormatter.ofPattern("MMM d", Locale.US)
 private val cardDate = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.US)
+private val spokenDate = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.US)
+private val spokenCardDate = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.US)
 
 /** T3: parsed as a calendar date, never through an instant or timezone, so Feb 1 stays Feb 1. */
 fun rowDate(isoDate: String): String = LocalDate.parse(isoDate).format(rowDate)
 
 /** "Mon, Feb 1, 2027", for the selection card. */
 fun cardDate(isoDate: String): String = LocalDate.parse(isoDate).format(cardDate)
+
+/** UI_SPEC §8: "Monday, February 1", spoken in full in place of the row's "Mon, Feb 1". */
+fun spokenDate(isoDate: String): String = LocalDate.parse(isoDate).format(spokenDate)
+
+/** "Monday, February 1, 2027", spoken in place of the card's date. */
+fun spokenCardDate(isoDate: String): String = LocalDate.parse(isoDate).format(spokenCardDate)
 
 /** "Feb 10", for the dates chip. */
 fun chipDate(isoDate: String): String = LocalDate.parse(isoDate).format(chipDate)

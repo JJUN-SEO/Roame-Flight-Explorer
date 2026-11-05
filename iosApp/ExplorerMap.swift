@@ -228,7 +228,7 @@ private struct MarkerPill: View {
         // MapKit offers an annotation less room than the pill needs, which cut off the count.
         .fixedSize()
         .accessibilityElement()
-        .accessibilityLabel("\(marker.city), \(flightCount(Int(marker.flightCount))), from \(PointsFormat.shared.full(points: marker.minPoints))")
+        .accessibilityLabel("\(marker.city), \(flightCount(Int(marker.flightCount))), from \(Format.spokenPoints(marker.minPoints))")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
@@ -246,6 +246,7 @@ struct MarkerSheet: View {
             VStack(spacing: 0) {
                 Text("\(marker.city) · \(marker.code) — \(flightCount(Int(marker.flightCount))) from \(PointsFormat.shared.full(points: marker.minPoints))")
                     .font(.appTitle)
+                    .accessibilityLabel("\(marker.city), \(marker.code), \(flightCount(Int(marker.flightCount))) from \(Format.spokenPoints(marker.minPoints))")
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 16)
