@@ -2,7 +2,7 @@
 
 > **Status: approved by the owner on 2026‑11‑01.**
 >
-> **Current step:** 6.4, the requirements audit, done and waiting for the owner's review, with two checks for the owner (pinch on the iPhone, Xcode's warnings). Update this line at every review gate.
+> **Current step:** 7.1, the README and submission notes, in progress (6.4 accepted by the owner on 2026‑11‑04; pinch on the iPhone and Xcode's warnings still with the owner). Update this line at every review gate.
 
 This plan turns the decided design (D1–D40) into small steps, in build order. A new session with no memory of earlier conversations should be able to continue from this file alone.
 
@@ -444,7 +444,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
     - Each row's spoken description sits on a child node of the clickable row, so check what TalkBack actually reads. A selected row is announced as "Selected", through the checked state.
 - **Done when:** every sub-step is accepted, Q22 and Q23 pass, and the owner has seen the apps side by side.
 
-#### [ ] 6.4 Requirements audit
+#### [x] 6.4 Requirements audit
 
 - **Goal:** nothing from the brief is missed.
 - **Covers:** every REQUIREMENTS row, DEL-5.
@@ -453,7 +453,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
   - Every row is ✅, or explained under Known limitations.
   - Every *(assumption)* in DOMAIN_RULES appears in SUBMISSION_NOTES.
   - The rule coverage check has no gaps.
-- **Result (2026‑11‑04), waiting for the owner's review:** the brief re-read against REQUIREMENTS; all 25 assumptions are in SUBMISSION_NOTES §3; all 98 rules have tests except the five screen-only ones and the removed B6; neither app decides anything about flights. Every screen state in UI_SPEC §4 was seen on both apps, the error messages with a probe server for the first time (QA Q34), which found iOS's loading list stretching the app past the screen; fixed. Android scrolling on a release build: 2–5% janky frames, against 10.6% for Settings. Left for the owner: pinch on the iPhone (MAP-4) and Xcode's Thread Performance Checker (PERF-2). Not measured: iPhone frame timing (PERF-1) and iOS's never-loaded map offline (OFF-9), listed under Known limitations.
+- **Result (2026‑11‑04), accepted by the owner:** the brief re-read against REQUIREMENTS; all 25 assumptions are in SUBMISSION_NOTES §3; all 98 rules have tests except the five screen-only ones and the removed B6; neither app decides anything about flights. Every screen state in UI_SPEC §4 was seen on both apps, the error messages with a probe server for the first time (QA Q34), which found iOS's loading list stretching the app past the screen; fixed. Android scrolling on a release build: 2–5% janky frames, against 10.6% for Settings. Left for the owner: pinch on the iPhone (MAP-4) and Xcode's Thread Performance Checker (PERF-2). Not measured: iPhone frame timing (PERF-1) and iOS's never-loaded map offline (OFF-9), listed under Known limitations.
 
 ### Phase 7: Submission
 
