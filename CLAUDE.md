@@ -51,8 +51,6 @@ Working agreement for AI coding agents in this repo. Read this file first, then 
 
 ## Repo map
 
-† = planned, does not exist yet.
-
 ```
 server/                Ktor JVM app: GET /flights (raw fixture bytes)
 shared/                KMP module → Android library + static Shared.framework (+ test-only jvm target)
@@ -70,7 +68,7 @@ shared/                KMP module → Android library + static Shared.framework 
   src/commonTest/        rule tests (run on JVM and iOS)
   src/jvmTest/           fixture contracts, DoubleMetaphoneOracleTest (port vs commons-codec jar), real OkHttp failures
   src/iosTest/           real Darwin failures, the app's database file
-  src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = Swift bridge †)
+  src/androidMain/  src/iosMain/   (iosMain/ios/ExplorerStoreIos.kt = the Swift bridge)
 androidApp/            Compose app, package travel.roame.takehome.android
 iosApp/                SwiftUI app: RoameStarter.xcodeproj, iOS 17, Swift 6
 fixtures/flights.json  1,000 flights, envelope {"flights":[…]} — provided; never edit
@@ -90,8 +88,6 @@ docs/                  planning docs (see table above)
 | Build Android | `./gradlew :androidApp:assembleDebug` |
 | Install on emulator | `./gradlew :androidApp:installDebug` |
 | Build iOS (Mac) | `xcodebuild -project iosApp/RoameStarter.xcodeproj -scheme RoameStarter -destination 'platform=iOS Simulator,name=<an installed iPhone>' build` |
-
-When a † command starts working, update this table and `README.md`.
 
 If `./gradlew` says "Unable to locate a Java Runtime", first run `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
 
