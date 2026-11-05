@@ -87,16 +87,25 @@ class DateCalendarTest {
     }
 
     @Test
-    fun k3_aDayOnOrAfterTheStartEndsTheRange() {
+    fun k3_theSecondTapEndsTheRange() {
         val started = tap(none, "2027-02-10")
         assertEquals(DateSelection("2027-02-10", "2027-03-05", awaitingEnd = false), tap(started, "2027-03-05"))
         assertEquals(DateSelection("2027-02-10", "2027-02-10", awaitingEnd = false), tap(started, "2027-02-10"), "one day")
     }
 
     @Test
-    fun k3_aDayBeforeTheStartStartsAgain() {
+    fun k3_aSecondTapBeforeTheStartEndsTheRangeTheOtherWayRound() {
         val started = tap(none, "2027-02-10")
-        assertEquals(DateSelection("2027-02-05", null, awaitingEnd = true), tap(started, "2027-02-05"))
+        assertEquals(DateSelection("2027-02-05", "2027-02-10", awaitingEnd = false), tap(started, "2027-02-05"))
+    }
+
+    @Test
+    fun k3_tapsAlternateStartAndEnd() {
+        val days = listOf("2027-03-20", "2027-03-10", "2027-02-01", "2027-04-01", "2027-02-15")
+        val selections = days.runningFold(none) { selection, day -> tap(selection, day) }.drop(1)
+        assertEquals(listOf(true, false, true, false, true), selections.map { it.awaitingEnd })
+        assertEquals(DateSelection("2027-03-10", "2027-03-20", awaitingEnd = false), selections[1])
+        assertEquals(DateSelection("2027-02-01", "2027-04-01", awaitingEnd = false), selections[3])
     }
 
     @Test

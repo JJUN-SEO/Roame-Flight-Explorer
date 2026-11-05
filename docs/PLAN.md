@@ -472,6 +472,7 @@ Differences in behaviour between platforms aren't allowed without asking (§3). 
 - **Covers:** DEL-4.
 - **Owner does:** records both apps, following TEST_PLAN §7: search, filters, map selection, saving flights, and reopening with the API stopped.
 - **Agent does:** resets the data and lists the steps before each take.
+- **Found while recording (2026‑11‑05):** picking dates was glitchy on the owner's iPhone. The iOS calendar rebuilt every month on each tap (keyed by its contents; Android keys by month); now keyed like Android's. At the owner's request, taps alternate start and end (D51, K3; QA Q36).
 
 #### [ ] 7.3 Hand in
 
