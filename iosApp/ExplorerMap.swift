@@ -3,8 +3,8 @@ import MapKit
 import Shared
 
 /**
- * The results as destination pills, with the selected flight's great-circle route as dots and a plane flying along
- * them (UI_SPEC §2.1, M1–M9). `camera` lives in the results screen, so it survives leaving and coming back (M8).
+ * The results as destination pills, with the selected flight's route as an arc of dots (D50) and a plane flying along
+ * it (UI_SPEC §2.1, M1–M9). `camera` lives in the results screen, so it survives leaving and coming back (M8).
  * `bottomInset` is how much of the map the results sheet and the selection card cover: it's the map's bottom safe
  * area, so Apple's Legal link stays visible and routes are framed above them.
  */
@@ -147,7 +147,7 @@ private final class RouteLayerView: UIView {
     private var route: RouteLayer?
     private var from = GeoPoint(latitude: 0, longitude: 0)
     private var to = GeoPoint(latitude: 0, longitude: 0)
-    /** The shared great-circle points, their longitudes back in -180..180 for MapKit. */
+    /** The shared arc's points (M7), their longitudes back in -180..180 for MapKit. */
     private var points: [CLLocationCoordinate2D] = []
     /** Where the route was last drawn, so a still map with a resting plane isn't drawn again every frame. */
     private var drawnAt: [CGPoint?] = []
@@ -184,7 +184,7 @@ private final class RouteLayerView: UIView {
         if route.flight.id != self.route?.flight.id {
             from = GeoPoint(latitude: route.flight.originLatitude, longitude: route.flight.originLongitude)
             to = GeoPoint(latitude: route.flight.destinationLatitude, longitude: route.flight.destinationLongitude)
-            points = GreatCircle.shared.interpolate(from: from, to: to, segments: 64).map { coordinate($0.latitude, $0.longitude) }
+            points = RouteArc.shared.interpolate(from: from, to: to, segments: 64).map { coordinate($0.latitude, $0.longitude) }
         }
         self.route = route
         if plane.contents == nil {
@@ -265,7 +265,7 @@ private final class RouteLayerView: UIView {
         let frame = route.flying
             ? PlaneFlight.shared.at(elapsedMillis: Int64(Date.now.timeIntervalSince(route.takeOff) * 1000))
             : PlaneFlight.shared.resting
-        let at = GreatCircle.shared.plane(from: from, to: to, fraction: frame.fraction)
+        let at = RouteArc.shared.plane(from: from, to: to, fraction: frame.fraction)
         if let point = route.convert(coordinate(at.latitude, at.longitude)) {
             plane.isHidden = false
             plane.position = point
@@ -394,12 +394,12 @@ struct MarkerSheet: View {
 }
 
 /**
- * Fits the route: a map rectangle around the shared `GreatCircle` points, with room around it. The points' longitudes are
+ * Fits the route: a map rectangle around the shared `RouteArc` points, with room around it. The points' longitudes are
  * unwrapped, so a route across the antimeridian gives one rectangle running past the world's edge, which MapKit
  * accepts, rather than the long way round the world. MapKit fits a rectangle exactly, where it shortened regions here.
  */
 private func routeCamera(_ flight: FlightItem) -> MapCameraPosition {
-    let points = GreatCircle.shared.interpolate(
+    let points = RouteArc.shared.interpolate(
         from: GeoPoint(latitude: flight.originLatitude, longitude: flight.originLongitude),
         to: GeoPoint(latitude: flight.destinationLatitude, longitude: flight.destinationLongitude),
         segments: 64

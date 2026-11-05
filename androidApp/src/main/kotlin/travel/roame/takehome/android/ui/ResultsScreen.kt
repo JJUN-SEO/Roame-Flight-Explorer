@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -237,7 +238,9 @@ private fun MapWithSheet(
                 visible = active,
                 camera = view.mapCamera,
                 bottomInset = covered,
-                insetReady = !showCard || cardHeight > 0,
+                // A selection drops the sheet to the peek and shows the card; fit the route only once both have happened,
+                // or a flight chosen from the full list is fitted above a sheet that still covers the map.
+                insetReady = state.selected == null || (showCard && cardHeight > 0),
                 onMarkerTap = { openMarker = it },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -271,8 +274,15 @@ private fun MapWithSheet(
             Modifier.fillMaxWidth()
                 .height(with(density) { height.toDp() })
                 .offset { IntOffset(0, offset.value.roundToInt()) }
-                .shadow(12.dp, SheetShape)
-                .background(MaterialTheme.colorScheme.background, SheetShape)
+                // Like Airbnb's, the corners and the shadow fade out over the last stretch to the top, so the full list
+                // meets the header with no map beside its corners. Read while drawing, so a drag doesn't recompose it.
+                .graphicsLayer {
+                    val rounding = (offset.value / SquareOffDistance.toPx()).coerceIn(0f, 1f)
+                    shape = RoundedCornerShape(topStart = SheetRadius * rounding, topEnd = SheetRadius * rounding)
+                    shadowElevation = 12.dp.toPx() * rounding
+                    clip = true
+                }
+                .background(MaterialTheme.colorScheme.background)
                 .then(if (full) Modifier else sheetDrag),
         ) {
             SheetHeader(state, onSort, Modifier.onSizeChanged { headerHeight = it.height }.then(if (full) sheetDrag else Modifier))
@@ -466,7 +476,10 @@ private fun MapButton(modifier: Modifier, onClick: () -> Unit) {
 /** The sheet's header: the handle and the count, which is all that shows at [SheetStop.Peek]. */
 private val PeekHeight = 64.dp
 
-private val SheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+private val SheetRadius = 20.dp
+
+/** How far below the top the sheet starts to lose its corners and shadow on its way to [SheetStop.Full]. */
+private val SquareOffDistance = 48.dp
 
 /** Faster than this, in pixels a second, a release goes on to the next stop rather than the nearest. */
 private const val FlingVelocity = 1_000f

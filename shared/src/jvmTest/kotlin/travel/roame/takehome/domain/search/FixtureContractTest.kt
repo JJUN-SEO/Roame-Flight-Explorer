@@ -21,7 +21,7 @@ import travel.roame.takehome.data.remote.FetchResult
 import travel.roame.takehome.data.remote.KtorFlightsApi
 import travel.roame.takehome.di.AppGraph
 import travel.roame.takehome.domain.DealIndex
-import travel.roame.takehome.domain.GreatCircle
+import travel.roame.takehome.domain.RouteArc
 import travel.roame.takehome.domain.MarkerSheetOrder
 import travel.roame.takehome.domain.sortedFor
 import travel.roame.takehome.domain.matching
@@ -306,18 +306,20 @@ class FixtureContractTest {
     }
 
     @Test
-    fun m7_everyFixtureRouteIsContinuousShortAndTheRightLength() {
+    fun m7_everyFixtureRouteIsContinuousShortAndEndsAtItsAirports() {
         val routes = decoded.distinctBy { it.origin.code to it.destination.code }
         assertEquals(192, routes.size)
         assertEquals(68, routes.count { abs(it.destination.longitude - it.origin.longitude) > 180 })
         for (route in routes) {
             val from = GeoPoint(route.origin.latitude, route.origin.longitude)
             val to = GeoPoint(route.destination.latitude, route.destination.longitude)
-            val points = GreatCircle.interpolate(from, to)
+            val points = RouteArc.interpolate(from, to)
             val label = "${route.origin.code} to ${route.destination.code}"
             points.zipWithNext { a, b -> assertTrue(abs(b.longitude - a.longitude) < 180.0, label) }
             assertTrue(abs(points.last().longitude - points.first().longitude) <= 180.0, label)
-            assertEquals(from.distanceKmTo(to), points.zipWithNext { a, b -> a.distanceKmTo(b) }.sum(), 1e-3, label)
+            assertEquals(0.0, points.last().distanceKmTo(to), 1e-6, label)
+            // A gentle arc never reaches the poles, where the flat map has no edge.
+            assertTrue(points.all { it.latitude in -80.0..80.0 }, label)
         }
     }
 

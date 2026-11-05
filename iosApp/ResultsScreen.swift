@@ -139,6 +139,9 @@ private struct MapWithSheet: View {
         GeometryReader { geometry in
             let height = geometry.size.height
             let offset = min(max(anchor(stop, height) + drag, anchor(.full, height)), anchor(.peek, height))
+            // Like Airbnb's, the corners and the shadow fade out over the last stretch to the top, so the full list
+            // meets the header with no map beside its corners.
+            let rounding = min(max(offset / squareOffDistance, 0), 1)
             let showCard = state.selected != nil && stop == .peek
             let covered = height - anchor(stop, height) + (showCard && cardHeight > 0 ? cardHeight + 12 : 0)
             let full = stop == .full && !dragging
@@ -215,8 +218,8 @@ private struct MapWithSheet: View {
                     .gesture(sheetDrag, including: full ? .subviews : .all)
                 }
                 .frame(height: height, alignment: .top)
-                .background(Color.background, in: UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20))
-                .shadow(color: .black.opacity(0.18), radius: 10, y: -2)
+                .background(Color.background, in: UnevenRoundedRectangle(topLeadingRadius: 20 * rounding, topTrailingRadius: 20 * rounding))
+                .shadow(color: .black.opacity(0.18 * rounding), radius: 10, y: -2)
                 .offset(y: offset)
             }
         }
@@ -406,6 +409,9 @@ private struct MapButton: View {
 
 /** The sheet's header: the handle and the count, which is all that shows at `SheetStop.peek`. */
 private let peekHeight: CGFloat = 64
+
+/** How far below the top the sheet starts to lose its corners and shadow on its way to `SheetStop.full`. */
+private let squareOffDistance: CGFloat = 48
 
 /** How far past the release point the finger was heading for the release to count as a flick. */
 private let flickDistance: CGFloat = 60

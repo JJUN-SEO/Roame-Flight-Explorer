@@ -34,6 +34,8 @@ Tab bar
 │       │     └── Tap a pill → the destination's flights (M5) → tap one → selected
 │       ├── The list, as a sheet over the map: peek (handle + "238 flights"), half (the start), or full
 │       │     ├── Drag it anywhere while it isn't full; when full, the list scrolls and only its header drags
+│       │     ├── When full, it meets the header with square corners and no shadow, like Airbnb's, so no map shows
+│       │     │   beside it; they come back as it's dragged down (the owner's review of Step 6.3f)
 │       │     └── When full, a "Map" button drops it to the peek
 │       ├── Selecting a flight drops the sheet to the peek and shows the selection card above it; the map frames
 │       │   the route above the card (M8). Moving the sheet never changes the selection (L4)
@@ -361,7 +363,7 @@ Use the same tokens on both platforms, mapped to native APIs.
 | `ListRow`, `OptionRow` | 56 pt rows: an icon, Body large text, a chevron; or 52 pt rows with a pink check when chosen | Account's menu; sheet options |
 | `DateRangeCalendar` | Weekday letters, then months of 44 pt day cells; pink 40 pt circles on the ends, a light pink band between | The search page's dates; the Dates sheet |
 | `SubpageTopBar(closes:)` | As above, with ✕ instead of Back | The search page |
-| Results sheet | The background colour, with 20 pt top corners and a shadow; a 36 × 4 handle and the count | The results (§2.1) |
+| Results sheet | The background colour, with 20 pt top corners and a shadow, both fading out over its last 48 pt to the top, so it's square and flush under the header when full; a 36 × 4 handle and the count | The results (§2.1) |
 | `FiltersButton` | A 48 pt outlined circle with ⚙ (tune) and a count badge | The results' header |
 | Map button | A dark (#2B2B2B) 44 pt pill with a map icon and "Map" in white | Over the full results sheet |
 | Sort pill | A 36 pt outlined pill with the sort's name and ▾ (D46) | The results sheet's header |
@@ -407,7 +409,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
 | Shell | A `VStack` of the content and `AppTabBar` (§6). Explore stays alive, hidden, under the other tabs. Portrait only (D28) | A `Column` of the content and `AppTabBar` (§6). Explore stays composed but unplaced under the other tabs, so the map is never detached (D31). Portrait only (D28) |
 | Sheets | `.sheet` + `.presentationDetents` for the Filters, cabin and marker sheets. The results sheet is the app's own (`ResultsScreen.swift`) | `ModalBottomSheet` for the same three. The results sheet is the app's own (`ResultsScreen.kt`) |
 | List | `List` or `LazyVStack` with `id: \.id` | `LazyColumn` with `key = { it.id }` |
-| Map | `Map(position:, interactionModes: [.pan, .zoom])` + `Annotation` + `MapPolyline(coordinates:contourStyle: .geodesic)`, muted and flat standard style (Step 5.5). MapKit draws lines under annotations, so the route (its dots, the origin's dot and the plane) is drawn over the map, placed with `MapReader`'s `convert` whenever the map moves and the plane every frame, with the selected pill cut out of it. The selected destination is the map's own selection, so MapKit draws it on top (M4). Its bottom safe area is what the sheet and card cover | MapLibre, bottom to top: a symbol layer for the other pills, a line layer with `GreatCircle` points for the route as a still dash pattern, the origin's dot, a symbol layer for the selected pill, and one for the plane, its source moved every frame. Rotation and tilt off. OpenFreeMap's colour "Liberty" style, muted like iOS's map: no points of interest or 3D buildings, and iOS's sea blue (D48). No MapLibre logo, and the ⓘ credit kept above the sheet and card (D27) |
+| Map | `Map(position:, interactionModes: [.pan, .zoom])` + `Annotation`, muted and flat standard style (Step 5.5). The route is the shared `RouteArc` points (M7, D50). MapKit draws lines under annotations, so the route (its dots, the origin's dot and the plane) is drawn over the map, placed with `MapReader`'s `convert` whenever the map moves and the plane every frame, with the selected pill cut out of it. The selected destination is the map's own selection, so MapKit draws it on top (M4). Its bottom safe area is what the sheet and card cover | MapLibre, bottom to top: a symbol layer for the other pills, a line layer with `RouteArc` points for the route as a still dash pattern, the origin's dot, a symbol layer for the selected pill, and one for the plane, its source moved every frame. Rotation and tilt off. OpenFreeMap's colour "Liberty" style, muted like iOS's map: no points of interest or 3D buildings, and iOS's sea blue (D48). No MapLibre logo, and the ⓘ credit kept above the sheet and card (D27) |
 | Refresh | None (D29): on launch, with a thin progress bar | None (D29): on launch, with a thin progress bar |
 | Messages | `AppToast` at the top, with Retry (§6) | `AppToast` at the top, with Retry (§6) |
 | Date picker | `DateRangeCalendar` (`Calendar.swift`), drawing the shared `DateCalendar` (D41). Dates stay ISO strings throughout | `DateRangeCalendar` (`Calendar.kt`), the same. Material's `DateRangePicker` and its UTC millis are no longer used |

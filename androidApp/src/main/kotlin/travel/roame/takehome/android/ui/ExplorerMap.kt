@@ -91,10 +91,10 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import travel.roame.takehome.android.R
-import travel.roame.takehome.domain.GreatCircle
 import travel.roame.takehome.domain.PlaneFlight
 import travel.roame.takehome.domain.PlaneFrame
 import travel.roame.takehome.domain.PointsFormat
+import travel.roame.takehome.domain.RouteArc
 import travel.roame.takehome.domain.search.GeoPoint
 import travel.roame.takehome.presentation.DestinationMarker
 import travel.roame.takehome.presentation.ExplorerState
@@ -154,6 +154,13 @@ class MapHolder internal constructor() {
     internal var markers: List<DestinationMarker> = emptyList()
     /** How much of the map's bottom the results sheet covers, so the first fit leaves the markers above it. */
     internal var coveredBottom: Int = 0
+    internal var selectedId: String? = null
+
+    /**
+     * M8: the map was made with no camera to restore, so its first view is fitted: the markers, or the route of a flight
+     * already chosen, such as a best offer's (MapContent fits that one).
+     */
+    internal var fitsFirstView = false
 
     private var started = false
     private var resumed = false
@@ -161,6 +168,7 @@ class MapHolder internal constructor() {
     internal fun create(context: Context, options: MapLibreMapOptions, camera: MutableState<DoubleArray?>, fitPadding: Int): MapView {
         MapLibre.getInstance(context.applicationContext)
         val created = MapView(context, options).apply { onCreate(null) }
+        fitsFirstView = camera.value == null
         created.getMapAsync { loadedMap ->
             // D27: MapLibre's BSD licence doesn't require its logo. The ⓘ credit stays.
             loadedMap.uiSettings.isLogoEnabled = false
@@ -170,7 +178,7 @@ class MapHolder internal constructor() {
             val saved = camera.value
             if (saved != null) {
                 loadedMap.cameraPosition = saved.toCameraPosition()
-            } else {
+            } else if (selectedId == null) {
                 // M8: on first display, fit every marker. Wait for layout, which fitting needs.
                 created.post { markersCamera(markers, fitPadding, fitPadding + coveredBottom)?.let(loadedMap::moveCamera) }
             }
@@ -228,7 +236,7 @@ fun rememberMapHolder(): MapHolder {
 }
 
 /**
- * The results as destination pills, with the selected flight's great-circle route as moving dots and a plane
+ * The results as destination pills, with the selected flight's route as an arc of dots and a plane flying along it
  * (UI_SPEC §2.1, M1–M9). [camera] outlives the map, so it's kept even when the activity is recreated (M8). While not
  * [visible], the map stays in place but hidden, paused, and out of reach of taps and TalkBack (D31). [bottomInset] is
  * how much of the map the results sheet and the selection card cover; a selected route is fitted above it once
@@ -249,6 +257,7 @@ fun ExplorerMap(
     SideEffect {
         holder.onMarkerTap = onMarkerTap
         holder.markers = state.markers
+        holder.selectedId = state.selected?.id
         holder.coveredBottom = with(density) { bottomInset.roundToPx() }
     }
     val mapView = holder.view ?: rememberNewMapView(holder, camera)
@@ -375,7 +384,8 @@ private fun MapContent(
     // M8: the camera moves on an explicit selection, never because filters changed.
     val inset by rememberUpdatedState(bottomInset)
     val ready by rememberUpdatedState(insetReady)
-    var shownSelection by remember { mutableStateOf(state.selected?.id) }
+    // A flight already chosen when the map is made counts as new, so its route is the first view.
+    var shownSelection by remember { mutableStateOf(if (holder.fitsFirstView) null else state.selected?.id) }
     LaunchedEffect(map, state.selected?.id, visible) {
         val loadedMap = map ?: return@LaunchedEffect
         val selected = state.selected
@@ -586,7 +596,7 @@ private fun Style.showMarkers(
     return kept
 }
 
-/** M7: the great-circle line from the shared `GreatCircle`, with a dot at the origin. */
+/** M7: the gentle arc from the shared `RouteArc` (D50), with a dot at the origin. */
 private fun Style.showRoute(selected: FlightItem?) {
     val route = selected?.let(::routePoints)
     val line = route?.let { Feature.fromGeometry(LineString.fromLngLats(it)) }
@@ -598,7 +608,7 @@ private fun Style.showRoute(selected: FlightItem?) {
 /** M9: the plane [frame] of the way along the selected route, or no plane. */
 private fun Style.showPlane(selected: FlightItem?, frame: PlaneFrame) {
     val plane = selected?.let {
-        val at = GreatCircle.plane(
+        val at = RouteArc.plane(
             GeoPoint(it.originLatitude, it.originLongitude),
             GeoPoint(it.destinationLatitude, it.destinationLongitude),
             frame.fraction,
@@ -636,7 +646,7 @@ private fun planeBitmap(context: Context, density: Float): Bitmap {
 }
 
 private fun routePoints(flight: FlightItem): List<Point> =
-    GreatCircle.interpolate(
+    RouteArc.interpolate(
         GeoPoint(flight.originLatitude, flight.originLongitude),
         GeoPoint(flight.destinationLatitude, flight.destinationLongitude),
     ).map { Point.fromLngLat(it.longitude, it.latitude) }

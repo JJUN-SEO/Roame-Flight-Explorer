@@ -233,16 +233,17 @@ Implemented in `presentation/DateCalendar.kt` (owner decision D41: written once 
   - The sheet updates live as filters change.
   - If the destination drops out of the results, the sheet closes.
 - **M6** If `results` is empty, there are no markers and an empty-state overlay is shown. The map stays interactive.
-- **M7** A selected flight draws a **great-circle** route connector from origin to destination. The origin is drawn as a small dot and the destination marker is highlighted. The route is drawn above the other pills and under the destination's pill (owner's review of Step 6.3d).
-  - A shared `GreatCircle.interpolate(from, to, segments = 64)` provides the points for map SDKs that can't draw geodesics.
+- **M7** A selected flight draws a **gentle arc** as its route connector, from origin to destination (D50, the owner's review of Step 6.3f; until then a great circle). The origin is drawn as a small dot and the destination marker is highlighted. The route is drawn above the other pills and under the destination's pill (owner's review of Step 6.3d).
+  - The arc isn't the flight's real path. On the flat, north-up map it's the straight line from origin to destination, bent into a quadratic curve whose middle sits a tenth of the line's length to the north, or to the east for a route due north or south. A great circle bows far towards the pole on this map (JFK → HKG's middle is at 79°N), so it looked too curved and could leave the screen; the arc stays within a tenth of its length of the straight line, so fitting the route (M8) shows all of it.
+  - A shared `RouteArc.interpolate(from, to, segments = 64)` provides the points for both maps.
   - It unwraps longitudes (adding or subtracting 360° to keep every point within 180° of the origin), so trans-Pacific routes don't wrap the long way around the world. A shortest path never spans more than 180° of longitude, so this also rules out any jump between consecutive points.
 - **M8** Camera behaviour:
-  - On first display, fit all markers.
+  - On first display, fit all markers, unless a flight is already selected, as after a best offer (B9): then fit its route.
   - **Never** move the camera automatically when filters change, so the user's pan and zoom are respected.
-  - On an explicit selection, animate to fit the route.
+  - On an explicit selection, animate to fit the route, once the sheet has dropped to its peek and the card has been measured, so the route lands above them.
 - **M9** The selected route is drawn as still dots, with a plane flying along them from the origin to the destination (Step 6.3d, owner's design; D43 replaced the moving dots after the owner's review).
   - `PlaneFlight.at(elapsed)` gives each frame. A flight takes 3.6 s, easing out of the origin and into the destination (smoothstep). The plane fades in over the first 3% of the route and out between 80% and 92%, so it has gone before the destination's pill, which covers the end of the route. It waits 0.4 s out of sight, then flies again. Each new selection takes off from the origin.
-  - `GreatCircle.plane(from, to, fraction)` gives the plane's position that fraction of the way along the route (halfway, it's the middle of `interpolate`'s points), with its longitude back in -180..180. It also gives the heading: the angle of the line across a 64th of the route either side, as a north-up Web Mercator map draws it, in degrees clockwise from north. Both maps stay north-up and flat, so the heading holds.
+  - `RouteArc.plane(from, to, fraction)` gives the plane's position that fraction of the way along the arc (halfway, it's the middle of `interpolate`'s points), with its longitude back in -180..180. It also gives the heading: the arc's direction there as a north-up Web Mercator map draws it, in degrees clockwise from north, so the plane climbs away from the origin and descends into the destination. Both maps stay north-up and flat, so the heading holds.
   - Under Reduce Motion the plane rests halfway, fully visible (`PlaneFlight.resting`).
 
 ## 6b. Landing page deals (B)
@@ -274,7 +275,7 @@ Implemented in `domain/Deals.kt` (`DealIndex`), built once per data change in `i
   - the loyalty program,
   - a Save or Remove button that reflects the current saved state.
 
-  In Map mode, the great-circle line from M7 is drawn as well. *(assumption: "route connector" is satisfied by the map line and also by the connector graphic in the card)*
+  In Map mode, the arc from M7 is drawn as well. *(assumption: "route connector" is satisfied by the map line and also by the connector graphic in the card)*
 - **L7** The Saved view has its own selection, `savedSelectedId`. It is independent of the discovery filters and is cleared when that flight is removed. *(assumption)*
 
 ## 7b. Flight details (DT)
