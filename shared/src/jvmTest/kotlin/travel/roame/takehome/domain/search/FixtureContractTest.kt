@@ -1,0 +1,426 @@
+package travel.roame.takehome.domain.search
+
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import travel.roame.takehome.data.remote.FetchResult
+import travel.roame.takehome.data.remote.KtorFlightsApi
+import travel.roame.takehome.di.AppGraph
+import travel.roame.takehome.domain.DealIndex
+import travel.roame.takehome.domain.RouteArc
+import travel.roame.takehome.domain.MarkerSheetOrder
+import travel.roame.takehome.domain.sortedFor
+import travel.roame.takehome.domain.matching
+import travel.roame.takehome.domain.toDestinationGroups
+import travel.roame.takehome.domain.toFilterOptions
+import travel.roame.takehome.model.AirportSuggestion
+import travel.roame.takehome.model.FilterOptions
+import travel.roame.takehome.model.Flight
+import travel.roame.takehome.model.FlightFilters
+import travel.roame.takehome.model.SortOrder
+import travel.roame.takehome.presentation.DataStatus
+import travel.roame.takehome.presentation.ExplorerStore
+import travel.roame.takehome.testing.awaitState
+import travel.roame.takehome.testing.testDb
+import java.io.File
+import java.security.MessageDigest
+import kotlin.math.abs
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+/**
+ * Keeps the test data and docs honest. The airports and flight counts in [TestAirports] must match
+ * `fixtures/flights.json`, `fixtures/airports.json` must cover exactly those airports, and the real
+ * fixture must decode to the facts in DOMAIN_RULES §0.
+ */
+class FixtureContractTest {
+
+    private val fixtures = File("../fixtures")
+
+    private fun objects(file: File): List<Map<String, String>> =
+        Regex("""\{[^{}]*\}""").findAll(file.readText()).map { obj ->
+            Regex(""""(\w+)"\s*:\s*(?:"([^"]*)"|(-?[0-9.]+))""").findAll(obj.value)
+                .associate { it.groupValues[1] to it.groupValues[2].ifEmpty { it.groupValues[3] } }
+        }.toList()
+
+    private val flights by lazy { objects(File(fixtures, "flights.json")).filter { "id" in it } }
+
+    private fun airportsOn(side: String) = flights.map {
+        TestAirports.airport(
+            it.getValue(side),
+            it.getValue("${side}City"),
+            it.getValue("${side}Latitude").toDouble(),
+            it.getValue("${side}Longitude").toDouble(),
+        )
+    }.toSet()
+
+    private val fixtureText by lazy { File(fixtures, "flights.json").readText() }
+
+    /** The real fixture through the real decoding path; only the network is fake. */
+    private val decoded: List<Flight> by lazy {
+        val engine = MockEngine {
+            respond(fixtureText, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        val result = runBlocking { KtorFlightsApi(engine, "http://api.test").fetchFlights() }
+        (result as FetchResult.Success).flights
+    }
+
+    @Test
+    fun fixtureEnvelopeHasOnlyFlights_andEveryRecordHasAll13Fields() {
+        val envelope = Json.parseToJsonElement(fixtureText).jsonObject
+        assertEquals(setOf("flights"), envelope.keys)
+        val records = envelope.getValue("flights").jsonArray.map { it.jsonObject }
+        assertEquals(1000, records.size)
+        val fields = setOf(
+            "id", "origin", "originCity", "originLatitude", "originLongitude",
+            "destination", "destinationCity", "destinationLatitude", "destinationLongitude",
+            "departureDate", "program", "points", "cabin",
+        )
+        assertTrue(records.all { it.keys == fields })
+        assertTrue(records.none { record -> record.values.any { it is JsonNull } })
+    }
+
+    @Test
+    fun fixtureDecodesTo1000FlightsWithUniqueOpaqueIds() {
+        assertEquals(1000, decoded.size)
+        assertEquals(1000, decoded.map { it.id }.toSet().size)
+        assertEquals(
+            setOf("f101", "f102", "f103", "f104", "f105", "f106"),
+            decoded.map { it.id }.filterNot { it.startsWith("fx-") }.toSet(),
+        )
+    }
+
+    @Test
+    fun fixtureDatesCoverEveryDayFromFeb1ToApr1InOrder() {
+        val dates = decoded.map { it.departureDate }
+        assertEquals(dates.sorted(), dates)
+        assertEquals(LocalDate(2027, 2, 1), dates.first())
+        assertEquals(LocalDate(2027, 4, 1), dates.last())
+        assertEquals(60, dates.toSet().size)
+        assertEquals(59, dates.first().daysUntil(dates.last()))
+    }
+
+    @Test
+    fun fixtureAirportsAndRoutes() {
+        val origins = decoded.map { it.origin.code }.toSet()
+        val destinations = decoded.map { it.destination.code }.toSet()
+        assertEquals(setOf("BOS", "JFK", "LAX", "ORD", "SEA", "SFO", "YVR", "YYZ"), origins)
+        assertEquals(24, destinations.size)
+        assertTrue(origins.intersect(destinations).isEmpty())
+
+        val everyOccurrence = decoded.flatMap { listOf(it.origin, it.destination) }.toSet()
+        assertEquals(32, everyOccurrence.size, "a code's city and coordinates are the same everywhere")
+
+        assertEquals(192, decoded.map { it.origin.code to it.destination.code }.toSet().size)
+        assertEquals(
+            1000,
+            decoded.map { Triple(it.origin.code, it.destination.code, it.departureDate) }.toSet().size,
+            "at most one flight per route per day",
+        )
+    }
+
+    @Test
+    fun fixtureCabinsProgramsAndPoints() {
+        assertEquals(
+            mapOf("Economy" to 467, "Business" to 344, "Premium Economy" to 189),
+            decoded.groupingBy { it.cabin }.eachCount(),
+        )
+        assertEquals(
+            mapOf("Flying Blue" to 212, "Mileage Plan" to 203, "MileagePlus" to 199, "Avios" to 196, "Aeroplan" to 190),
+            decoded.groupingBy { it.program }.eachCount(),
+        )
+        assertEquals(9_000, decoded.minOf { it.points })
+        assertEquals(133_000, decoded.maxOf { it.points })
+        assertTrue(decoded.all { it.points % 500 == 0 })
+    }
+
+    @Test
+    fun fixtureTraps() {
+        assertEquals(
+            setOf("HND", "NRT"),
+            decoded.map { it.destination }.filter { it.city == "Tokyo" }.map { it.code }.toSet(),
+        )
+        assertTrue(decoded.any { it.destination.city == "Sao Paulo" })
+        assertEquals(364, decoded.count { abs(it.destination.longitude - it.origin.longitude) > 180 })
+
+        val perDestination = decoded.groupingBy { it.destination.code }.eachCount()
+        assertEquals(55, perDestination["NRT"])
+        assertEquals(55, perDestination["HND"])
+        assertEquals(54, perDestination["MAD"])
+        assertEquals(55, perDestination.values.max())
+    }
+
+    // Filters on the real data. The expected counts come from a separate Python script over the same file.
+
+    private fun count(filters: FlightFilters, origin: Set<String>? = null, destination: Set<String>? = null) =
+        decoded.matching(filters, origin, destination).size
+
+    @Test
+    fun f7_noFiltersShowEveryFixtureFlight() {
+        assertEquals(1000, count(FlightFilters()))
+    }
+
+    @Test
+    fun f1_fixtureDateBoundariesAreInclusive() {
+        assertEquals(48, count(FlightFilters(dateStart = "2027-02-10", dateEnd = "2027-02-12")))
+        assertEquals(16, count(FlightFilters(dateStart = "2027-02-10", dateEnd = "2027-02-10")))
+    }
+
+    @Test
+    fun f4_fixturePointsBoundariesAreInclusive() {
+        assertEquals(805, count(FlightFilters(maxPoints = 60_000)))
+        assertEquals(800, count(FlightFilters(maxPoints = 59_500)))
+        assertEquals(1, count(FlightFilters(maxPoints = 9_000)))
+        assertEquals(0, count(FlightFilters(maxPoints = 8_500)))
+    }
+
+    @Test
+    fun f6_fixtureProgramsStaySeparate() {
+        assertEquals(203, count(FlightFilters(programs = setOf("Mileage Plan"))))
+        assertEquals(199, count(FlightFilters(programs = setOf("MileagePlus"))))
+        assertEquals(386, count(FlightFilters(programs = setOf("Avios", "Aeroplan"))))
+    }
+
+    @Test
+    fun f7_fixtureFiltersAndSearchCombine() {
+        val demo = FlightFilters("2027-02-10", "2027-02-12", "Business", 60_000, setOf("Avios", "Aeroplan"))
+        assertEquals(2, count(demo))
+        assertEquals(16, count(FlightFilters(), setOf("BOS"), setOf("HND", "NRT")))
+        assertEquals(7, count(FlightFilters(cabin = "Economy", maxPoints = 60_000), setOf("BOS"), setOf("HND", "NRT")))
+    }
+
+    @Test
+    fun f8_fixtureOptionsComeFromTheData() {
+        assertEquals(
+            FilterOptions(
+                minDate = "2027-02-01",
+                maxDate = "2027-04-01",
+                minPoints = 9_000,
+                maxPoints = 133_000,
+                cabins = listOf("Economy", "Premium Economy", "Business"),
+                programs = listOf("Aeroplan", "Avios", "Flying Blue", "Mileage Plan", "MileagePlus"),
+            ),
+            decoded.toFilterOptions(),
+        )
+    }
+
+    /** SHA-256 of every id in order, one per line, so a single row out of place fails. */
+    private fun orderHash(order: Comparator<Flight>): String = hashOf(decoded.sortedWith(order))
+
+    private fun hashOf(flights: List<Flight>): String {
+        val ids = flights.joinToString("\n") { it.id }
+        return MessageDigest.getInstance("SHA-256").digest(ids.toByteArray()).toHexString()
+    }
+
+    /** Each sort's hash from an independent Python sort (2026‑11‑04), Best offer's with its own B1–B4 values. */
+    @Test
+    fun o1_fixtureSortsTheSameAsAnIndependentSort() {
+        val expected = mapOf(
+            SortOrder.LowestPoints to "8f3196e19d5a757e06c79e5bff8e15a4a0a6d2d26863861e04466238a4f6f359",
+            SortOrder.HighestPoints to "63c17ae6ae7197d2949fe69b6ff748695eea4e21b5f92709c21cf88d175b9fa8",
+            SortOrder.ByProgram to "bbee9f4b0f44b8cdf183a25571cf099465d888bd21f782c72477e8edeee240a6",
+            SortOrder.BestOffer to "2939683156aaed7598584ba73669550fa00e92b4486d8aee86045bfeae74bf76",
+        )
+        for ((sort, hash) in expected) assertEquals(hash, hashOf(decoded.sortedFor(sort)), "$sort")
+    }
+
+    @Test
+    fun o2_fixtureSortsTheSameAsAnIndependentSort() {
+        assertEquals("8f3196e19d5a757e06c79e5bff8e15a4a0a6d2d26863861e04466238a4f6f359", orderHash(MarkerSheetOrder))
+    }
+
+    // The landing page's deals on the real data, checked against an independent Python calculation (2026‑11‑04).
+
+    @Test
+    fun b7_fixtureBestOfferPerProgram() {
+        val index = DealIndex.of(decoded)
+        val everywhere = index.dealsFrom(null).offers.map { Triple(it.program, it.best.flight.id, it.best.percentBelowTypical) }
+        assertEquals(
+            listOf(
+                Triple("MileagePlus", "fx-BOS-SIN-20270323", 37),
+                Triple("Avios", "fx-JFK-SYD-20270224", 36),
+                Triple("Mileage Plan", "fx-BOS-SIN-20270220", 36),
+                Triple("Aeroplan", "fx-BOS-BKK-20270315", 36),
+                Triple("Flying Blue", "fx-YVR-SYD-20270328", 35),
+            ),
+            everywhere,
+        )
+        val ottawa = GeoPoint(45.42, -75.70)
+        val home = index.homeAirport(ottawa)
+        assertEquals("YYZ", home?.code)
+        assertEquals(
+            listOf("fx-YYZ-JNB-20270322", "fx-YYZ-SIN-20270224", "fx-YYZ-AKL-20270309", "fx-YYZ-MAD-20270210", "fx-YYZ-DXB-20270330"),
+            index.dealsFrom(home).offers.map { it.best.flight.id },
+        )
+    }
+
+    @Test
+    fun b8_fixtureDestinationDeck() {
+        val deck = DealIndex.of(decoded).dealsFrom(null).destinations
+        assertEquals(23, deck.size, "24 airports, but Tokyo's two are one card")
+        assertEquals(
+            listOf("Singapore" to 25_000, "Sydney" to 24_000, "Bangkok" to 26_000, "Johannesburg" to 26_000, "Auckland" to 21_000),
+            deck.take(5).map { it.city to it.minPoints },
+        )
+        assertEquals(listOf("HND", "NRT"), deck.single { it.city == "Tokyo" }.codes)
+    }
+
+    // The map on the real data.
+
+    @Test
+    fun m2_fixtureGivesOneMarkerPerDestination() {
+        val groups = decoded.toDestinationGroups()
+        assertEquals(24, groups.size)
+        assertEquals(1000, groups.sumOf { it.flightCount })
+        val expected = mapOf("CDG" to (45 to 13_500), "HKG" to (25 to 23_500), "NRT" to (55 to 19_500), "HND" to (55 to 16_500), "SYD" to (43 to 24_000))
+        for ((code, countAndMin) in expected) {
+            val group = groups.first { it.destination.code == code }
+            assertEquals(countAndMin, group.flightCount to group.minPoints, code)
+        }
+    }
+
+    @Test
+    fun m1_fixtureMarkersFollowTheFilters() {
+        val results = decoded.matching(FlightFilters(cabin = "Business", maxPoints = 60_000))
+        val groups = results.toDestinationGroups()
+        assertEquals(171, results.size)
+        assertEquals(22, groups.size)
+        assertEquals(171, groups.sumOf { it.flightCount })
+        val paris = groups.first { it.destination.code == "CDG" }
+        assertEquals(12 to 39_000, paris.flightCount to paris.minPoints)
+    }
+
+    @Test
+    fun m7_everyFixtureRouteIsContinuousShortAndEndsAtItsAirports() {
+        val routes = decoded.distinctBy { it.origin.code to it.destination.code }
+        assertEquals(192, routes.size)
+        assertEquals(68, routes.count { abs(it.destination.longitude - it.origin.longitude) > 180 })
+        for (route in routes) {
+            val from = GeoPoint(route.origin.latitude, route.origin.longitude)
+            val to = GeoPoint(route.destination.latitude, route.destination.longitude)
+            val points = RouteArc.interpolate(from, to)
+            val label = "${route.origin.code} to ${route.destination.code}"
+            points.zipWithNext { a, b -> assertTrue(abs(b.longitude - a.longitude) < 180.0, label) }
+            assertTrue(abs(points.last().longitude - points.first().longitude) <= 180.0, label)
+            assertEquals(0.0, points.last().distanceKmTo(to), 1e-6, label)
+            // A gentle arc never reaches the poles, where the flat map has no edge.
+            assertTrue(points.all { it.latitude in -80.0..80.0 }, label)
+        }
+    }
+
+    // The whole app graph on the real data. Only the network is fake.
+
+    private fun withRealStore(test: suspend (ExplorerStore) -> Unit) = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val db = testDb()
+        try {
+            val engine = MockEngine {
+                respond(fixtureText, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+            }
+            val store = AppGraph(db, engine, "http://api.test", scope = scope).store
+            store.awaitState { it.data is DataStatus.Ready && it.resultCount > 0 }
+            test(store)
+        } finally {
+            // Stop the store first, so no read is still running when the database closes.
+            scope.coroutineContext.job.cancelAndJoin()
+            db.close()
+        }
+    }
+
+    @Test
+    fun r3_theRealFixtureReachesTheStateBothAppsRead() = withRealStore { store ->
+        val all = store.state.value
+        assertEquals(1000, all.resultCount)
+        assertEquals(24, all.markers.size)
+        assertEquals(1000, all.markers.sumOf { it.flightCount })
+        // The fixture's cheapest flight comes first, under the default sort (D46).
+        assertEquals("fx-LAX-MEX-20270218", all.results.first().id)
+        assertEquals(decoded.toFilterOptions(), all.options)
+
+        store.setCabin("Business")
+        store.setMaxPoints(60_000)
+        val filtered = store.awaitState { it.filters.cabin == "Business" && it.filters.maxPoints == 60_000 }
+        assertEquals(171, filtered.resultCount)
+        assertEquals(22, filtered.markers.size)
+        assertEquals(171, filtered.markers.sumOf { it.flightCount })
+        val paris = filtered.markers.first { it.code == "CDG" }
+        assertEquals(12 to 39_000, paris.flightCount to paris.minPoints)
+    }
+
+    @Test
+    fun s14_theRealFixtureSearchesAndPicksLikeThePythonScriptCounts() = withRealStore { store ->
+        store.setDestinationQuery("tokyo")
+        val tokyo = store.awaitState { it.destinationQuery == "tokyo" }
+        assertEquals(110, tokyo.resultCount)
+        assertEquals(
+            listOf(
+                AirportSuggestion("Tokyo", listOf("HND", "NRT"), isCityRow = true),
+                AirportSuggestion("Tokyo", listOf("HND"), isCityRow = false),
+                AirportSuggestion("Tokyo", listOf("NRT"), isCityRow = false),
+            ),
+            tokyo.destinationSuggestions,
+        )
+
+        store.setOriginQuery("bos")
+        assertEquals(16, store.awaitState { it.originQuery == "bos" }.resultCount)
+        store.pickDestination(listOf("HND"))
+        assertEquals(9, store.awaitState { it.destinationPick != null }.resultCount)
+        store.pickDestination(listOf("HND", "NRT"))
+        assertEquals(16, store.awaitState { it.destinationPick?.isCityRow == true }.resultCount)
+
+        store.setDestinationQuery("nrt")
+        val nrt = store.awaitState { it.destinationQuery == "nrt" }
+        assertEquals(listOf(AirportSuggestion("Tokyo", listOf("NRT"), isCityRow = false)), nrt.destinationSuggestions)
+        assertEquals(7, nrt.resultCount)
+
+        store.resetAll()
+        store.setOriginQuery("new york")
+        assertEquals(113, store.awaitState { it.originQuery == "new york" }.resultCount)
+        store.setOriginQuery("")
+        store.setDestinationQuery("sydeny")
+        val sydney = store.awaitState { it.destinationQuery == "sydeny" }
+        assertEquals(43, sydney.resultCount)
+        assertEquals(listOf(AirportSuggestion("Sydney", listOf("SYD"), isCityRow = false)), sydney.destinationHint)
+    }
+
+    @Test
+    fun p3_theShippedPassengerFiguresMatchAirportsJson() {
+        val inFile = objects(File(fixtures, "airports.json")).filter { "code" in it }
+            .associate { it.getValue("code") to it.getValue("annualPassengers").toLong() }
+        assertEquals(inFile, AIRPORT_PASSENGERS)
+    }
+
+    @Test
+    fun testAirportsMatchFlightsJson() {
+        assertEquals(1000, flights.size)
+        assertEquals(airportsOn("origin"), TestAirports.origins.toSet())
+        assertEquals(airportsOn("destination"), TestAirports.destinations.toSet())
+        assertEquals(flights.groupingBy { it.getValue("origin") }.eachCount(), TestAirports.originFlightCounts)
+        assertEquals(flights.groupingBy { it.getValue("destination") }.eachCount(), TestAirports.destinationFlightCounts)
+    }
+
+    @Test
+    fun p3_airportsJsonCoversEveryFixtureAirportOnce() {
+        val stats = objects(File(fixtures, "airports.json")).filter { "code" in it }
+        val codes = stats.map { it.getValue("code") }
+        assertEquals(codes.size, codes.toSet().size, "no duplicate codes")
+        val fixtureCodes = (TestAirports.origins + TestAirports.destinations).map { it.code }.toSet()
+        assertEquals(fixtureCodes, codes.toSet())
+        assertTrue(stats.all { it.getValue("annualPassengers").toLong() > 0 })
+    }
+}

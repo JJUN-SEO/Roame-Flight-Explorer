@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "dest_athens.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "dest_mexico_city.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

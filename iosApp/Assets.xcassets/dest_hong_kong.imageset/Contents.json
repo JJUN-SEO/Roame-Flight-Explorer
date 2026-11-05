@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "dest_hong_kong.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

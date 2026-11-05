@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "RoameTakeHome"
-include(":shared", ":androidApp")
+include(":shared", ":androidApp", ":server")

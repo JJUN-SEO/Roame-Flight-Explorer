@@ -2,18 +2,73 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
     id("com.android.kotlin.multiplatform.library")
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 kotlin {
+    // Room's generated database constructor is an expect/actual object, which Kotlin still calls Beta.
+    compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
+    // Test-only target: runs shared tests on any OS (docs/ARCHITECTURE.md, D9). Not shipped.
+    jvm()
     android {
         namespace = "travel.roame.takehome.shared"
         compileSdk { version = release(37) { minorApiLevel = 0 } }
-        minSdk = 23
+        minSdk = 26
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
     listOf(iosArm64(), iosSimulatorArm64(), iosX64()).forEach {
         it.binaries.framework { baseName = "Shared"; isStatic = true }
     }
+    sourceSets {
+        commonMain.dependencies {
+            // api: the store's public state is a StateFlow, which the Android app has to see.
+            api(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.room.runtime)
+            implementation(libs.sqlite.bundled)
+        }
+        androidMain.dependencies { implementation(libs.ktor.client.okhttp) }
+        iosMain.dependencies { implementation(libs.ktor.client.darwin) }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.turbine)
+        }
+        jvmTest.dependencies {
+            implementation(libs.commons.codec)
+            // The engine Android ships, so real connection failures can be tested without a device.
+            implementation(libs.ktor.client.okhttp)
+        }
+    }
 }
 
+room { schemaDirectory("$projectDir/schemas") }
+
+// Silences a JDK 24+ warning when the JVM tests load the bundled SQLite library.
+tasks.withType<Test>().configureEach { jvmArgs("--enable-native-access=ALL-UNNAMED") }
+
+// TEST_PLAN §4.1: the scale benchmarks are slow, so they only run when asked:
+// ./gradlew :shared:jvmTest -Pbench --tests "*ScaleBenchmark*"
+tasks.named<Test>("jvmTest") {
+    if (providers.gradleProperty("bench").isPresent) {
+        maxHeapSize = "1g"
+        outputs.upToDateWhen { false }
+    } else {
+        exclude("**/bench/**")
+    }
+}
+
+// Room's code generator runs once per target (docs/ARCHITECTURE.md §5.4).
+dependencies {
+    listOf("kspAndroid", "kspIosArm64", "kspIosSimulatorArm64", "kspIosX64", "kspJvm").forEach {
+        add(it, libs.room.compiler)
+    }
+}

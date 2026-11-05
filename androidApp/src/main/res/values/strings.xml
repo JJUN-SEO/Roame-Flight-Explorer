@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copy from UI_SPEC §4. -->
+<resources>
+    <string name="app_name">Flight Explorer</string>
+    <string name="tab_explore">Explore</string>
+    <string name="tab_saved">Saved</string>
+
+    <string name="loading">Finding flights…</string>
+    <plurals name="result_count">
+        <item quantity="one">%s flight</item>
+        <item quantity="other">%s flights</item>
+    </plurals>
+
+    <string name="error_offline_title">Can\'t reach Flight Explorer</string>
+    <string name="error_offline_body">Make sure the local API is running and you\'re connected, then try again.</string>
+    <string name="error_timeout">The server took too long to respond.</string>
+    <string name="error_server">The server had a problem (%d).</string>
+    <string name="error_invalid_data">We received flight data we couldn\'t read.</string>
+    <string name="error_unknown">Something went wrong while loading flights.</string>
+    <string name="try_again">Try again</string>
+
+    <string name="synced_empty_title">No flights available right now</string>
+    <string name="synced_empty_body">The server returned no flights.</string>
+
+    <string name="saved_empty_title">No saved flights yet</string>
+    <string name="saved_empty_body">Tap ♡ on any flight to keep it here — even offline.</string>
+
+    <string name="search_from">From</string>
+    <string name="search_to">To</string>
+    <string name="search_placeholder">City or airport</string>
+    <string name="airport_label">%1$s (%2$s)</string>
+    <string name="city_label">%1$s (all airports)</string>
+    <string name="hint">Showing %1$s</string>
+    <string name="hint_more">Showing %1$s +%2$d more</string>
+    <string name="filtered_empty_title">No flights match your search</string>
+    <string name="reset_filters">Reset filters</string>
+
+    <string name="route_cities">%1$s → %2$s</string>
+    <string name="reset">Reset</string>
+    <string name="filter_dates">Dates</string>
+    <string name="filter_cabin">Cabin</string>
+    <string name="filter_points">Points</string>
+    <string name="filter_programs">Programs</string>
+    <string name="date_range">%1$s – %2$s</string>
+    <string name="points_chip">≤ %s</string>
+    <string name="programs_more">%1$s +%2$d</string>
+    <string name="any_dates">Any dates</string>
+    <string name="any_cabin">Any</string>
+    <string name="points_up_to">Up to %s</string>
+    <string name="points_any">Any</string>
+    <string name="clear">Clear</string>
+    <string name="show_flights">Show flights</string>
+    <string name="clear_filter">Clear %s</string>
+    <string name="chip_active">%1$s: %2$s, active</string>
+
+    <string name="row_description">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s</string>
+    <string name="row_description_saved">%1$s to %2$s, %3$s, %4$s, %5$s, %6$s, saved</string>
+    <string name="row_description_not_listed">%1$s, no longer listed</string>
+    <!-- UI_SPEC §8: points in full words when spoken -->
+    <string name="spoken_points">%1$s points</string>
+    <string name="marker_sheet_description">%1$s, %2$s, %3$s from %4$s</string>
+
+    <string name="selected_flight">Selected flight</string>
+    <string name="close">Close</string>
+    <string name="save_flight">Save flight</string>
+    <string name="remove">Remove</string>
+    <string name="remove_from_saved">Remove from saved</string>
+    <string name="not_listed">No longer listed</string>
+    <string name="save_failed">Couldn\'t save flight.</string>
+    <string name="remove_failed">Couldn\'t remove flight.</string>
+    <string name="retry">Retry</string>
+
+    <plurals name="marker_sheet_title">
+        <item quantity="one">%1$s · %2$s — %3$s flight from %4$s</item>
+        <item quantity="other">%1$s · %2$s — %3$s flights from %4$s</item>
+    </plurals>
+    <string name="map_unavailable_title">Can\'t load the map</string>
+    <string name="map_unavailable_body">It needs internet the first time. Your flights are still in the list.</string>
+    <string name="stale_banner">Couldn\'t refresh · showing results from %s</string>
+
+    <!-- Debug builds only (TEST_PLAN §6). -->
+    <string name="debug_fail_next">Debug: the next save or remove will fail.</string>
+    <string name="clear_field">Clear %1$s</string>
+
+    <!-- Step 6.3a: the tab bar and the Account tab (D38, D39). The same words as iOS. -->
+    <string name="tab_account">Account</string>
+    <plurals name="tab_with_count">
+        <item quantity="one">%1$s, %2$d saved flight</item>
+        <item quantity="other">%1$s, %2$d saved flights</item>
+    </plurals>
+    <string name="back">Back</string>
+    <!-- The flight details page (Step 6.3f, UI_SPEC §2.3b). Times, travel time and aircraft aren't in the data (DT2). -->
+    <string name="view_details">View details</string>
+    <string name="details_from_to">From %1$s to</string>
+    <string name="details_from_to_description">From %1$s to %2$s</string>
+    <string name="details_title">Flight Details</string>
+    <string name="details_updated">Updated %1$s</string>
+    <string name="details_departure">Departure · %1$s</string>
+    <string name="details_departure_description">Departure, %1$s</string>
+    <string name="details_program_aircraft">%1$s · Aircraft TBD</string>
+    <string name="details_program_aircraft_description">%1$s. Aircraft not in the data</string>
+    <string name="details_time_placeholder">XX:XX</string>
+    <string name="details_place">%1$s (%2$s)</string>
+    <string name="details_stop_departure_description">Departure, %1$s, time not in the data</string>
+    <string name="details_stop_arrival_description">Arrival, %1$s, time not in the data</string>
+    <string name="details_travel_time">Travel time: XX hr XX min</string>
+    <string name="details_travel_time_description">Travel time not in the data</string>
+    <string name="details_below_typical">%1$d%% below typical for %2$s</string>
+    <string name="details_distance">Distance</string>
+    <string name="details_distance_value">%1$s km</string>
+    <string name="details_footnote">Times, travel time and aircraft aren\'t in the data, so they\'re placeholders.</string>
+    <string name="account_guest">Guest</string>
+    <string name="account_guest_initial">G</string>
+    <string name="account_view_profile">View profile</string>
+    <string name="account_settings">Settings</string>
+    <string name="account_change_profile">Change profile</string>
+    <string name="account_privacy">Privacy</string>
+    <string name="account_info">Info</string>
+    <string name="account_log_out">Log out</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="appearance_system">System</string>
+    <string name="appearance_light">Light</string>
+    <string name="appearance_dark">Dark</string>
+    <string name="appearance_note">System follows your phone\'s light or dark setting.</string>
+    <string name="profile_placeholder">Profiles aren\'t part of this demo. There\'s no sign-in, so there\'s nothing to change yet.</string>
+    <string name="log_out_placeholder">There\'s no account to log out of in this demo.</string>
+    <string name="privacy_location_title">Your location</string>
+    <string name="privacy_location_body">Only your approximate location, and only if you allow it. It\'s used on this phone to put nearby airports first and to show deals from the airport nearest you, and it\'s never sent anywhere.</string>
+    <string name="privacy_data_title">Your flights</string>
+    <string name="privacy_data_body">The flights you last downloaded and the flights you save stay on this phone. There\'s no account and no tracking.</string>
+    <string name="privacy_map_title">Maps</string>
+    <string name="privacy_map_body_android">Map tiles come from OpenFreeMap, which sees the requests like any website does. Map data © OpenStreetMap contributors.</string>
+    <string name="app_name_full">Flight Explorer</string>
+    <string name="info_version">Version %1$s (%2$d)</string>
+    <string name="info_about_title">About</string>
+    <string name="info_about_body">A take-home project inspired by Roame, built natively for Android and iOS on one Kotlin Multiplatform core. It isn\'t affiliated with Roame or with the loyalty programs shown.</string>
+    <string name="info_credits_title">Credits</string>
+    <string name="info_credits_body_android">Icons: Material Symbols by Google (Apache 2.0). Font: Inter (SIL Open Font License 1.1). Program logos: Wikimedia Commons, public domain; trademarks of their owners. Map: MapLibre, with OpenFreeMap tiles and OpenStreetMap data. Made with Natural Earth.</string>
+    <string name="info_photos_title">Photo credits</string>
+    <string name="info_photos_body">From Wikimedia Commons, cropped and resized. Each keeps its own licence (CC0, CC BY or CC BY-SA, at creativecommons.org).\n\nAmsterdam: Basile Morin, CC BY-SA 4.0\nAthens: Jebulon, CC0\nAuckland: DXR, CC BY-SA 4.0\nBangkok: Diego Delso, CC BY-SA 3.0\nBarcelona: kallerna, CC BY-SA 4.0\nDoha: Zairon, CC BY 4.0\nDubai: Tim Reckmann from Hamm, Deutschland, CC BY-SA 3.0\nDublin: Christian David, CC BY-SA 4.0\nFrankfurt: Thomas Wolf (Der Wolf im Wald), CC BY-SA 3.0\nHong Kong: Diliff, CC BY 3.0\nJohannesburg: Frankbel, CC BY-SA 4.0\nLisbon: Ingo Mehling, CC BY-SA 4.0\nLondon: Diego Delso, CC BY-SA 4.0\nMadrid: Carlos Delgado, CC BY-SA 3.0\nMelbourne: DXR, CC BY-SA 4.0\nMexico City: Daniel Case, CC BY-SA 3.0\nParis: © Jorge Royan / http://www.royan.com.ar, CC BY-SA 3.0\nRome: Diliff, CC BY-SA 2.5\nSao Paulo: Marcosleal, CC BY-SA 3.0\nSeoul: © Frank Schulenburg, CC BY-SA 4.0\nSingapore: Basile Morin, CC BY-SA 4.0\nSydney: Diliff, CC BY-SA 3.0\nTokyo: David Kernan, CC BY 4.0\nTuscany (the banner): Ciorophotoproject, CC BY-SA 4.0</string>
+    <!-- The landing page (Step 6.3b, UI_SPEC §2.0) -->
+    <string name="landing_search_title">Where to?</string>
+    <string name="landing_anywhere">Anywhere</string>
+    <string name="landing_any_cabin">Any cabin</string>
+    <string name="landing_search_route">%1$s → %2$s</string>
+    <string name="landing_search_details">%1$s · %2$s</string>
+    <string name="landing_search_description">Search flights. %1$s, %2$s</string>
+    <string name="landing_hero_title">See where your points can take you</string>
+    <string name="landing_hero_button">Find a flight</string>
+    <string name="landing_destinations_title">Best deals by destination</string>
+    <string name="landing_offers_title">Best offers by program</string>
+    <string name="landing_from_points">from %1$s</string>
+    <string name="landing_up_to_below">Up to %1$d%% below typical</string>
+    <string name="landing_below_typical">%1$d%% below typical</string>
+    <string name="landing_destination_description">%1$s, from %2$s points</string>
+    <string name="landing_destination_description_below">%1$s, from %2$s points, up to %3$d%% below typical</string>
+    <string name="landing_offer_description">%1$s best offer: %2$s to %3$s, %4$s, %5$s, %6$s points</string>
+    <string name="landing_offer_below">, %1$d%% below typical</string>
+    <!-- The search page (Step 6.3c, UI_SPEC §2.0b) -->
+    <string name="search_title">Search flights</string>
+    <string name="search_button">Search flights</string>
+    <string name="search_swap">Swap From and To</string>
+    <string name="search_field_description">%1$s, %2$s</string>
+    <string name="done">Done</string>
+    <string name="calendar_start">%1$s, start date</string>
+    <string name="calendar_end">%1$s, end date</string>
+    <string name="calendar_single">%1$s, selected</string>
+    <string name="calendar_between">%1$s, in range</string>
+    <!-- The results (Step 6.3d, UI_SPEC §2.1) -->
+    <string name="clear_all">Clear all</string>
+    <string name="filters_title">Filters</string>
+    <plurals name="filters_button">
+        <item quantity="one">Filters, %d active</item>
+        <item quantity="other">Filters, %d active</item>
+    </plurals>
+    <string name="filters_button_none">Filters</string>
+    <string name="show_map">Map</string>
+    <string name="results_sheet_handle">Flight list. Drag to show more or less of the map</string>
+    <!-- The sort (O1, D46) -->
+    <string name="sort_by">Sort by</string>
+    <string name="sort_lowest_points">Lowest points</string>
+    <string name="sort_highest_points">Highest points</string>
+    <string name="sort_by_program">By program</string>
+    <string name="sort_best_offer">Best offer</string>
+    <string name="sort_button">Sort, %1$s</string>
+    <string name="program_heading">%1$s · %2$s</string>
+    <string name="program_heading_description">%1$s, %2$s</string>
+</resources>

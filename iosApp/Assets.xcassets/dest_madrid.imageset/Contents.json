@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "dest_madrid.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
