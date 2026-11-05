@@ -80,7 +80,6 @@ Location is asked for when the app first opens (D32).
 │ │ Toronto → Johannesburg     │        │
 │ │ ──────────────────────────          │
 │ │ (35% below typical)  39,000 pts     │
-│ │                     ≈ $702 value    │
 │ └────────────────────────────┘        │
 ├────────────────────────────────────────┤
 │   Explore        ♡ Saved (1)   Account │
@@ -194,9 +193,9 @@ Like Roame's, from the owner's screenshot. It slides up over the tabs, and ← o
 │ │ 28,000 pts                         │ │  Points
 │ │ (37% below typical for Economy)    │ │  only above 0 (DT1)
 │ │ Distance                 15,129 km │ │
-│ │ Estimated value         about $504 │ │  only for a cabin with a published value (B6)
 │ │ Times, travel time and aircraft    │ │  Caption, secondary
-│ │ aren't in the data, so they're …   │ │
+│ │ aren't in the data, so they're     │ │
+│ │ placeholders.                      │ │
 │ └────────────────────────────────────┘ │
 │ [         ♡  Save flight          ]    │  full width, fixed at the bottom; Remove when saved
 └────────────────────────────────────────┘
@@ -229,7 +228,7 @@ At the bottom, "Clear all" (the filters only, keeping the search) and a **"Show 
 | `RouteConnector` | `ORIGIN ●──✈──● DEST` graphic | Used in the row (compact) and in the card |
 | `DestinationMarker` | Map pill (D44, the owner's decision): the code in bold, then the flight count on a light pink badge marked with a plane, e.g. `LIS ✈ 33`. The lowest points aren't drawn; they're in the pill's spoken label and the destination's sheet title. Centred on the airport, with a soft shadow | default (card colour) · selected (pink with a white badge, always on top, M4) · pressed |
 | `FlightCard` | Selection details + Save / Remove, and "View details ›" (Step 6.3f) | idle · pending · error message shown |
-| `FlightDetailsScreen` | The details page (§2.3b, DT1–DT3) | not saved · saved · pending; with or without a photo, a "below typical" badge and a value |
+| `FlightDetailsScreen` | The details page (§2.3b, DT1–DT3) | not saved · saved · pending; with or without a photo and a "below typical" badge |
 | `StatusBanner` | Stale or offline info, with no Retry (D29) | stale · refreshing (inline progress) |
 | `EmptyState` / `ErrorState` | Full-area explanations | See §4 |
 | `AppToast` | One-shot `UserMessage`, at the top of the screen (§6) | "Couldn't save flight" + Retry |
@@ -261,7 +260,7 @@ Use the same copy on both platforms.
 | Save pending | id in `pendingWriteIds` | The button shows a spinner and is disabled |
 | Save or remove failed | A `UserMessage` arrives (V7) | Toast: "Couldn't save flight." / "Couldn't remove flight." + **Retry**. The heart stays in its previous state. |
 | Not listed | A saved flight missing from the cache (V4) | A grey "No longer listed" tag in the Saved row and card |
-| Details placeholders | Always, on the details page (DT2) | "XX:XX" for both stops, "Travel time: XX hr XX min", "<program> · Aircraft TBD", and under the figures: "Times, travel time and aircraft aren't in the data, so they're placeholders. The value is an estimate from Roame's average cents per point for the cabin." |
+| Details placeholders | Always, on the details page (DT2) | "XX:XX" for both stops, "Travel time: XX hr XX min", "<program> · Aircraft TBD", and under the figures: "Times, travel time and aircraft aren't in the data, so they're placeholders." |
 
 ## 5. Interaction details
 
@@ -393,7 +392,7 @@ Follow DOMAIN_RULES §10. Points come from the shared formatter: `25,000 pts` in
   - Chips announce "Cabin: Business, active".
   - Landing search bar: "Search flights. Where to?, Feb 1 – Apr 1 · Any cabin" (or the current route).
   - Destination card: "Johannesburg, from 39,000 points, up to 35% below typical".
-  - Offer card: "MileagePlus best offer: Toronto to Johannesburg, Mon, Mar 22, Premium Economy, 39,000 points, 35% below typical, worth about $702".
+  - Offer card: "MileagePlus best offer: Toronto to Johannesburg, Mon, Mar 22, Premium Economy, 39,000 points, 35% below typical". No cash value (D49).
   - Section titles are headings, and each card is one button.
   - Details page: the photo's text is one heading, "From Boston to Singapore"; each stop reads "Departure, Boston (BOS), time not in the data"; the travel time "Travel time not in the data"; the program line "MileagePlus. Aircraft not in the data". While the page is open, VoiceOver and TalkBack read only the page.
   - Search page rows: "From, Toronto (YYZ)", "Dates, Feb 10 – Feb 20"; the swap button: "Swap From and To".

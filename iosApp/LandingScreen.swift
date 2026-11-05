@@ -223,7 +223,6 @@ private struct OfferCard: View {
     var body: some View {
         let flight = offer.flight
         let below = Int(offer.percentBelowTypical)
-        let value = offer.estimatedValueUsd.map { Format.count(Int($0.int32Value)) }
         VStack(alignment: .leading, spacing: 8) {
             ProgramLogo(program: offer.program, height: 18)
             Button(action: action) {
@@ -249,12 +248,7 @@ private struct OfferCard: View {
                                 .background(Color.selectedCard, in: .capsule)
                         }
                         Spacer(minLength: 8)
-                        VStack(alignment: .trailing, spacing: 0) {
-                            Text(PointsFormat.shared.full(points: flight.points)).font(.appTitle).monospacedDigit()
-                            if let value {
-                                Text("≈ $\(value) value").font(.appCaption).foregroundStyle(Color.secondaryText)
-                            }
-                        }
+                        Text(PointsFormat.shared.full(points: flight.points)).font(.appTitle).monospacedDigit()
                     }
                 }
                 .padding(16)
@@ -269,7 +263,6 @@ private struct OfferCard: View {
                 "\(offer.program) best offer: \(flight.originCity) to \(flight.destinationCity), \(Format.rowDate(flight.departureDate)), "
                     + "\(flight.cabin), \(Format.count(Int(flight.points))) points"
                     + (below > 0 ? ", \(below)% below typical" : "")
-                    + (value.map { ", worth about $\($0)" } ?? "")
             )
             .accessibilityAddTraits(.isButton)
         }

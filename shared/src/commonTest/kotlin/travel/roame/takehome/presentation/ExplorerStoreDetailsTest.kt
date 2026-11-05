@@ -17,8 +17,8 @@ import kotlin.test.assertNull
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExplorerStoreDetailsTest {
 
-    // Every test flight flies the same 5,535 km (Python's haversine, 2026‑11‑04), so a value is points over the cabin's
-    // median points: Economy's median is 20,000.
+    // Every test flight flies the same 5,535 km (Python's haversine, 2026‑11‑04), so a flight's B4 value is its points
+    // over its cabin's median points: Economy's median is 20,000.
     private val cheap = flight(id = "cheap", points = 10_000, cabin = "Economy")
     private val typical = flight(id = "typical", points = 20_000, cabin = "Economy")
     private val pricey = flight(id = "pricey", points = 30_000, cabin = "Economy")
@@ -52,7 +52,6 @@ class ExplorerStoreDetailsTest {
         assertEquals("cheap", details.flight.id)
         assertEquals(5_535, details.distanceKm)
         assertEquals(50, details.percentBelowTypical, "10,000 against Economy's typical 20,000")
-        assertEquals(180, details.estimatedValueUsd, "10,000 points at 1.80¢")
         assertEquals("dest_cdg_city", details.photoKey)
     }
 
@@ -64,9 +63,8 @@ class ExplorerStoreDetailsTest {
     }
 
     @Test
-    fun dt1_aCabinWithNoPublishedValueHasNoEstimate() = runTest {
+    fun dt1_aCabinsOnlyFlightIsItsTypical() = runTest {
         val details = after(store()) { select("royal") }.selectedDetails!!
-        assertNull(details.estimatedValueUsd)
         assertEquals(0, details.percentBelowTypical, "the only Royal flight is its cabin's typical")
     }
 
@@ -77,7 +75,7 @@ class ExplorerStoreDetailsTest {
         runCurrent()
         val state = after(store) { selectSaved("pricey") }
         assertEquals("pricey", state.savedSelectedDetails!!.flight.id)
-        assertEquals(540, state.savedSelectedDetails!!.estimatedValueUsd)
+        assertEquals(0, state.savedSelectedDetails!!.percentBelowTypical, "30,000 is above Economy's typical")
         assertNull(state.selectedDetails)
     }
 

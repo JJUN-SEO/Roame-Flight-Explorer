@@ -242,12 +242,10 @@ internal fun NoPhoto() {
 private fun OfferCard(offer: ProgramOffer, onClick: () -> Unit) {
     val flight = offer.flight
     val points = PointsFormat.full(flight.points)
-    val value = offer.estimatedValueUsd?.let { groupedCount(it) }
     val description = stringResource(
         R.string.landing_offer_description,
         offer.program, flight.originCity, flight.destinationCity, rowDate(flight.departureDate), flight.cabin, groupedCount(flight.points),
-    ) + (if (offer.percentBelowTypical > 0) stringResource(R.string.landing_offer_below, offer.percentBelowTypical) else "") +
-        (value?.let { stringResource(R.string.landing_offer_value, it) } ?: "")
+    ) + (if (offer.percentBelowTypical > 0) stringResource(R.string.landing_offer_below, offer.percentBelowTypical) else "")
     Column(Modifier.width(300.dp)) {
         ProgramLogo(offer.program, height = 18.dp)
         Spacer(Modifier.height(8.dp))
@@ -288,12 +286,7 @@ private fun OfferCard(offer: ProgramOffer, onClick: () -> Unit) {
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(points, style = MaterialTheme.typography.titleMedium.merge(TabularDigits))
-                        if (value != null) {
-                            Text(stringResource(R.string.landing_value, value), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    Text(points, style = MaterialTheme.typography.titleMedium.merge(TabularDigits))
                 }
             }
         }

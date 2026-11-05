@@ -231,12 +231,12 @@ private fun DetailsCard(details: FlightDetails, data: DataStatus.Ready?, modifie
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            Column(Modifier.padding(top = 12.dp)) {
-                Fact(stringResource(R.string.details_distance), stringResource(R.string.details_distance_value, groupedCount(details.distanceKm)), stacked)
-                details.estimatedValueUsd?.let { value ->
-                    Fact(stringResource(R.string.details_value), stringResource(R.string.details_value_amount, groupedCount(value)), stacked)
-                }
-            }
+            Fact(
+                stringResource(R.string.details_distance),
+                stringResource(R.string.details_distance_value, groupedCount(details.distanceKm)),
+                stacked,
+                Modifier.padding(top = 12.dp),
+            )
 
             Text(
                 stringResource(R.string.details_footnote),
@@ -277,15 +277,15 @@ private fun DottedLine() {
 
 /** A label on the left and its value on the right, or the value under it at large font scales. */
 @Composable
-private fun Fact(label: String, value: String, stacked: Boolean) {
-    val modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).semantics(mergeDescendants = true) {}
+private fun Fact(label: String, value: String, stacked: Boolean, modifier: Modifier = Modifier) {
+    val row = modifier.fillMaxWidth().padding(vertical = 6.dp).semantics(mergeDescendants = true) {}
     if (stacked) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(row, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, style = MaterialTheme.typography.labelLarge)
         }
     } else {
-        Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Row(row, verticalAlignment = Alignment.CenterVertically) {
             Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
             Text(value, style = MaterialTheme.typography.labelLarge)

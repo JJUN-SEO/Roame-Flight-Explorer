@@ -4,7 +4,6 @@ import travel.roame.takehome.data.CacheSnapshot
 import travel.roame.takehome.data.SyncStatus
 import travel.roame.takehome.domain.DealIndex
 import travel.roame.takehome.domain.MarkerSheetOrder
-import travel.roame.takehome.domain.estimatedValueUsd
 import travel.roame.takehome.domain.photoKey
 import travel.roame.takehome.domain.sortedFor
 import travel.roame.takehome.domain.active
@@ -214,7 +213,6 @@ private fun details(flight: FlightItem, deals: DealIndex): FlightDetails {
         flight = flight,
         distanceKm = km.roundToInt(),
         percentBelowTypical = deals.percentBelowTypical(km, flight.points, flight.cabin),
-        estimatedValueUsd = estimatedValueUsd(flight.points, flight.cabin),
         photoKey = photoKey(flight.destinationCity),
     )
 }
@@ -225,10 +223,7 @@ private fun landing(deals: DealIndex, location: GeoPoint?, item: (Flight) -> Fli
     val fromHome = deals.dealsFrom(home)
     return Landing(
         homeAirport = home?.let { HomeAirport(it.code, it.city) },
-        offers = fromHome.offers.map { offer ->
-            val flight = offer.best.flight
-            ProgramOffer(offer.program, item(flight), offer.best.percentBelowTypical, estimatedValueUsd(flight.points, flight.cabin))
-        },
+        offers = fromHome.offers.map { offer -> ProgramOffer(offer.program, item(offer.best.flight), offer.best.percentBelowTypical) },
         destinations = fromHome.destinations.map { deal ->
             DestinationDeal(deal.city, deal.codes, deal.minPoints, deal.best.percentBelowTypical, photoKey(deal.city))
         },

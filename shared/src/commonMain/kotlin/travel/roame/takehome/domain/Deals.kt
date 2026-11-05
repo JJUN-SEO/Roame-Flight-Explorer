@@ -5,7 +5,6 @@ import travel.roame.takehome.domain.search.SearchText
 import travel.roame.takehome.model.Airport
 import travel.roame.takehome.model.Flight
 import kotlin.math.floor
-import kotlin.math.roundToInt
 
 /** A flight with its value (B4). Lower is better: 0.7 means 30% fewer points per kilometre than typical for its cabin. */
 internal class RatedFlight(val flight: Flight, val value: Double) {
@@ -128,13 +127,6 @@ internal fun Flight.rate(): Double? = rate(origin.point.distanceKmTo(destination
 internal fun rate(km: Double, points: Int): Double? = if (km < 1.0 || points <= 0) null else points / (km / 1000)
 
 private val Airport.point get() = GeoPoint(latitude, longitude)
-
-/** B6, A22: Roame's published cents per point for each cabin. Roame gives none for Premium Economy, so it uses Economy's. */
-private val CENTS_PER_POINT = mapOf("Economy" to 1.80, "Premium Economy" to 1.80, "Business" to 4.10, "First" to 10.5)
-
-/** B6: an estimate in whole US dollars, or null for a cabin with no published value. */
-internal fun estimatedValueUsd(points: Int, cabin: String): Int? =
-    CENTS_PER_POINT[cabin]?.let { cents -> (points * cents / 100).roundToInt() }
 
 /** B8: the name each app's bundled photo has (D33), such as `dest_sao_paulo`. */
 internal fun photoKey(city: String): String = "dest_" + SearchText.normalize(city).replace(' ', '_')

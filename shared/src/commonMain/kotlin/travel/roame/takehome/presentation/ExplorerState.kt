@@ -100,8 +100,6 @@ data class FlightDetails(
     val distanceKm: Int,
     /** B4 against the cached flights of its cabin; 0 when it isn't below typical, or its cabin isn't in the cache. */
     val percentBelowTypical: Int,
-    /** B6: an estimate in US dollars, or null when its cabin has no published value. */
-    val estimatedValueUsd: Int?,
     /** D33: the destination's bundled photo, such as `dest_barcelona`. A city without one gets a drawn hero. */
     val photoKey: String,
 )
@@ -126,8 +124,6 @@ data class ProgramOffer(
     val flight: FlightItem,
     /** B4: whole percent below the typical points per kilometre for its cabin; 0 when it isn't below. */
     val percentBelowTypical: Int,
-    /** B6: an estimate in US dollars, or null when its cabin has no published value. */
-    val estimatedValueUsd: Int?,
 )
 
 data class DestinationDeal(

@@ -158,15 +158,10 @@ private struct DetailsCard: View {
                     .background(Color.selectedCard, in: .capsule)
                     .padding(.top, 8)
             }
-            VStack(spacing: 0) {
-                Fact(label: "Distance", value: "\(Format.count(Int(details.distanceKm))) km", stacked: typeSize.isAccessibilitySize)
-                if let value = details.estimatedValueUsd {
-                    Fact(label: "Estimated value", value: "about $\(Format.count(Int(value.int32Value)))", stacked: typeSize.isAccessibilitySize)
-                }
-            }
-            .padding(.top, 12)
+            Fact(label: "Distance", value: "\(Format.count(Int(details.distanceKm))) km", stacked: typeSize.isAccessibilitySize)
+                .padding(.top, 12)
 
-            Text("Times, travel time and aircraft aren't in the data, so they're placeholders. The value is an estimate from Roame's average cents per point for the cabin.")
+            Text("Times, travel time and aircraft aren't in the data, so they're placeholders.")
                 .font(.appCaption)
                 .foregroundStyle(Color.secondaryText)
                 .padding(.top, 16)

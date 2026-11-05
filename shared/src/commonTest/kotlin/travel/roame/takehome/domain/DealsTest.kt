@@ -141,27 +141,6 @@ class DealsTest {
         assertEquals("fromSeattle", index.dealsFrom(null).offers.single().best.flight.id)
     }
 
-    // Estimated value (B6, A22)
-
-    @Test
-    fun b6_theEstimateUsesRoamesCentsPerPointForTheCabin() {
-        assertEquals(504, estimatedValueUsd(28_000, "Economy"), "1.80¢")
-        assertEquals(702, estimatedValueUsd(39_000, "Premium Economy"), "Economy's 1.80¢: Roame gives none for Premium Economy")
-        assertEquals(1_640, estimatedValueUsd(40_000, "Business"), "4.10¢")
-        assertEquals(10_500, estimatedValueUsd(100_000, "First"), "10.5¢")
-    }
-
-    @Test
-    fun b6_theEstimateRoundsToWholeDollars() {
-        assertEquals(22, estimatedValueUsd(1_234, "Economy"), "$22.21")
-        assertEquals(51, estimatedValueUsd(1_250, "Business"), "$51.25")
-    }
-
-    @Test
-    fun b6_aCabinWithNoPublishedValueHasNoEstimate() {
-        assertNull(estimatedValueUsd(30_000, "Basic Economy"))
-    }
-
     // Best offer per program (B7)
 
     @Test

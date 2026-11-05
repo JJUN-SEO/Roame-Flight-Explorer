@@ -82,11 +82,10 @@ class ExplorerStoreLandingTest {
     }
 
     @Test
-    fun b6_b7_anOfferCarriesItsEstimateAndHowFarBelowTypicalItIs() = runTest {
+    fun b7_anOfferCarriesHowFarBelowTypicalItIs() = runTest {
         val offers = newStore().state.value.landing.offers
         val avios = offers.single { it.program == "Avios" }
         assertEquals("sea-hnd", avios.flight.id)
-        assertEquals(1_435, avios.estimatedValueUsd, "35,000 Business points at 4.10¢")
         assertEquals(0, avios.percentBelowTypical, "the only Business flight is the Business typical")
         val aeroplan = offers.single { it.program == "Aeroplan" }
         assertTrue(aeroplan.percentBelowTypical > 0)

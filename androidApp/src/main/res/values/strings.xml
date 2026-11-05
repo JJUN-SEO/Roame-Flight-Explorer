@@ -108,9 +108,7 @@
     <string name="details_below_typical">%1$d%% below typical for %2$s</string>
     <string name="details_distance">Distance</string>
     <string name="details_distance_value">%1$s km</string>
-    <string name="details_value">Estimated value</string>
-    <string name="details_value_amount">about $%1$s</string>
-    <string name="details_footnote">Times, travel time and aircraft aren\'t in the data, so they\'re placeholders. The value is an estimate from Roame\'s average cents per point for the cabin.</string>
+    <string name="details_footnote">Times, travel time and aircraft aren\'t in the data, so they\'re placeholders.</string>
     <string name="account_guest">Guest</string>
     <string name="account_guest_initial">G</string>
     <string name="account_view_profile">View profile</string>
@@ -154,12 +152,10 @@
     <string name="landing_from_points">from %1$s</string>
     <string name="landing_up_to_below">Up to %1$d%% below typical</string>
     <string name="landing_below_typical">%1$d%% below typical</string>
-    <string name="landing_value">≈ $%1$s value</string>
     <string name="landing_destination_description">%1$s, from %2$s points</string>
     <string name="landing_destination_description_below">%1$s, from %2$s points, up to %3$d%% below typical</string>
     <string name="landing_offer_description">%1$s best offer: %2$s to %3$s, %4$s, %5$s, %6$s points</string>
     <string name="landing_offer_below">, %1$d%% below typical</string>
-    <string name="landing_offer_value">, worth about $%1$s</string>
     <!-- The search page (Step 6.3c, UI_SPEC §2.0b) -->
     <string name="search_title">Search flights</string>
     <string name="search_button">Search flights</string>
